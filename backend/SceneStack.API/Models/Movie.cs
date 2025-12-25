@@ -10,6 +10,8 @@ public class Movie
     public string? Synopsis { get; set; }
     public string? AiSynopsis { get; set; }  // Claude-generated
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public bool IsDeleted { get; set; } = false;
+    public DateTime? DeletedAt { get; set; }
     
     // Navigation properties
     public ICollection<Watch> Watches { get; set; } = new List<Watch>();

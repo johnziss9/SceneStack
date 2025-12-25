@@ -35,6 +35,9 @@ public class ApplicationDbContext : DbContext
             entity.HasKey(e => e.Id);
             entity.HasIndex(e => e.TmdbId).IsUnique();
             entity.Property(e => e.Title).IsRequired().HasMaxLength(255);
+            
+            // Global query filter to exclude soft-deleted movies
+            entity.HasQueryFilter(m => !m.IsDeleted);
         });
 
         // Configure Watch
@@ -44,6 +47,9 @@ public class ApplicationDbContext : DbContext
             entity.HasIndex(e => e.UserId);
             entity.HasIndex(e => e.MovieId);
             entity.HasIndex(e => e.WatchedDate);
+
+            // Global query filter to exclude soft-deleted watches
+            entity.HasQueryFilter(w => !w.IsDeleted);
 
             // Define relationships
             entity.HasOne(w => w.User)

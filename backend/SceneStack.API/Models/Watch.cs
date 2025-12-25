@@ -12,6 +12,8 @@ public class Watch
     public string? WatchedWith { get; set; }  // Free text or user tags
     public bool IsRewatch { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public bool IsDeleted { get; set; } = false;
+    public DateTime? DeletedAt { get; set; }
     
     // Navigation properties
     public User User { get; set; } = null!;

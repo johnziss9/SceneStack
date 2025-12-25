@@ -1,5 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using SceneStack.API.Data;
+using SceneStack.API.Interfaces;
+using SceneStack.API.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -11,6 +13,8 @@ builder.Services.AddSwaggerGen();
 // Add DbContext
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+builder.Services.AddScoped<IMovieService, MovieService>();
 
 var app = builder.Build();
 
