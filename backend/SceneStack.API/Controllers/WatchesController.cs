@@ -1,0 +1,114 @@
+using Microsoft.AspNetCore.Mvc;
+using SceneStack.API.DTOs;
+using SceneStack.API.Interfaces;
+using SceneStack.API.Mappers;
+using SceneStack.API.Models;
+
+namespace SceneStack.API.Controllers;
+
+[ApiController]
+[Route("api/[controller]")]
+public class WatchesController : ControllerBase
+{
+    private readonly IWatchService _watchService;
+    private readonly IMovieService _movieService;
+    private readonly ILogger<WatchesController> _logger;
+
+    public WatchesController(IWatchService watchService, IMovieService movieService, ILogger<WatchesController> logger)
+    {
+        _watchService = watchService;
+        _movieService = movieService;
+        _logger = logger;
+    }
+
+    // GET: api/watches
+    [HttpGet]
+    public async Task<ActionResult<IEnumerable<WatchResponse>>> GetWatches([FromQuery] int? userId = null)
+    {
+        var watches = await _watchService.GetAllAsync(userId);
+        var response = watches.Select(WatchMapper.ToResponse);
+        return Ok(response);
+    }
+
+    // GET: api/watches/5
+    [HttpGet("{id}")]
+    public async Task<ActionResult<WatchResponse>> GetWatch(int id)
+    {
+        var watch = await _watchService.GetByIdAsync(id);
+        
+        if (watch == null)
+            return NotFound();
+
+        return Ok(WatchMapper.ToResponse(watch));
+    }
+
+    // POST: api/watches
+    [HttpPost]
+    public async Task<ActionResult<WatchResponse>> CreateWatch(CreateWatchRequest request)
+    {
+        _logger.LogInformation("Creating watch for TMDb movie ID: {TmdbId}", request.TmdbId);
+
+        try
+        {
+            // Get or create the movie from TMDb
+            var movie = await _movieService.GetOrCreateFromTmdbAsync(request.TmdbId);
+
+            // Create the watch record
+            var watch = new Watch
+            {
+                UserId = request.UserId,
+                MovieId = movie.Id,
+                WatchedDate = DateTime.SpecifyKind(request.WatchedDate, DateTimeKind.Utc),
+                Rating = request.Rating,
+                Notes = request.Notes,
+                WatchLocation = request.WatchLocation,
+                WatchedWith = request.WatchedWith,
+                IsRewatch = request.IsRewatch
+            };
+
+            var createdWatch = await _watchService.CreateAsync(watch);
+            _logger.LogInformation("Successfully created watch with ID: {WatchId}", createdWatch.Id);
+
+            return CreatedAtAction(nameof(GetWatch), new { id = createdWatch.Id }, WatchMapper.ToResponse(createdWatch));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error creating watch for TMDb ID: {TmdbId}", request.TmdbId);
+            return StatusCode(500, $"Error creating watch: {ex.Message}");
+        }
+    }
+
+    // PUT: api/watches/5
+    [HttpPut("{id}")]
+    public async Task<ActionResult<WatchResponse>> UpdateWatch(int id, UpdateWatchRequest request)
+    {
+        var watch = new Watch
+        {
+            WatchedDate = DateTime.SpecifyKind(request.WatchedDate, DateTimeKind.Utc),
+            Rating = request.Rating,
+            Notes = request.Notes,
+            WatchLocation = request.WatchLocation,
+            WatchedWith = request.WatchedWith,
+            IsRewatch = request.IsRewatch
+        };
+
+        var updatedWatch = await _watchService.UpdateAsync(id, watch);
+        
+        if (updatedWatch == null)
+            return NotFound();
+
+        return Ok(WatchMapper.ToResponse(updatedWatch));
+    }
+
+    // DELETE: api/watches/5
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> DeleteWatch(int id)
+    {
+        var result = await _watchService.DeleteAsync(id);
+        
+        if (!result)
+            return NotFound();
+
+        return NoContent();
+    }
+}

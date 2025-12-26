@@ -20,6 +20,7 @@ builder.Services.Configure<TmdbSettings>(
     builder.Configuration.GetSection("TmdbApi"));
 
 builder.Services.AddScoped<IMovieService, MovieService>();
+builder.Services.AddScoped<IWatchService, WatchService>();
 builder.Services.AddHttpClient<ITmdbService, TmdbService>();
 
 var app = builder.Build();

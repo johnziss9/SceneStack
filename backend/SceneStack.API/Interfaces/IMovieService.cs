@@ -10,4 +10,5 @@ public interface IMovieService
     Task<Movie?> UpdateAsync(int id, Movie movie);
     Task<bool> DeleteAsync(int id);
     Task<Movie?> GetByTmdbIdAsync(int tmdbId);
+    Task<Movie> GetOrCreateFromTmdbAsync(int tmdbId);
 }
