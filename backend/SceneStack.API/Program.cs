@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using SceneStack.API.Configuration;
 using SceneStack.API.Data;
 using SceneStack.API.Interfaces;
 using SceneStack.API.Services;
@@ -14,7 +15,12 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+// Configure TmdbSettings from appsettings
+builder.Services.Configure<TmdbSettings>(
+    builder.Configuration.GetSection("TmdbApi"));
+
 builder.Services.AddScoped<IMovieService, MovieService>();
+builder.Services.AddHttpClient<ITmdbService, TmdbService>();
 
 var app = builder.Build();
 
