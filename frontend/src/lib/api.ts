@@ -1,3 +1,4 @@
+import { GroupedWatch } from '@/types/watch';
 import { api } from './api-client';
 import type {
     TmdbSearchResponse,
@@ -24,6 +25,10 @@ export const watchApi = {
         const endpoint = userId ? `/api/watches?userId=${userId}` : '/api/watches';
         return api.get<Watch[]>(endpoint);
     },
+
+    // GET: api/watches/grouped
+    getGroupedWatches: (userId: number) =>
+        api.get<GroupedWatch[]>(`/api/watches/grouped?userId=${userId}`),
 
     // GET: api/watches/{id}
     getWatch: (id: number) =>

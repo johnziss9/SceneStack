@@ -42,6 +42,17 @@ public class WatchesController : ControllerBase
         return Ok(WatchMapper.ToResponse(watch));
     }
 
+    // GET: api/watches/grouped?userId={userId}
+    [HttpGet("grouped")]
+    public async Task<ActionResult<List<GroupedWatchesResponse>>> GetGroupedWatches([FromQuery] int userId)
+    {
+        _logger.LogInformation("Getting grouped watches for user {UserId}", userId);
+        
+        var grouped = await _watchService.GetGroupedWatchesAsync(userId);
+        
+        return Ok(grouped);
+    }
+
     // POST: api/watches
     [HttpPost]
     public async Task<ActionResult<WatchResponse>> CreateWatch(CreateWatchRequest request)

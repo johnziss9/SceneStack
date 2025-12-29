@@ -17,6 +17,27 @@ export interface Watch {
     user: User;
 }
 
+// Matches WatchEntryResponse from backend
+export interface WatchEntry {
+    id: number;
+    watchedDate: string;
+    rating?: number;
+    notes?: string;
+    watchLocation?: string;
+    watchedWith?: string;
+    isRewatch: boolean;
+}
+
+// Matches GroupedWatchesResponse from backend
+export interface GroupedWatch {
+    movieId: number;
+    movie: Movie;
+    watchCount: number;
+    averageRating?: number;
+    latestRating?: number;
+    watches: WatchEntry[];
+}
+
 // Matches CreateWatchRequest from backend
 export interface CreateWatchRequest {
     tmdbId: number;

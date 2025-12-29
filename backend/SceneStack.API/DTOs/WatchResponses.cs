@@ -35,3 +35,24 @@ public class UserBasicInfo
     public string Username { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
 }
+
+public class GroupedWatchesResponse
+{
+    public int MovieId { get; set; }
+    public MovieBasicInfo Movie { get; set; } = null!;
+    public int WatchCount { get; set; }
+    public double? AverageRating { get; set; }
+    public int? LatestRating { get; set; }
+    public List<WatchEntryResponse> Watches { get; set; } = new();
+}
+
+public class WatchEntryResponse
+{
+    public int Id { get; set; }
+    public DateTime WatchedDate { get; set; }
+    public int? Rating { get; set; }
+    public string? Notes { get; set; }
+    public string? WatchLocation { get; set; }
+    public string? WatchedWith { get; set; }
+    public bool IsRewatch { get; set; }
+}
