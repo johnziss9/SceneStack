@@ -53,6 +53,24 @@ public class WatchesController : ControllerBase
         return Ok(grouped);
     }
 
+    // GET: api/watches/by-movie/550?userId=1
+    [HttpGet("by-movie/{movieId}")]
+    public async Task<ActionResult<List<WatchResponse>>> GetWatchesByMovie(int movieId, [FromQuery] int userId)
+    {
+        _logger.LogInformation("Getting watches for movieId: {MovieId}, userId: {UserId}", movieId, userId);
+        
+        var watches = await _watchService.GetByMovieIdAsync(movieId, userId);
+        
+        if (watches == null || !watches.Any())
+        {
+            _logger.LogInformation("No watches found for movieId: {MovieId}, userId: {UserId}", movieId, userId);
+            return Ok(new List<WatchResponse>()); // Return empty list, not 404
+        }
+        
+        var response = watches.Select(w => WatchMapper.ToResponse(w)).ToList();
+        return Ok(response);
+    }
+
     // POST: api/watches
     [HttpPost]
     public async Task<ActionResult<WatchResponse>> CreateWatch(CreateWatchRequest request)

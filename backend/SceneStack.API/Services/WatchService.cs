@@ -88,6 +88,16 @@ public class WatchService : IWatchService
         return grouped;
     }
 
+    public async Task<List<Watch>> GetByMovieIdAsync(int movieId, int userId)
+    {
+        return await _context.Watches
+            .Include(w => w.Movie)
+            .Include(w => w.User)
+            .Where(w => w.MovieId == movieId && w.UserId == userId)
+            .OrderByDescending(w => w.WatchedDate)
+            .ToListAsync();
+    }
+
     public async Task<Watch> CreateAsync(Watch watch)
     {
         watch.CreatedAt = DateTime.UtcNow;

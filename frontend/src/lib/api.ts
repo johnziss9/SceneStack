@@ -30,6 +30,10 @@ export const watchApi = {
     getGroupedWatches: (userId: number) =>
         api.get<GroupedWatch[]>(`/api/watches/grouped?userId=${userId}`),
 
+    // GET: api/watches/by-movie/{movieId}?userId={userId}
+    getWatchesByMovie: (movieId: number, userId: number) =>
+        api.get<Watch[]>(`/api/watches/by-movie/${movieId}?userId=${userId}`),
+
     // GET: api/watches/{id}
     getWatch: (id: number) =>
         api.get<Watch>(`/api/watches/${id}`),
