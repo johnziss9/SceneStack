@@ -20,7 +20,7 @@ public class MovieService : IMovieService
 
     public async Task<Movie?> GetByIdAsync(int id)
     {
-        return await _context.Movies.FindAsync(id);
+        return await _context.Movies.FirstOrDefaultAsync(m => m.Id == id);
     }
 
     public async Task<IEnumerable<Movie>> GetAllAsync()
@@ -74,7 +74,7 @@ public class MovieService : IMovieService
             .FirstOrDefaultAsync(m => m.TmdbId == tmdbId);
     }
 
-    public async Task<Movie> GetOrCreateFromTmdbAsync(int tmdbId)
+    public async Task<Movie?> GetOrCreateFromTmdbAsync(int tmdbId)
     {
         _logger.LogInformation("Getting or creating movie from TMDb with ID: {TmdbId}", tmdbId);
 
@@ -103,7 +103,7 @@ public class MovieService : IMovieService
         if (tmdbMovie == null)
         {
             _logger.LogError("Movie with TMDb ID {TmdbId} not found in TMDb", tmdbId);
-            throw new Exception($"Movie with TMDb ID {tmdbId} not found in TMDb");
+            return null;
         }
 
         // Map TMDb movie to local Movie model
