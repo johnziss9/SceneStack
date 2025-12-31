@@ -21,10 +21,10 @@ export interface Watch {
 export interface WatchEntry {
     id: number;
     watchedDate: string;
-    rating?: number;
-    notes?: string;
-    watchLocation?: string;
-    watchedWith?: string;
+    rating?: number | null;
+    notes?: string | null;
+    watchLocation?: string | null;
+    watchedWith?: string | null;
     isRewatch: boolean;
 }
 
@@ -33,8 +33,8 @@ export interface GroupedWatch {
     movieId: number;
     movie: Movie;
     watchCount: number;
-    averageRating?: number;
-    latestRating?: number;
+    averageRating?: number | null;
+    latestRating?: number | null;
     watches: WatchEntry[];
 }
 
