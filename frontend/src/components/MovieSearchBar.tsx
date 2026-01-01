@@ -9,9 +9,10 @@ import type { TmdbMovie } from '@/types';
 
 interface MovieSearchBarProps {
     onResultsChange: (results: TmdbMovie[]) => void;
+    onLoadingChange?: (isLoading: boolean) => void;
 }
 
-export function MovieSearchBar({ onResultsChange }: MovieSearchBarProps) {
+export function MovieSearchBar({ onResultsChange, onLoadingChange }: MovieSearchBarProps) {
     const [query, setQuery] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -21,12 +22,14 @@ export function MovieSearchBar({ onResultsChange }: MovieSearchBarProps) {
         // Don't search if query is empty
         if (!query.trim()) {
             onResultsChange([]);
+            onLoadingChange?.(false);
             return;
         }
 
         // Set loading state immediately
         setIsLoading(true);
         setError(null);
+        onLoadingChange?.(true);
 
         // Debounce: wait 500ms after user stops typing
         const timeoutId = setTimeout(async () => {
@@ -40,6 +43,7 @@ export function MovieSearchBar({ onResultsChange }: MovieSearchBarProps) {
                 onResultsChange([]);
             } finally {
                 setIsLoading(false);
+                onLoadingChange?.(false);
             }
         }, 500);
 

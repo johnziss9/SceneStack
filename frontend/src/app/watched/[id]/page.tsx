@@ -19,6 +19,8 @@ import EditWatchDialog from '@/components/EditWatchDialog';
 import { WatchForm } from '@/components/WatchForm';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Plus } from 'lucide-react';
+import { toast } from 'sonner';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface WatchDetailPageProps {
   params: Promise<{ id: string }>;
@@ -72,16 +74,20 @@ export default function WatchDetailPage({ params }: WatchDetailPageProps) {
 
       if (watchesData.length === 0) {
         // No more watches for this movie, redirect to watched list
+        toast.success('Watch deleted successfully');
         router.push('/watched');
       } else {
         setWatches(watchesData);
+        toast.success('Watch deleted successfully');
       }
 
       setIsDeleteDialogOpen(false);
       setDeletingWatch(null);
     } catch (err) {
       console.error('Error deleting watch:', err);
-      alert('Failed to delete watch. Please try again.');
+      toast.error('Failed to delete watch', {
+        description: 'Please try again later',
+      });
     } finally {
       setIsDeleting(false);
     }
@@ -136,9 +142,46 @@ export default function WatchDetailPage({ params }: WatchDetailPageProps) {
     return (
       <main className="min-h-screen p-8">
         <div className="max-w-6xl mx-auto">
-          <div className="flex items-center justify-center h-64">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+          {/* Header Skeleton */}
+          <div className="flex items-center justify-between mb-6">
+            <Skeleton className="h-10 w-40" />
+            <Skeleton className="h-10 w-48" />
           </div>
+
+          {/* Movie Info Card Skeleton */}
+          <Card className="mb-8">
+            <CardContent className="p-6">
+              <div className="flex gap-6">
+                <Skeleton className="w-48 h-72 rounded-lg flex-shrink-0" />
+                <div className="flex-1 space-y-4">
+                  <Skeleton className="h-8 w-3/4" />
+                  <Skeleton className="h-4 w-1/4" />
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-2/3" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Watch History Table Skeleton */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Watch History</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className="flex gap-4">
+                    <Skeleton className="h-6 w-32" />
+                    <Skeleton className="h-6 w-16" />
+                    <Skeleton className="h-6 w-24" />
+                    <Skeleton className="h-6 flex-1" />
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </main>
     );
@@ -369,7 +412,7 @@ export default function WatchDetailPage({ params }: WatchDetailPageProps) {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
-        
+
         {/* Log Another Watch Dialog */}
         {movie && (
           <WatchForm

@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import { GroupedWatch } from "@/types/watch";
 import { watchApi } from "@/lib";
 import { WatchCard } from "./WatchCard";
-import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export function WatchList() {
     const [groupedWatches, setGroupedWatches] = useState<GroupedWatch[]>([]);
@@ -25,6 +26,9 @@ export function WatchList() {
             setGroupedWatches(data);
         } catch (err) {
             console.error("Failed to fetch watches:", err);
+            toast.error("Failed to load watches", {
+                description: "Please try again later",
+            });
             setError("Failed to load watches. Please try again.");
         } finally {
             setIsLoading(false);
@@ -34,9 +38,14 @@ export function WatchList() {
     // Loading state
     if (isLoading) {
         return (
-            <div className="flex items-center justify-center py-12">
-                <Loader2 className="w-8 h-8 animate-spin text-primary" />
-                <span className="ml-2 text-muted-foreground">Loading watches...</span>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                {[...Array(10)].map((_, i) => (
+                    <div key={i} className="space-y-3">
+                        <Skeleton className="h-[450px] w-full rounded-lg" />
+                        <Skeleton className="h-4 w-3/4" />
+                        <Skeleton className="h-4 w-1/2" />
+                    </div>
+                ))}
             </div>
         );
     }

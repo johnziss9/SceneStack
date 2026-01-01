@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { watchApi } from '@/lib';
 import type { Watch, UpdateWatchRequest } from '@/types';
+import { toast } from 'sonner';
 import {
     Dialog,
     DialogContent,
@@ -95,10 +96,16 @@ export default function EditWatchDialog({
             setNotes('');
             setIsRewatch(false);
 
+            toast.success('Watch updated successfully!', {
+                description: `Updated ${watch.movie.title}`,
+            });
             onSuccess();
             onOpenChange(false);
         } catch (err) {
             console.error('Error updating watch:', err);
+            toast.error('Failed to update watch', {
+                description: 'Please try again later',
+            });
             setError('Failed to update watch. Please try again.');
         } finally {
             setIsSubmitting(false);

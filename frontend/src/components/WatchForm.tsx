@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Loader2 } from 'lucide-react';
 import { watchApi } from '@/lib';
 import type { TmdbMovie, CreateWatchRequest } from '@/types';
+import { toast } from 'sonner';
 
 interface WatchFormProps {
     movie: TmdbMovie | null;
@@ -58,9 +59,15 @@ export function WatchForm({ movie, open, onOpenChange, onSuccess }: WatchFormPro
             // Success! Reset form and close dialog
             resetForm();
             onOpenChange(false);
+            toast.success('Watch logged successfully!', {
+                description: `Added ${movie.title} to your watched list`,
+            });
             onSuccess();
         } catch (err) {
             console.error('Failed to create watch:', err);
+            toast.error('Failed to add watch', {
+                description: 'Please try again later',
+            });
             setError('Failed to add watch. Please try again.');
         } finally {
             setIsSubmitting(false);

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from 'react';
+import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { MovieSearchBar } from "@/components/MovieSearchBar";
 import { MovieCard } from "@/components/MovieCard";
@@ -11,6 +12,7 @@ export default function Home() {
   const [searchResults, setSearchResults] = useState<TmdbMovie[]>([]);
   const [selectedMovie, setSelectedMovie] = useState<TmdbMovie | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
 
   const handleAddToWatched = (movie: TmdbMovie) => {
     setSelectedMovie(movie);
@@ -36,12 +38,30 @@ export default function Home() {
             <CardDescription>Search TMDb to find movies to add to your watched list</CardDescription>
           </CardHeader>
           <CardContent>
-            <MovieSearchBar onResultsChange={setSearchResults} />
+            <MovieSearchBar 
+              onResultsChange={setSearchResults} 
+              onLoadingChange={setIsSearching}
+            />
           </CardContent>
         </Card>
 
         {/* Search Results Grid */}
-        {searchResults.length > 0 && (
+        {isSearching && (
+          <div>
+            <h2 className="text-2xl font-semibold mb-4">Searching...</h2>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+              {[...Array(10)].map((_, i) => (
+                <div key={i} className="space-y-3">
+                  <Skeleton className="h-[450px] w-full rounded-lg" />
+                  <Skeleton className="h-4 w-3/4" />
+                  <Skeleton className="h-4 w-1/2" />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {!isSearching && searchResults.length > 0 && (
           <div>
             <h2 className="text-2xl font-semibold mb-4">
               Search Results ({searchResults.length})
