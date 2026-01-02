@@ -69,6 +69,7 @@ export function WatchList() {
     if (groupedWatches.length === 0) {
         return (
             <div className="flex flex-col items-center justify-center py-12 space-y-4">
+                <div className="text-muted-foreground text-6xl">📽️</div>
                 <p className="text-xl text-muted-foreground">No watches yet</p>
                 <p className="text-sm text-muted-foreground">
                     Start by searching for a movie to add to your watched list

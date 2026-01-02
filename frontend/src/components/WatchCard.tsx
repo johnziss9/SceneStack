@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import { GroupedWatch } from "@/types/watch";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Eye } from "lucide-react";
@@ -9,7 +10,7 @@ interface WatchCardProps {
     groupedWatch: GroupedWatch;
 }
 
-export function WatchCard({ groupedWatch }: WatchCardProps) {
+export const WatchCard = memo(function WatchCard({ groupedWatch }: WatchCardProps) {
     const { movie, watchCount, averageRating, watches } = groupedWatch;
 
     // Format average rating
@@ -99,4 +100,4 @@ export function WatchCard({ groupedWatch }: WatchCardProps) {
             </Card>
         </Link>
     );
-}
+});

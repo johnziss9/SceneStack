@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from 'react';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Calendar, Star } from 'lucide-react';
@@ -10,7 +11,7 @@ interface MovieCardProps {
     onAddToWatched: (movie: TmdbMovie) => void;
 }
 
-export function MovieCard({ movie, onAddToWatched }: MovieCardProps) {
+export const MovieCard = memo(function MovieCard({ movie, onAddToWatched }: MovieCardProps) {
     const posterUrl = movie.poster_path
         ? `https://image.tmdb.org/t/p/w342${movie.poster_path}`
         : null;
@@ -75,4 +76,4 @@ export function MovieCard({ movie, onAddToWatched }: MovieCardProps) {
             </CardFooter>
         </Card>
     );
-}
+});

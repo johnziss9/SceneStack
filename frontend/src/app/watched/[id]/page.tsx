@@ -18,7 +18,7 @@ import {
 import EditWatchDialog from '@/components/EditWatchDialog';
 import { WatchForm } from '@/components/WatchForm';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Plus } from 'lucide-react';
+import { ArrowLeft, Plus, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -200,8 +200,11 @@ export default function WatchDetailPage({ params }: WatchDetailPageProps) {
             Back to Watched List
           </Button>
           <Card>
-            <CardContent className="pt-6">
-              <p className="text-center text-muted-foreground">{error || 'Movie not found.'}</p>
+            <CardContent className="pt-12 pb-12">
+              <div className="flex flex-col items-center justify-center space-y-4">
+                <AlertCircle className="h-12 w-12 text-muted-foreground/50" />
+                <p className="text-center text-muted-foreground">{error || 'Movie not found.'}</p>
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -213,10 +216,11 @@ export default function WatchDetailPage({ params }: WatchDetailPageProps) {
     <main className="min-h-screen p-8">
       <div className="max-w-6xl mx-auto">
         {/* Header with Back Button */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 mb-6">
           <Button
             variant="ghost"
             onClick={() => router.push('/watched')}
+            className="justify-start"
           >
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Watched List
@@ -230,9 +234,9 @@ export default function WatchDetailPage({ params }: WatchDetailPageProps) {
         {/* Movie Info Section */}
         <Card className="mb-8">
           <CardContent className="p-6">
-            <div className="flex gap-6">
+            <div className="flex flex-col md:flex-row gap-6">
               {/* Movie Poster */}
-              <div className="flex-shrink-0">
+              <div className="flex-shrink-0 mx-auto md:mx-0">
                 {movie.posterPath ? (
                   <img
                     src={`https://image.tmdb.org/t/p/w342${movie.posterPath}`}
@@ -311,7 +315,7 @@ export default function WatchDetailPage({ params }: WatchDetailPageProps) {
                 </thead>
                 <tbody>
                   {watches.map((watch) => (
-                    <tr key={watch.id} className="border-b last:border-0 hover:bg-muted/50">
+                    <tr key={watch.id} className="border-b last:border-0 even:bg-muted/60 hover:bg-primary/20">
                       <td className="py-4 px-4 text-sm">
                         {new Date(watch.watchedDate).toLocaleDateString('en-GB', {
                           day: 'numeric',

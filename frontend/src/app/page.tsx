@@ -78,6 +78,17 @@ export default function Home() {
           </div>
         )}
 
+        {/* Empty State - No Results */}
+        {!isSearching && searchResults.length === 0 && (
+          <div className="flex flex-col items-center justify-center py-12 space-y-4">
+            <div className="text-muted-foreground text-6xl">🎬</div>
+            <p className="text-xl text-muted-foreground">No movies found</p>
+            <p className="text-sm text-muted-foreground">
+              Try adjusting your search terms
+            </p>
+          </div>
+        )}
+
         {/* Watch Form Dialog */}
         <WatchForm
           movie={selectedMovie}

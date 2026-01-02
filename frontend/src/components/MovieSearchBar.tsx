@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, memo } from 'react';
 import { Search, X, Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -12,7 +12,7 @@ interface MovieSearchBarProps {
     onLoadingChange?: (isLoading: boolean) => void;
 }
 
-export function MovieSearchBar({ onResultsChange, onLoadingChange }: MovieSearchBarProps) {
+export const MovieSearchBar = memo(function MovieSearchBar({ onResultsChange, onLoadingChange }: MovieSearchBarProps) {
     const [query, setQuery] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -93,4 +93,4 @@ export function MovieSearchBar({ onResultsChange, onLoadingChange }: MovieSearch
             )}
         </div>
     );
-}
+});
