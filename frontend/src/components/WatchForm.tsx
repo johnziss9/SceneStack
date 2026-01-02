@@ -23,6 +23,11 @@ export function WatchForm({ movie, open, onOpenChange, onSuccess }: WatchFormPro
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
+    // Validation errors
+    const [dateError, setDateError] = useState<string | null>(null);
+    const [ratingError, setRatingError] = useState<string | null>(null);
+    const [locationError, setLocationError] = useState<string | null>(null);
+
     // Form state
     const [watchedDate, setWatchedDate] = useState(
         new Date().toISOString().split('T')[0] // Today's date in YYYY-MM-DD format
@@ -34,10 +39,53 @@ export function WatchForm({ movie, open, onOpenChange, onSuccess }: WatchFormPro
     const [watchedWith, setWatchedWith] = useState('');
     const [isRewatch, setIsRewatch] = useState(false);
 
+    // Validation function
+    const validateForm = (): boolean => {
+        let isValid = true;
+
+        // Reset errors
+        setDateError(null);
+        setRatingError(null);
+        setLocationError(null);
+
+        // Validate watch date (required)
+        if (!watchedDate) {
+            setDateError('Watch date is required');
+            isValid = false;
+        }
+
+        // Validate rating (1-10 if provided)
+        if (rating && (parseInt(rating) < 1 || parseInt(rating) > 10)) {
+            setRatingError('Rating must be between 1 and 10');
+            isValid = false;
+        }
+
+        // Validate custom location (required when "Other" is selected)
+        if (watchLocation === "Other" && !customLocation.trim()) {
+            setLocationError('Please specify the location');
+            isValid = false;
+        }
+
+        return isValid;
+    };
+
+    // Check if form is valid (for disabling submit button)
+    const isFormValid = (): boolean => {
+        if (!watchedDate) return false;
+        if (rating && (parseInt(rating) < 1 || parseInt(rating) > 10)) return false;
+        if (watchLocation === "Other" && !customLocation.trim()) return false;
+        return true;
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
         if (!movie) return;
+
+        // Validate form before submitting
+        if (!validateForm()) {
+            return;
+        }
 
         setIsSubmitting(true);
         setError(null);
@@ -83,6 +131,9 @@ export function WatchForm({ movie, open, onOpenChange, onSuccess }: WatchFormPro
         setWatchedWith('');
         setIsRewatch(false);
         setError(null);
+        setDateError(null);
+        setRatingError(null);
+        setLocationError(null);
     };
 
     const handleOpenChange = (newOpen: boolean) => {
@@ -108,7 +159,7 @@ export function WatchForm({ movie, open, onOpenChange, onSuccess }: WatchFormPro
                     </DialogDescription>
                 </DialogHeader>
 
-                <form onSubmit={handleSubmit} className="space-y-4">
+                <form onSubmit={handleSubmit} className="space-y-4" noValidate>
                     {/* Watch Date */}
                     <div className="space-y-2">
                         <Label htmlFor="watchedDate">Watch Date *</Label>
@@ -116,9 +167,20 @@ export function WatchForm({ movie, open, onOpenChange, onSuccess }: WatchFormPro
                             id="watchedDate"
                             type="date"
                             value={watchedDate}
-                            onChange={(e) => setWatchedDate(e.target.value)}
-                            required
+                            onChange={(e) => {
+                                setWatchedDate(e.target.value);
+                                setDateError(null); // Clear error on change
+                            }}
+                            onBlur={() => {
+                                if (!watchedDate) {
+                                    setDateError('Watch date is required');
+                                }
+                            }}
+                            className={dateError ? 'border-destructive' : ''}
                         />
+                        {dateError && (
+                            <p className="text-sm text-destructive">{dateError}</p>
+                        )}
                     </div>
 
                     {/* Rating */}
@@ -127,12 +189,22 @@ export function WatchForm({ movie, open, onOpenChange, onSuccess }: WatchFormPro
                         <Input
                             id="rating"
                             type="number"
-                            min="1"
-                            max="10"
                             value={rating}
-                            onChange={(e) => setRating(e.target.value)}
+                            onChange={(e) => {
+                                setRating(e.target.value);
+                                setRatingError(null); // Clear error on change
+                            }}
+                            onBlur={() => {
+                                if (rating && (parseInt(rating) < 1 || parseInt(rating) > 10)) {
+                                    setRatingError('Rating must be between 1 and 10');
+                                }
+                            }}
                             placeholder="Optional"
+                            className={ratingError ? 'border-destructive' : ''}
                         />
+                        {ratingError && (
+                            <p className="text-sm text-destructive">{ratingError}</p>
+                        )}
                     </div>
 
                     {/* Location */}
@@ -151,12 +223,26 @@ export function WatchForm({ movie, open, onOpenChange, onSuccess }: WatchFormPro
 
                         {/* Show text input when "Other" is selected */}
                         {watchLocation === "Other" && (
-                            <Input
-                                type="text"
-                                placeholder="Enter location (e.g., Friend's house, Drive-in)..."
-                                value={customLocation}
-                                onChange={(e) => setCustomLocation(e.target.value)}
-                            />
+                            <>
+                                <Input
+                                    type="text"
+                                    placeholder="Enter location (e.g., Friend's house, Drive-in)..."
+                                    value={customLocation}
+                                    onChange={(e) => {
+                                        setCustomLocation(e.target.value);
+                                        setLocationError(null); // Clear error on change
+                                    }}
+                                    onBlur={() => {
+                                        if (watchLocation === "Other" && !customLocation.trim()) {
+                                            setLocationError('Please specify the location');
+                                        }
+                                    }}
+                                    className={locationError ? 'border-destructive' : ''}
+                                />
+                                {locationError && (
+                                    <p className="text-sm text-destructive">{locationError}</p>
+                                )}
+                            </>
                         )}
                     </div>
 
@@ -213,7 +299,7 @@ export function WatchForm({ movie, open, onOpenChange, onSuccess }: WatchFormPro
                         >
                             Cancel
                         </Button>
-                        <Button type="submit" disabled={isSubmitting}>
+                        <Button type="submit" disabled={isSubmitting || !isFormValid()}>
                             {isSubmitting ? (
                                 <>
                                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />

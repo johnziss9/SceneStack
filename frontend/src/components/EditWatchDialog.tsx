@@ -45,9 +45,14 @@ export default function EditWatchDialog({
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    // Populate form when watch changes
+    // Validation errors
+    const [dateError, setDateError] = useState<string | null>(null);
+    const [ratingError, setRatingError] = useState<string | null>(null);
+    const [locationError, setLocationError] = useState<string | null>(null);
+
+    // Populate form when watch changes OR when dialog opens
     useEffect(() => {
-        if (watch) {
+        if (watch && open) {
             setWatchedDate(watch.watchedDate.split('T')[0]); // Extract YYYY-MM-DD
             setRating(watch.rating?.toString() || '');
 
@@ -63,12 +68,60 @@ export default function EditWatchDialog({
             setWatchedWith(watch.watchedWith || '');
             setNotes(watch.notes || '');
             setIsRewatch(watch.isRewatch);
+
+            // Clear validation errors when dialog opens
+            setDateError(null);
+            setRatingError(null);
+            setLocationError(null);
         }
-    }, [watch]);
+    }, [watch, open]);
+
+    // Validation function
+    const validateForm = (): boolean => {
+        let isValid = true;
+
+        // Reset errors
+        setDateError(null);
+        setRatingError(null);
+        setLocationError(null);
+
+        // Validate watch date (required)
+        if (!watchedDate) {
+            setDateError('Watch date is required');
+            isValid = false;
+        }
+
+        // Validate rating (1-10 if provided)
+        if (rating && (parseInt(rating) < 1 || parseInt(rating) > 10)) {
+            setRatingError('Rating must be between 1 and 10');
+            isValid = false;
+        }
+
+        // Validate custom location (required when "Other" is selected)
+        if (location === 'Other' && !customLocation.trim()) {
+            setLocationError('Please specify the location');
+            isValid = false;
+        }
+
+        return isValid;
+    };
+
+    // Check if form is valid (for disabling submit button)
+    const isFormValid = (): boolean => {
+        if (!watchedDate) return false;
+        if (rating && (parseInt(rating) < 1 || parseInt(rating) > 10)) return false;
+        if (location === 'Other' && !customLocation.trim()) return false;
+        return true;
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!watch) return;
+
+        // Validate form before submitting
+        if (!validateForm()) {
+            return;
+        }
 
         setIsSubmitting(true);
         setError(null);
@@ -95,6 +148,9 @@ export default function EditWatchDialog({
             setWatchedWith('');
             setNotes('');
             setIsRewatch(false);
+            setDateError(null);
+            setRatingError(null);
+            setLocationError(null);
 
             toast.success('Watch updated successfully!', {
                 description: `Updated ${watch.movie.title}`,
@@ -120,35 +176,56 @@ export default function EditWatchDialog({
                 <DialogHeader>
                     <DialogTitle>Edit Watch: {watch.movie.title}</DialogTitle>
                 </DialogHeader>
-                <form onSubmit={handleSubmit} className="space-y-4">
+                <form onSubmit={handleSubmit} className="space-y-4" noValidate>
                     {/* Watch Date */}
-                    <div>
+                    <div className="space-y-2">
                         <Label htmlFor="watchedDate">Date Watched *</Label>
                         <Input
                             id="watchedDate"
                             type="date"
                             value={watchedDate}
-                            onChange={(e) => setWatchedDate(e.target.value)}
-                            required
+                            onChange={(e) => {
+                                setWatchedDate(e.target.value);
+                                setDateError(null);
+                            }}
+                            onBlur={() => {
+                                if (!watchedDate) {
+                                    setDateError('Watch date is required');
+                                }
+                            }}
+                            className={dateError ? 'border-destructive' : ''}
                         />
+                        {dateError && (
+                            <p className="text-sm text-destructive">{dateError}</p>
+                        )}
                     </div>
 
                     {/* Rating */}
-                    <div>
+                    <div className="space-y-2">
                         <Label htmlFor="rating">Rating (1-10)</Label>
                         <Input
                             id="rating"
                             type="number"
-                            min="1"
-                            max="10"
                             value={rating}
-                            onChange={(e) => setRating(e.target.value)}
+                            onChange={(e) => {
+                                setRating(e.target.value);
+                                setRatingError(null);
+                            }}
+                            onBlur={() => {
+                                if (rating && (parseInt(rating) < 1 || parseInt(rating) > 10)) {
+                                    setRatingError('Rating must be between 1 and 10');
+                                }
+                            }}
                             placeholder="Optional"
+                            className={ratingError ? 'border-destructive' : ''}
                         />
+                        {ratingError && (
+                            <p className="text-sm text-destructive">{ratingError}</p>
+                        )}
                     </div>
 
                     {/* Location */}
-                    <div>
+                    <div className="space-y-2">
                         <Label htmlFor="location">Location</Label>
                         <Select value={location} onValueChange={setLocation}>
                             <SelectTrigger>
@@ -160,21 +237,32 @@ export default function EditWatchDialog({
                                 <SelectItem value="Other">Other</SelectItem>
                             </SelectContent>
                         </Select>
-                    </div>
 
-                    {/* Custom Location (if Other selected) */}
-                    {location === 'Other' && (
-                        <div>
-                            <Label htmlFor="customLocation">Custom Location</Label>
-                            <Input
-                                id="customLocation"
-                                type="text"
-                                value={customLocation}
-                                onChange={(e) => setCustomLocation(e.target.value)}
-                                placeholder="Enter location"
-                            />
-                        </div>
-                    )}
+                        {/* Custom Location (if Other selected) */}
+                        {location === 'Other' && (
+                            <>
+                                <Input
+                                    id="customLocation"
+                                    type="text"
+                                    value={customLocation}
+                                    onChange={(e) => {
+                                        setCustomLocation(e.target.value);
+                                        setLocationError(null);
+                                    }}
+                                    onBlur={() => {
+                                        if (location === 'Other' && !customLocation.trim()) {
+                                            setLocationError('Please specify the location');
+                                        }
+                                    }}
+                                    placeholder="Enter location"
+                                    className={locationError ? 'border-destructive' : ''}
+                                />
+                                {locationError && (
+                                    <p className="text-sm text-destructive">{locationError}</p>
+                                )}
+                            </>
+                        )}
+                    </div>
 
                     {/* Watched With */}
                     <div>
@@ -229,7 +317,7 @@ export default function EditWatchDialog({
                         >
                             Cancel
                         </Button>
-                        <Button type="submit" disabled={isSubmitting}>
+                        <Button type="submit" disabled={isSubmitting || !isFormValid()}>
                             {isSubmitting ? 'Saving...' : 'Save Changes'}
                         </Button>
                     </div>
