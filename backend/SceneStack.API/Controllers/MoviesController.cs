@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SceneStack.API.DTOs;
 using SceneStack.API.Interfaces;
@@ -8,6 +9,7 @@ namespace SceneStack.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
 public class MoviesController : ControllerBase
 {
     private readonly IMovieService _movieService;

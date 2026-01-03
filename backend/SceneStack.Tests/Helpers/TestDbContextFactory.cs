@@ -28,8 +28,9 @@ public static class TestDbContextFactory
             Id = 1,
             Username = "testuser",
             Email = "test@example.com",
-            PasswordHash = "hashedpassword",
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow,
+            IsDeleted = false
         };
         context.Users.Add(testUser);
 

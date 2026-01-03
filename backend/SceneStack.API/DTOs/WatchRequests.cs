@@ -3,7 +3,6 @@ namespace SceneStack.API.DTOs;
 public class CreateWatchRequest
 {
     public int TmdbId { get; set; }
-    public int UserId { get; set; }
     public DateTime WatchedDate { get; set; }
     public int? Rating { get; set; }
     public string? Notes { get; set; }

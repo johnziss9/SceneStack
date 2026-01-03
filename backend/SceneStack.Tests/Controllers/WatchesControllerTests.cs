@@ -1,4 +1,6 @@
+using System.Security.Claims;
 using FluentAssertions;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
@@ -11,49 +13,40 @@ namespace SceneStack.Tests.Controllers;
 
 public class WatchesControllerTests
 {
-    [Fact]
-    public async Task GetWatches_NoFilter_ReturnsOkWithAllWatches()
+    private WatchesController CreateControllerWithAuthenticatedUser(
+        IWatchService watchService,
+        IMovieService movieService,
+        ILogger<WatchesController> logger,
+        int userId = 1)
     {
-        // Arrange
-        var watchService = Substitute.For<IWatchService>();
-        var movieService = Substitute.For<IMovieService>();
-        var logger = Substitute.For<ILogger<WatchesController>>();
         var controller = new WatchesController(watchService, movieService, logger);
 
-        var watches = new List<Watch>
+        // Mock the authenticated user
+        var claims = new List<Claim>
         {
-            new Watch
-            {
-                Id = 1,
-                UserId = 1,
-                MovieId = 1,
-                WatchedDate = DateTime.UtcNow,
-                Rating = 9,
-                IsRewatch = false,
-                Movie = new Movie { Id = 1, TmdbId = 550, Title = "Fight Club", Year = 1999 },
-                User = new User { Id = 1, Username = "testuser", Email = "test@test.com" }
-            }
+            new Claim(ClaimTypes.NameIdentifier, userId.ToString()),
+            new Claim(ClaimTypes.Name, "testuser"),
+            new Claim(ClaimTypes.Email, "test@example.com")
+        };
+        var identity = new ClaimsIdentity(claims, "TestAuth");
+        var claimsPrincipal = new ClaimsPrincipal(identity);
+
+        controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext { User = claimsPrincipal }
         };
 
-        watchService.GetAllAsync(null).Returns(watches);
-
-        // Act
-        var result = await controller.GetWatches();
-
-        // Assert
-        var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject;
-        var returnedWatches = okResult.Value.Should().BeAssignableTo<IEnumerable<WatchResponse>>().Subject;
-        returnedWatches.Should().HaveCount(1);
+        return controller;
     }
 
     [Fact]
-    public async Task GetWatches_WithUserIdFilter_ReturnsOkWithFilteredWatches()
+    public async Task GetWatches_ReturnsOkWithAllWatches()
     {
         // Arrange
         var watchService = Substitute.For<IWatchService>();
         var movieService = Substitute.For<IMovieService>();
         var logger = Substitute.For<ILogger<WatchesController>>();
-        var controller = new WatchesController(watchService, movieService, logger);
+        var controller = CreateControllerWithAuthenticatedUser(watchService, movieService, logger);
 
         var watches = new List<Watch>
         {
@@ -73,7 +66,7 @@ public class WatchesControllerTests
         watchService.GetAllAsync(1).Returns(watches);
 
         // Act
-        var result = await controller.GetWatches(userId: 1);
+        var result = await controller.GetWatches();
 
         // Assert
         var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject;
@@ -88,7 +81,7 @@ public class WatchesControllerTests
         var watchService = Substitute.For<IWatchService>();
         var movieService = Substitute.For<IMovieService>();
         var logger = Substitute.For<ILogger<WatchesController>>();
-        var controller = new WatchesController(watchService, movieService, logger);
+        var controller = CreateControllerWithAuthenticatedUser(watchService, movieService, logger);
 
         var watch = new Watch
         {
@@ -122,7 +115,7 @@ public class WatchesControllerTests
         var watchService = Substitute.For<IWatchService>();
         var movieService = Substitute.For<IMovieService>();
         var logger = Substitute.For<ILogger<WatchesController>>();
-        var controller = new WatchesController(watchService, movieService, logger);
+        var controller = CreateControllerWithAuthenticatedUser(watchService, movieService, logger);
 
         watchService.GetByIdAsync(999).Returns((Watch?)null);
 
@@ -140,7 +133,7 @@ public class WatchesControllerTests
         var watchService = Substitute.For<IWatchService>();
         var movieService = Substitute.For<IMovieService>();
         var logger = Substitute.For<ILogger<WatchesController>>();
-        var controller = new WatchesController(watchService, movieService, logger);
+        var controller = CreateControllerWithAuthenticatedUser(watchService, movieService, logger);
 
         var groupedWatches = new List<GroupedWatchesResponse>
         {
@@ -158,7 +151,7 @@ public class WatchesControllerTests
         watchService.GetGroupedWatchesAsync(1).Returns(groupedWatches);
 
         // Act
-        var result = await controller.GetGroupedWatches(userId: 1);
+        var result = await controller.GetGroupedWatches();
 
         // Assert
         var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject;
@@ -174,7 +167,7 @@ public class WatchesControllerTests
         var watchService = Substitute.For<IWatchService>();
         var movieService = Substitute.For<IMovieService>();
         var logger = Substitute.For<ILogger<WatchesController>>();
-        var controller = new WatchesController(watchService, movieService, logger);
+        var controller = CreateControllerWithAuthenticatedUser(watchService, movieService, logger);
 
         var watches = new List<Watch>
         {
@@ -194,7 +187,7 @@ public class WatchesControllerTests
         watchService.GetByMovieIdAsync(1, 1).Returns(watches);
 
         // Act
-        var result = await controller.GetWatchesByMovie(movieId: 1, userId: 1);
+        var result = await controller.GetWatchesByMovie(movieId: 1);
 
         // Assert
         var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject;
@@ -209,12 +202,12 @@ public class WatchesControllerTests
         var watchService = Substitute.For<IWatchService>();
         var movieService = Substitute.For<IMovieService>();
         var logger = Substitute.For<ILogger<WatchesController>>();
-        var controller = new WatchesController(watchService, movieService, logger);
+        var controller = CreateControllerWithAuthenticatedUser(watchService, movieService, logger);
 
         watchService.GetByMovieIdAsync(999, 1).Returns(new List<Watch>());
 
         // Act
-        var result = await controller.GetWatchesByMovie(movieId: 999, userId: 1);
+        var result = await controller.GetWatchesByMovie(movieId: 999);
 
         // Assert
         var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject;
@@ -229,7 +222,7 @@ public class WatchesControllerTests
         var watchService = Substitute.For<IWatchService>();
         var movieService = Substitute.For<IMovieService>();
         var logger = Substitute.For<ILogger<WatchesController>>();
-        var controller = new WatchesController(watchService, movieService, logger);
+        var controller = CreateControllerWithAuthenticatedUser(watchService, movieService, logger);
 
         var movie = new Movie { Id = 1, TmdbId = 550, Title = "Fight Club", Year = 1999 };
         movieService.GetOrCreateFromTmdbAsync(550).Returns(movie);
@@ -252,7 +245,6 @@ public class WatchesControllerTests
         var request = new CreateWatchRequest
         {
             TmdbId = 550,
-            UserId = 1,
             WatchedDate = DateTime.UtcNow,
             Rating = 9,
             Notes = "Amazing!",
@@ -276,14 +268,13 @@ public class WatchesControllerTests
         var watchService = Substitute.For<IWatchService>();
         var movieService = Substitute.For<IMovieService>();
         var logger = Substitute.For<ILogger<WatchesController>>();
-        var controller = new WatchesController(watchService, movieService, logger);
+        var controller = CreateControllerWithAuthenticatedUser(watchService, movieService, logger);
 
         movieService.GetOrCreateFromTmdbAsync(999).Returns((Movie?)null);
 
         var request = new CreateWatchRequest
         {
             TmdbId = 999,
-            UserId = 1,
             WatchedDate = DateTime.UtcNow,
             Rating = 9,
             IsRewatch = false
@@ -304,7 +295,7 @@ public class WatchesControllerTests
         var watchService = Substitute.For<IWatchService>();
         var movieService = Substitute.For<IMovieService>();
         var logger = Substitute.For<ILogger<WatchesController>>();
-        var controller = new WatchesController(watchService, movieService, logger);
+        var controller = CreateControllerWithAuthenticatedUser(watchService, movieService, logger);
 
         var updatedWatch = new Watch
         {
@@ -346,7 +337,7 @@ public class WatchesControllerTests
         var watchService = Substitute.For<IWatchService>();
         var movieService = Substitute.For<IMovieService>();
         var logger = Substitute.For<ILogger<WatchesController>>();
-        var controller = new WatchesController(watchService, movieService, logger);
+        var controller = CreateControllerWithAuthenticatedUser(watchService, movieService, logger);
 
         watchService.UpdateAsync(999, Arg.Any<Watch>()).Returns((Watch?)null);
 
@@ -371,7 +362,7 @@ public class WatchesControllerTests
         var watchService = Substitute.For<IWatchService>();
         var movieService = Substitute.For<IMovieService>();
         var logger = Substitute.For<ILogger<WatchesController>>();
-        var controller = new WatchesController(watchService, movieService, logger);
+        var controller = CreateControllerWithAuthenticatedUser(watchService, movieService, logger);
 
         watchService.DeleteAsync(1).Returns(true);
 
@@ -389,7 +380,7 @@ public class WatchesControllerTests
         var watchService = Substitute.For<IWatchService>();
         var movieService = Substitute.For<IMovieService>();
         var logger = Substitute.For<ILogger<WatchesController>>();
-        var controller = new WatchesController(watchService, movieService, logger);
+        var controller = CreateControllerWithAuthenticatedUser(watchService, movieService, logger);
 
         watchService.DeleteAsync(999).Returns(false);
 

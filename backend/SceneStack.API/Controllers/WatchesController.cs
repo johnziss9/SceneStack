@@ -1,5 +1,7 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SceneStack.API.DTOs;
+using SceneStack.API.Extensions;
 using SceneStack.API.Interfaces;
 using SceneStack.API.Mappers;
 using SceneStack.API.Models;
@@ -8,6 +10,7 @@ namespace SceneStack.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
 public class WatchesController : ControllerBase
 {
     private readonly IWatchService _watchService;
@@ -23,8 +26,9 @@ public class WatchesController : ControllerBase
 
     // GET: api/watches
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<WatchResponse>>> GetWatches([FromQuery] int? userId = null)
+    public async Task<ActionResult<IEnumerable<WatchResponse>>> GetWatches()
     {
+        var userId = User.GetUserId();
         var watches = await _watchService.GetAllAsync(userId);
         var response = watches.Select(WatchMapper.ToResponse);
         return Ok(response);
@@ -42,10 +46,11 @@ public class WatchesController : ControllerBase
         return Ok(WatchMapper.ToResponse(watch));
     }
 
-    // GET: api/watches/grouped?userId={userId}
+    // GET: api/watches/grouped
     [HttpGet("grouped")]
-    public async Task<ActionResult<List<GroupedWatchesResponse>>> GetGroupedWatches([FromQuery] int userId)
+    public async Task<ActionResult<List<GroupedWatchesResponse>>> GetGroupedWatches()
     {
+        var userId = User.GetUserId();
         _logger.LogInformation("Getting grouped watches for user {UserId}", userId);
         
         var grouped = await _watchService.GetGroupedWatchesAsync(userId);
@@ -53,10 +58,11 @@ public class WatchesController : ControllerBase
         return Ok(grouped);
     }
 
-    // GET: api/watches/by-movie/550?userId=1
+    // GET: api/watches/by-movie/550
     [HttpGet("by-movie/{movieId}")]
-    public async Task<ActionResult<List<WatchResponse>>> GetWatchesByMovie(int movieId, [FromQuery] int userId)
+    public async Task<ActionResult<List<WatchResponse>>> GetWatchesByMovie(int movieId)
     {
+        var userId = User.GetUserId();
         _logger.LogInformation("Getting watches for movieId: {MovieId}, userId: {UserId}", movieId, userId);
         
         var watches = await _watchService.GetByMovieIdAsync(movieId, userId);
@@ -81,11 +87,18 @@ public class WatchesController : ControllerBase
         {
             // Get or create the movie from TMDb
             var movie = await _movieService.GetOrCreateFromTmdbAsync(request.TmdbId);
+            
+            if (movie == null)
+            {
+                _logger.LogError("Failed to get or create movie from TMDb ID: {TmdbId}", request.TmdbId);
+                return StatusCode(500, "Failed to retrieve movie from TMDb");
+            }
 
-            // Create the watch record
+            var userId = User.GetUserId();
+            
             var watch = new Watch
             {
-                UserId = request.UserId,
+                UserId = userId,
                 MovieId = movie.Id,
                 WatchedDate = DateTime.SpecifyKind(request.WatchedDate, DateTimeKind.Utc),
                 Rating = request.Rating,

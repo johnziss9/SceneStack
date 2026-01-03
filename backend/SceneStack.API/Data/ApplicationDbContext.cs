@@ -1,9 +1,10 @@
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using SceneStack.API.Models;
 
 namespace SceneStack.API.Data;
 
-public class ApplicationDbContext : DbContext
+public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
 {
     public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
         : base(options)
@@ -19,6 +20,15 @@ public class ApplicationDbContext : DbContext
     {
         base.OnModelCreating(modelBuilder);
 
+        // Configure ApplicationUser -> User relationship
+        modelBuilder.Entity<ApplicationUser>(entity =>
+        {
+            entity.HasOne(au => au.DomainUser)
+                .WithMany()
+                .HasForeignKey(au => au.DomainUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
         // Configure User
         modelBuilder.Entity<User>(entity =>
         {
@@ -27,6 +37,9 @@ public class ApplicationDbContext : DbContext
             entity.HasIndex(e => e.Email).IsUnique();
             entity.Property(e => e.Username).IsRequired().HasMaxLength(50);
             entity.Property(e => e.Email).IsRequired().HasMaxLength(255);
+            
+            // Global query filter to exclude soft-deleted users
+            entity.HasQueryFilter(u => !u.IsDeleted);
         });
 
         // Configure Movie

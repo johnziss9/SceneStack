@@ -18,10 +18,22 @@ public class WatchServiceTests
         var logger = Substitute.For<ILogger<WatchService>>();
         var service = new WatchService(context, logger);
 
+        // Create a test user first
+        var user = new User
+        {
+            Username = "testuser",
+            Email = "test@example.com",
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow,
+            IsDeleted = false
+        };
+        context.Users.Add(user);
+        await context.SaveChangesAsync();
+
         // Add a test watch
         var watch = new Watch
         {
-            UserId = 1,
+            UserId = user.Id,
             MovieId = 1,
             WatchedDate = DateTime.UtcNow,
             Rating = 9,
@@ -66,10 +78,22 @@ public class WatchServiceTests
         var logger = Substitute.For<ILogger<WatchService>>();
         var service = new WatchService(context, logger);
 
+        // Create a test user first
+        var user = new User
+        {
+            Username = "testuser",
+            Email = "test@example.com",
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow,
+            IsDeleted = false
+        };
+        context.Users.Add(user);
+        await context.SaveChangesAsync();
+
         // Add and soft delete a watch
         var watch = new Watch
         {
-            UserId = 1,
+            UserId = user.Id,
             MovieId = 1,
             WatchedDate = DateTime.UtcNow,
             Rating = 8,
@@ -96,11 +120,23 @@ public class WatchServiceTests
         var logger = Substitute.For<ILogger<WatchService>>();
         var service = new WatchService(context, logger);
 
+        // Create a test user first
+        var user = new User
+        {
+            Username = "testuser",
+            Email = "test@example.com",
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow,
+            IsDeleted = false
+        };
+        context.Users.Add(user);
+        await context.SaveChangesAsync();
+
         // Add multiple watches
         var watches = new[]
         {
-            new Watch { UserId = 1, MovieId = 1, WatchedDate = DateTime.UtcNow, IsRewatch = false, CreatedAt = DateTime.UtcNow },
-            new Watch { UserId = 1, MovieId = 1, WatchedDate = DateTime.UtcNow.AddDays(-1), IsRewatch = true, CreatedAt = DateTime.UtcNow }
+            new Watch { UserId = user.Id, MovieId = 1, WatchedDate = DateTime.UtcNow, IsRewatch = false, CreatedAt = DateTime.UtcNow },
+            new Watch { UserId = user.Id, MovieId = 1, WatchedDate = DateTime.UtcNow.AddDays(-1), IsRewatch = true, CreatedAt = DateTime.UtcNow }
         };
         context.Watches.AddRange(watches);
         await context.SaveChangesAsync();
@@ -120,32 +156,41 @@ public class WatchServiceTests
         var logger = Substitute.For<ILogger<WatchService>>();
         var service = new WatchService(context, logger);
 
-        // Add another user
+        // Create two users
+        var user1 = new User
+        {
+            Username = "user1",
+            Email = "user1@test.com",
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow,
+            IsDeleted = false
+        };
         var user2 = new User
         {
-            Id = 2,
             Username = "user2",
             Email = "user2@test.com",
-            PasswordHash = "hash",
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow,
+            IsDeleted = false
         };
-        context.Users.Add(user2);
+        context.Users.AddRange(user1, user2);
+        await context.SaveChangesAsync();
 
         // Add watches for different users
         var watches = new[]
         {
-            new Watch { UserId = 1, MovieId = 1, WatchedDate = DateTime.UtcNow, IsRewatch = false, CreatedAt = DateTime.UtcNow },
-            new Watch { UserId = 2, MovieId = 1, WatchedDate = DateTime.UtcNow, IsRewatch = false, CreatedAt = DateTime.UtcNow }
+            new Watch { UserId = user1.Id, MovieId = 1, WatchedDate = DateTime.UtcNow, IsRewatch = false, CreatedAt = DateTime.UtcNow },
+            new Watch { UserId = user2.Id, MovieId = 1, WatchedDate = DateTime.UtcNow, IsRewatch = false, CreatedAt = DateTime.UtcNow }
         };
         context.Watches.AddRange(watches);
         await context.SaveChangesAsync();
 
         // Act
-        var result = await service.GetAllAsync(userId: 1);
+        var result = await service.GetAllAsync(userId: user1.Id);
 
         // Assert
         result.Should().HaveCount(1);
-        result.First().UserId.Should().Be(1);
+        result.First().UserId.Should().Be(user1.Id);
     }
 
     [Fact]
@@ -156,9 +201,21 @@ public class WatchServiceTests
         var logger = Substitute.For<ILogger<WatchService>>();
         var service = new WatchService(context, logger);
 
+        // Create a test user first
+        var user = new User
+        {
+            Username = "testuser",
+            Email = "test@example.com",
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow,
+            IsDeleted = false
+        };
+        context.Users.Add(user);
+        await context.SaveChangesAsync();
+
         var newWatch = new Watch
         {
-            UserId = 1,
+            UserId = user.Id,
             MovieId = 1,
             WatchedDate = DateTime.UtcNow,
             Rating = 10,
@@ -193,10 +250,22 @@ public class WatchServiceTests
         var logger = Substitute.For<ILogger<WatchService>>();
         var service = new WatchService(context, logger);
 
+        // Create a test user first
+        var user = new User
+        {
+            Username = "testuser",
+            Email = "test@example.com",
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow,
+            IsDeleted = false
+        };
+        context.Users.Add(user);
+        await context.SaveChangesAsync();
+
         // Create a watch
         var watch = new Watch
         {
-            UserId = 1,
+            UserId = user.Id,
             MovieId = 1,
             WatchedDate = DateTime.UtcNow,
             Rating = 7,
@@ -262,10 +331,22 @@ public class WatchServiceTests
         var logger = Substitute.For<ILogger<WatchService>>();
         var service = new WatchService(context, logger);
 
+        // Create a test user first
+        var user = new User
+        {
+            Username = "testuser",
+            Email = "test@example.com",
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow,
+            IsDeleted = false
+        };
+        context.Users.Add(user);
+        await context.SaveChangesAsync();
+
         // Create a watch
         var watch = new Watch
         {
-            UserId = 1,
+            UserId = user.Id,
             MovieId = 1,
             WatchedDate = DateTime.UtcNow,
             IsRewatch = false,
@@ -312,22 +393,34 @@ public class WatchServiceTests
         var logger = Substitute.For<ILogger<WatchService>>();
         var service = new WatchService(context, logger);
 
+        // Create a test user first
+        var user = new User
+        {
+            Username = "testuser",
+            Email = "test@example.com",
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow,
+            IsDeleted = false
+        };
+        context.Users.Add(user);
+        await context.SaveChangesAsync();
+
         // Add multiple watches for same movie
         var watches = new[]
         {
-            new Watch { UserId = 1, MovieId = 1, WatchedDate = DateTime.UtcNow, Rating = 8, IsRewatch = false, CreatedAt = DateTime.UtcNow },
-            new Watch { UserId = 1, MovieId = 1, WatchedDate = DateTime.UtcNow.AddDays(-10), Rating = 9, IsRewatch = true, CreatedAt = DateTime.UtcNow }
+            new Watch { UserId = user.Id, MovieId = 1, WatchedDate = DateTime.UtcNow, Rating = 8, IsRewatch = false, CreatedAt = DateTime.UtcNow },
+            new Watch { UserId = user.Id, MovieId = 1, WatchedDate = DateTime.UtcNow.AddDays(-10), Rating = 9, IsRewatch = true, CreatedAt = DateTime.UtcNow }
         };
         context.Watches.AddRange(watches);
         await context.SaveChangesAsync();
 
         // Act
-        var result = await service.GetByMovieIdAsync(movieId: 1, userId: 1);
+        var result = await service.GetByMovieIdAsync(movieId: 1, userId: user.Id);
 
         // Assert
         result.Should().HaveCount(2);
         result.Should().AllSatisfy(w => w.MovieId.Should().Be(1));
-        result.Should().AllSatisfy(w => w.UserId.Should().Be(1));
+        result.Should().AllSatisfy(w => w.UserId.Should().Be(user.Id));
         // Should be ordered by most recent first
         result.First().Rating.Should().Be(8);
         result.Last().Rating.Should().Be(9);
@@ -340,7 +433,19 @@ public class WatchServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var logger = Substitute.For<ILogger<WatchService>>();
         var service = new WatchService(context, logger);
-        
+
+        // Create a test user first
+        var user = new User
+        {
+            Username = "testuser",
+            Email = "test@example.com",
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow,
+            IsDeleted = false
+        };
+        context.Users.Add(user);
+        await context.SaveChangesAsync();
+
         // Add another movie
         var movie2 = new Movie
         {
@@ -351,25 +456,25 @@ public class WatchServiceTests
             CreatedAt = DateTime.UtcNow
         };
         context.Movies.Add(movie2);
-        
+
         // Add multiple watches for different movies
         var watches = new[]
         {
             // Fight Club - watched twice
-            new Watch { UserId = 1, MovieId = 1, WatchedDate = DateTime.UtcNow, Rating = 9, IsRewatch = false, CreatedAt = DateTime.UtcNow },
-            new Watch { UserId = 1, MovieId = 1, WatchedDate = DateTime.UtcNow.AddDays(-10), Rating = 10, IsRewatch = true, CreatedAt = DateTime.UtcNow },
+            new Watch { UserId = user.Id, MovieId = 1, WatchedDate = DateTime.UtcNow, Rating = 9, IsRewatch = false, CreatedAt = DateTime.UtcNow },
+            new Watch { UserId = user.Id, MovieId = 1, WatchedDate = DateTime.UtcNow.AddDays(-10), Rating = 10, IsRewatch = true, CreatedAt = DateTime.UtcNow },
             // The Matrix - watched once
-            new Watch { UserId = 1, MovieId = 2, WatchedDate = DateTime.UtcNow.AddDays(-5), Rating = 8, IsRewatch = false, CreatedAt = DateTime.UtcNow }
+            new Watch { UserId = user.Id, MovieId = 2, WatchedDate = DateTime.UtcNow.AddDays(-5), Rating = 8, IsRewatch = false, CreatedAt = DateTime.UtcNow }
         };
         context.Watches.AddRange(watches);
         await context.SaveChangesAsync();
-        
+
         // Act
-        var result = await service.GetGroupedWatchesAsync(userId: 1);
-        
+        var result = await service.GetGroupedWatchesAsync(userId: user.Id);
+
         // Assert
         result.Should().HaveCount(2); // Two unique movies
-        
+
         // Check Fight Club group
         var fightClubGroup = result.First(g => g.MovieId == 1);
         fightClubGroup.WatchCount.Should().Be(2);
@@ -377,7 +482,7 @@ public class WatchServiceTests
         fightClubGroup.LatestRating.Should().Be(9); // Most recent watch
         fightClubGroup.Watches.Should().HaveCount(2);
         fightClubGroup.Movie.Title.Should().Be("Fight Club");
-        
+
         // Check The Matrix group
         var matrixGroup = result.First(g => g.MovieId == 2);
         matrixGroup.WatchCount.Should().Be(1);
