@@ -7,3 +7,4 @@ export type {
     CreateWatchRequest,
     UpdateWatchRequest
 } from './watch';
+export type { RegisterRequest, LoginRequest, AuthResponse } from './auth';

@@ -44,7 +44,7 @@ export default function WatchDetailPage({ params }: WatchDetailPageProps) {
     // Refetch watches after edit
     if (movieId) {
       try {
-        const watchesData = await watchApi.getWatchesByMovie(movieId, 1);
+        const watchesData = await watchApi.getWatchesByMovie(movieId);
         setWatches(watchesData);
       } catch (err) {
         console.error('Error refetching watches:', err);
@@ -70,7 +70,7 @@ export default function WatchDetailPage({ params }: WatchDetailPageProps) {
       await watchApi.deleteWatch(deletingWatch.id);
 
       // Refetch watches after delete
-      const watchesData = await watchApi.getWatchesByMovie(movieId, 1);
+      const watchesData = await watchApi.getWatchesByMovie(movieId);
 
       if (watchesData.length === 0) {
         // No more watches for this movie, redirect to watched list
@@ -97,7 +97,7 @@ export default function WatchDetailPage({ params }: WatchDetailPageProps) {
     // Refetch watches after adding another watch
     if (movieId) {
       try {
-        const watchesData = await watchApi.getWatchesByMovie(movieId, 1);
+        const watchesData = await watchApi.getWatchesByMovie(movieId);
         setWatches(watchesData);
         if (watchesData.length > 0) {
           setMovie(watchesData[0].movie); // Update movie data in case it changed
@@ -116,7 +116,7 @@ export default function WatchDetailPage({ params }: WatchDetailPageProps) {
         setMovieId(parsedId);
 
         // Fetch watches for this movie
-        const watchesData = await watchApi.getWatchesByMovie(parsedId, 1); // userId: 1 for Phase 1
+        const watchesData = await watchApi.getWatchesByMovie(parsedId);
 
         if (watchesData.length === 0) {
           setError('No watches found for this movie.');

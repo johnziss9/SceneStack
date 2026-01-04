@@ -4,6 +4,8 @@ import { memo } from 'react';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Calendar, Star } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import Link from 'next/link';
 import type { TmdbMovie } from '@/types';
 
 interface MovieCardProps {
@@ -12,6 +14,8 @@ interface MovieCardProps {
 }
 
 export const MovieCard = memo(function MovieCard({ movie, onAddToWatched }: MovieCardProps) {
+    const { user } = useAuth();
+    
     const posterUrl = movie.poster_path
         ? `https://image.tmdb.org/t/p/w342${movie.poster_path}`
         : null;
@@ -67,12 +71,20 @@ export const MovieCard = memo(function MovieCard({ movie, onAddToWatched }: Movi
             </CardContent>
 
             <CardFooter className="p-4 pt-0">
-                <Button
-                    onClick={() => onAddToWatched(movie)}
-                    className="w-full"
-                >
-                    Add to Watched
-                </Button>
+                {user ? (
+                    <Button
+                        onClick={() => onAddToWatched(movie)}
+                        className="w-full"
+                    >
+                        Add to Watched
+                    </Button>
+                ) : (
+                    <Link href="/login" className="w-full">
+                        <Button variant="outline" className="w-full">
+                            Sign in to log watches
+                        </Button>
+                    </Link>
+                )}
             </CardFooter>
         </Card>
     );

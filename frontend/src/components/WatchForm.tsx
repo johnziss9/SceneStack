@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,6 +21,7 @@ interface WatchFormProps {
 }
 
 export function WatchForm({ movie, open, onOpenChange, onSuccess }: WatchFormProps) {
+    const { user } = useAuth();
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -93,7 +95,6 @@ export function WatchForm({ movie, open, onOpenChange, onSuccess }: WatchFormPro
         try {
             const watchData: CreateWatchRequest = {
                 tmdbId: movie.id,
-                userId: 1, // Hardcoded for Phase 1 (no auth yet)
                 watchedDate: new Date(watchedDate).toISOString(),
                 rating: rating ? parseInt(rating) : undefined,
                 notes: notes || undefined,

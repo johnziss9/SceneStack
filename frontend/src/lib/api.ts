@@ -5,7 +5,25 @@ import type {
     Watch,
     CreateWatchRequest,
     UpdateWatchRequest,
+    RegisterRequest,
+    LoginRequest,
+    AuthResponse,
 } from '@/types';
+
+// Auth endpoints
+export const authApi = {
+    // POST: api/auth/register
+    register: (data: RegisterRequest) =>
+        api.post<AuthResponse>('/api/auth/register', data),
+
+    // POST: api/auth/login
+    login: (data: LoginRequest) =>
+        api.post<AuthResponse>('/api/auth/login', data),
+
+    // POST: api/auth/logout
+    logout: () =>
+        api.post<void>('/api/auth/logout'),
+};
 
 // Movie endpoints
 export const movieApi = {
@@ -20,19 +38,17 @@ export const watchApi = {
     createWatch: (data: CreateWatchRequest) =>
         api.post<Watch>('/api/watches', data),
 
-    // GET: api/watches
-    getWatches: (userId?: number) => {
-        const endpoint = userId ? `/api/watches?userId=${userId}` : '/api/watches';
-        return api.get<Watch[]>(endpoint);
-    },
+    // GET: api/watches (userId now from JWT token)
+    getWatches: () =>
+        api.get<Watch[]>('/api/watches'),
 
-    // GET: api/watches/grouped
-    getGroupedWatches: (userId: number) =>
-        api.get<GroupedWatch[]>(`/api/watches/grouped?userId=${userId}`),
+    // GET: api/watches/grouped (userId now from JWT token)
+    getGroupedWatches: () =>
+        api.get<GroupedWatch[]>('/api/watches/grouped'),
 
-    // GET: api/watches/by-movie/{movieId}?userId={userId}
-    getWatchesByMovie: (movieId: number, userId: number) =>
-        api.get<Watch[]>(`/api/watches/by-movie/${movieId}?userId=${userId}`),
+    // GET: api/watches/by-movie/{movieId} (userId now from JWT token)
+    getWatchesByMovie: (movieId: number) =>
+        api.get<Watch[]>(`/api/watches/by-movie/${movieId}`),
 
     // GET: api/watches/{id}
     getWatch: (id: number) =>

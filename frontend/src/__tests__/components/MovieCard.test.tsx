@@ -1,7 +1,18 @@
 import { render, screen } from '@/test-utils'
 import { MovieCard } from '@/components/MovieCard'
+import { useAuth } from '@/contexts/AuthContext'
 import type { TmdbMovie } from '@/types'
 import userEvent from '@testing-library/user-event'
+
+// Mock AuthContext
+jest.mock('@/contexts/AuthContext')
+jest.mock('next/navigation', () => ({
+    useRouter: () => ({
+        push: jest.fn(),
+    }),
+}))
+
+const mockUseAuth = useAuth as jest.MockedFunction<typeof useAuth>
 
 describe('MovieCard', () => {
     const mockMovie: TmdbMovie = {
@@ -18,6 +29,15 @@ describe('MovieCard', () => {
 
     beforeEach(() => {
         jest.clearAllMocks()
+        
+        // Default: user is authenticated
+        mockUseAuth.mockReturnValue({
+            user: { id: 1, username: 'testuser', email: 'test@example.com' },
+            loading: false,
+            login: jest.fn(),
+            register: jest.fn(),
+            logout: jest.fn(),
+        })
     })
 
     it('renders movie information correctly', () => {
@@ -119,5 +139,87 @@ describe('MovieCard', () => {
         render(<MovieCard movie={movieWithoutOverview} onAddToWatched={mockOnAddToWatched} />)
 
         expect(screen.queryByText(/A ticking-time-bomb/)).not.toBeInTheDocument()
+    })
+
+    describe('Authentication', () => {
+        it('should show "Add to Watched" button when user is authenticated', () => {
+            mockUseAuth.mockReturnValue({
+                user: { id: 1, username: 'testuser', email: 'test@example.com' },
+                loading: false,
+                login: jest.fn(),
+                register: jest.fn(),
+                logout: jest.fn(),
+            })
+
+            render(<MovieCard movie={mockMovie} onAddToWatched={mockOnAddToWatched} />)
+
+            expect(screen.getByRole('button', { name: /add to watched/i })).toBeInTheDocument()
+        })
+
+        it('should show "Sign in to log watches" button when user is not authenticated', () => {
+            mockUseAuth.mockReturnValue({
+                user: null,
+                loading: false,
+                login: jest.fn(),
+                register: jest.fn(),
+                logout: jest.fn(),
+            })
+
+            render(<MovieCard movie={mockMovie} onAddToWatched={mockOnAddToWatched} />)
+
+            expect(screen.getByRole('button', { name: /sign in to log watches/i })).toBeInTheDocument()
+            expect(screen.queryByRole('button', { name: /add to watched/i })).not.toBeInTheDocument()
+        })
+
+        it('should link to login page when not authenticated', () => {
+            mockUseAuth.mockReturnValue({
+                user: null,
+                loading: false,
+                login: jest.fn(),
+                register: jest.fn(),
+                logout: jest.fn(),
+            })
+
+            render(<MovieCard movie={mockMovie} onAddToWatched={mockOnAddToWatched} />)
+
+            const signInLink = screen.getByRole('button', { name: /sign in to log watches/i }).closest('a')
+            expect(signInLink).toHaveAttribute('href', '/login')
+        })
+
+        it('should call onAddToWatched when authenticated user clicks button', async () => {
+            mockUseAuth.mockReturnValue({
+                user: { id: 1, username: 'testuser', email: 'test@example.com' },
+                loading: false,
+                login: jest.fn(),
+                register: jest.fn(),
+                logout: jest.fn(),
+            })
+
+            const user = userEvent.setup()
+            render(<MovieCard movie={mockMovie} onAddToWatched={mockOnAddToWatched} />)
+
+            const button = screen.getByRole('button', { name: /add to watched/i })
+            await user.click(button)
+
+            expect(mockOnAddToWatched).toHaveBeenCalledWith(mockMovie)
+        })
+
+        it('should not call onAddToWatched when not authenticated', async () => {
+            mockUseAuth.mockReturnValue({
+                user: null,
+                loading: false,
+                login: jest.fn(),
+                register: jest.fn(),
+                logout: jest.fn(),
+            })
+
+            const user = userEvent.setup()
+            render(<MovieCard movie={mockMovie} onAddToWatched={mockOnAddToWatched} />)
+
+            const button = screen.getByRole('button', { name: /sign in to log watches/i })
+            await user.click(button)
+
+            expect(mockOnAddToWatched).not.toHaveBeenCalled()
+        })
     })
 })

@@ -41,7 +41,6 @@ export interface GroupedWatch {
 // Matches CreateWatchRequest from backend
 export interface CreateWatchRequest {
     tmdbId: number;
-    userId: number; // Will be hardcoded to 1 for Phase 1
     watchedDate: string; // ISO date string
     rating?: number;
     notes?: string;

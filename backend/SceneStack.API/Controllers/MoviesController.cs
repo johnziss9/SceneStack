@@ -33,6 +33,7 @@ public class MoviesController : ControllerBase
 
     // GET: api/movies/search?query=fight%20club
     [HttpGet("search")]
+    [AllowAnonymous]
     public async Task<ActionResult<TmdbMovieSearchResult>> SearchMovies([FromQuery] string query)
     {
         if (string.IsNullOrWhiteSpace(query))
@@ -48,6 +49,7 @@ public class MoviesController : ControllerBase
 
     // GET: api/movies/tmdb/550
     [HttpGet("tmdb/{tmdbId}")]
+    [AllowAnonymous]
     public async Task<ActionResult<TmdbMovie>> GetTmdbMovie(int tmdbId)
     {
         var movie = await _tmdbService.GetMovieDetailsAsync(tmdbId);

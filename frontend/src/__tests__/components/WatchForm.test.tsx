@@ -1,6 +1,7 @@
 import { render, screen, waitFor } from '@/test-utils'
 import { WatchForm } from '@/components/WatchForm'
 import { watchApi } from '@/lib'
+import { useAuth } from '@/contexts/AuthContext'
 import userEvent from '@testing-library/user-event'
 import type { TmdbMovie, Watch } from '@/types'
 
@@ -10,6 +11,11 @@ jest.mock('@/lib', () => ({
         createWatch: jest.fn(),
     },
 }))
+
+// Mock AuthContext
+jest.mock('@/contexts/AuthContext')
+
+const mockUseAuth = useAuth as jest.MockedFunction<typeof useAuth>
 
 // Suppress console.error for cleaner test output
 const originalError = console.error
@@ -36,6 +42,15 @@ describe('WatchForm', () => {
 
     beforeEach(() => {
         jest.clearAllMocks()
+
+        // Mock authenticated user
+        mockUseAuth.mockReturnValue({
+            user: { id: 1, username: 'testuser', email: 'test@example.com' },
+            loading: false,
+            login: jest.fn(),
+            register: jest.fn(),
+            logout: jest.fn(),
+        })
     })
 
     it('renders dialog with movie title when open', () => {
@@ -141,7 +156,6 @@ describe('WatchForm', () => {
             expect(watchApi.createWatch).toHaveBeenCalledWith(
                 expect.objectContaining({
                     tmdbId: 550,
-                    userId: 1,
                     isRewatch: false,
                 })
             )
@@ -204,7 +218,6 @@ describe('WatchForm', () => {
             expect(watchApi.createWatch).toHaveBeenCalledWith(
                 expect.objectContaining({
                     tmdbId: 550,
-                    userId: 1,
                     rating: 9,
                     notes: 'Great movie!',
                     watchedWith: 'Friends',

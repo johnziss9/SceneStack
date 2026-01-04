@@ -89,7 +89,6 @@ describe('API Service Functions', () => {
             it('should create a watch with all fields', async () => {
                 const requestData: CreateWatchRequest = {
                     tmdbId: 550,
-                    userId: 1,
                     watchedDate: '2024-12-30',
                     rating: 9,
                     notes: 'Great movie!',
@@ -144,21 +143,10 @@ describe('API Service Functions', () => {
                 expect(api.get).toHaveBeenCalledWith('/api/watches')
                 expect(result).toEqual(mockResponse)
             })
-
-            it('should get watches filtered by userId', async () => {
-                const mockResponse: Watch[] = []
-
-                    ; (api.get as jest.Mock).mockResolvedValue(mockResponse)
-
-                const result = await watchApi.getWatches(1)
-
-                expect(api.get).toHaveBeenCalledWith('/api/watches?userId=1')
-                expect(result).toEqual(mockResponse)
-            })
         })
 
         describe('getGroupedWatches', () => {
-            it('should get grouped watches for a user', async () => {
+            it('should get grouped watches (userId from auth token)', async () => {
                 const mockResponse: GroupedWatch[] = [
                     {
                         movieId: 1,
@@ -198,22 +186,22 @@ describe('API Service Functions', () => {
 
                     ; (api.get as jest.Mock).mockResolvedValue(mockResponse)
 
-                const result = await watchApi.getGroupedWatches(1)
+                const result = await watchApi.getGroupedWatches()
 
-                expect(api.get).toHaveBeenCalledWith('/api/watches/grouped?userId=1')
+                expect(api.get).toHaveBeenCalledWith('/api/watches/grouped')
                 expect(result).toEqual(mockResponse)
             })
         })
 
         describe('getWatchesByMovie', () => {
-            it('should get all watches for a specific movie', async () => {
+            it('should get all watches for a specific movie (userId from auth token)', async () => {
                 const mockResponse: Watch[] = []
 
                     ; (api.get as jest.Mock).mockResolvedValue(mockResponse)
 
-                const result = await watchApi.getWatchesByMovie(4, 1)
+                const result = await watchApi.getWatchesByMovie(4)
 
-                expect(api.get).toHaveBeenCalledWith('/api/watches/by-movie/4?userId=1')
+                expect(api.get).toHaveBeenCalledWith('/api/watches/by-movie/4')
                 expect(result).toEqual(mockResponse)
             })
         })

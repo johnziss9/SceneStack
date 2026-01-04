@@ -121,8 +121,8 @@ describe('EditWatchDialog', () => {
             />
         )
 
-        // Should show custom location input
-        const customLocationInput = screen.getByLabelText(/custom location/i) as HTMLInputElement
+        // Custom location input appears when location is "Other"
+        const customLocationInput = screen.getByPlaceholderText(/enter location/i) as HTMLInputElement
         expect(customLocationInput.value).toBe("Friend's house")
     })
 

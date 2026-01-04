@@ -1,6 +1,7 @@
 import { render, screen, waitFor } from '@/test-utils'
 import { WatchList } from '@/components/WatchList'
 import { watchApi } from '@/lib'
+import { useAuth } from '@/contexts/AuthContext'
 import userEvent from '@testing-library/user-event'
 import type { GroupedWatch } from '@/types'
 
@@ -10,6 +11,11 @@ jest.mock('@/lib', () => ({
         getGroupedWatches: jest.fn(),
     },
 }))
+
+// Mock AuthContext
+jest.mock('@/contexts/AuthContext')
+
+const mockUseAuth = useAuth as jest.MockedFunction<typeof useAuth>
 
 // Suppress console.error for cleaner test output
 const originalError = console.error
@@ -23,6 +29,15 @@ afterAll(() => {
 describe('WatchList', () => {
     beforeEach(() => {
         jest.clearAllMocks()
+        
+        // Mock authenticated user
+        mockUseAuth.mockReturnValue({
+            user: { id: 1, username: 'testuser', email: 'test@example.com' },
+            loading: false,
+            login: jest.fn(),
+            register: jest.fn(),
+            logout: jest.fn(),
+        })
     })
 
     const mockGroupedWatches: GroupedWatch[] = [
@@ -92,9 +107,11 @@ describe('WatchList', () => {
             () => new Promise(() => { }) // Never resolves
         )
 
-        render(<WatchList />)
+        const { container } = render(<WatchList />)
 
-        expect(screen.getByText('Loading watches...')).toBeInTheDocument()
+        // Check for skeleton loading elements
+        const skeletons = container.querySelectorAll('.animate-pulse')
+        expect(skeletons.length).toBeGreaterThan(0)
     })
 
     it('fetches and displays grouped watches', async () => {
@@ -107,7 +124,7 @@ describe('WatchList', () => {
             expect(screen.getByText('The Matrix')).toBeInTheDocument()
         })
 
-        expect(watchApi.getGroupedWatches).toHaveBeenCalledWith(1)
+        expect(watchApi.getGroupedWatches).toHaveBeenCalledWith()
     })
 
     it('displays error message on fetch failure', async () => {
@@ -245,13 +262,13 @@ describe('WatchList', () => {
         expect(screen.queryByText('1x')).not.toBeInTheDocument()
     })
 
-    it('uses hardcoded userId 1 for Phase 1', async () => {
+    it('calls API without userId parameter (now from auth token)', async () => {
         ; (watchApi.getGroupedWatches as jest.Mock).mockResolvedValue(mockGroupedWatches)
 
         render(<WatchList />)
 
         await waitFor(() => {
-            expect(watchApi.getGroupedWatches).toHaveBeenCalledWith(1)
+            expect(watchApi.getGroupedWatches).toHaveBeenCalledWith()
         })
     })
 

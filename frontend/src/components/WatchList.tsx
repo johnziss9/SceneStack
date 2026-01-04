@@ -21,8 +21,7 @@ export function WatchList() {
         try {
             setIsLoading(true);
             setError(null);
-            // Hardcoded userId: 1 for Phase 1
-            const data = await watchApi.getGroupedWatches(1);
+            const data = await watchApi.getGroupedWatches();
             setGroupedWatches(data);
         } catch (err) {
             console.error("Failed to fetch watches:", err);
