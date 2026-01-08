@@ -145,7 +145,7 @@ public class WatchServiceTests
         var result = await service.GetAllAsync();
 
         // Assert
-        result.Should().HaveCount(2);
+        result.Should().HaveCount(3);
     }
 
     [Fact]

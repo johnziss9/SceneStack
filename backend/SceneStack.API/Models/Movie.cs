@@ -15,4 +15,5 @@ public class Movie
     
     // Navigation properties
     public ICollection<Watch> Watches { get; set; } = new List<Watch>();
+    public ICollection<AiInsight> AiInsights { get; set; } = new List<AiInsight>();
 }

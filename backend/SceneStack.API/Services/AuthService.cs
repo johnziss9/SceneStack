@@ -60,7 +60,7 @@ public class AuthService : IAuthService
         }
 
         // 3. Generate JWT token
-        var token = GenerateJwtToken(authUser, domainUser.Id);
+        var token = GenerateJwtToken(authUser, domainUser);
 
         return new AuthResponse(
             Token: token,
@@ -94,7 +94,7 @@ public class AuthService : IAuthService
         }
 
         // 4. Generate JWT token
-        var token = GenerateJwtToken(authUser, domainUser.Id);
+        var token = GenerateJwtToken(authUser, domainUser);
 
         return new AuthResponse(
             Token: token,
@@ -104,7 +104,7 @@ public class AuthService : IAuthService
         );
     }
 
-    private string GenerateJwtToken(ApplicationUser authUser, int domainUserId)
+    private string GenerateJwtToken(ApplicationUser authUser, User domainUser)
     {
         var jwtSettings = _configuration.GetSection("JwtSettings");
         var secretKey = jwtSettings["SecretKey"] ?? throw new InvalidOperationException("JWT SecretKey not configured");
@@ -113,10 +113,11 @@ public class AuthService : IAuthService
 
         var claims = new[]
         {
-            new Claim(ClaimTypes.NameIdentifier, domainUserId.ToString()), // Domain User.Id (int)
+            new Claim(ClaimTypes.NameIdentifier, domainUser.Id.ToString()), // Domain User.Id (int)
             new Claim(ClaimTypes.Name, authUser.UserName ?? string.Empty),
             new Claim(ClaimTypes.Email, authUser.Email ?? string.Empty),
-            new Claim("AuthUserId", authUser.Id) // ApplicationUser.Id (string GUID)
+            new Claim("AuthUserId", authUser.Id), // ApplicationUser.Id (string GUID)
+            new Claim("IsPremium", domainUser.IsPremium.ToString())
         };
 
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey));
