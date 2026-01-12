@@ -10,6 +10,7 @@ interface AuthUser {
     id: number;
     username: string;
     email: string;
+    isPremium: boolean;
 }
 
 interface AuthContextType {
@@ -42,10 +43,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 const username = payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name'];
                 const email = payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress'];
 
+                // Extract isPremium from token (backend includes this claim)
+                const isPremium = payload['IsPremium'] === 'True';
+
                 setUser({
                     id: userId,
                     username: username,
                     email: email,
+                    isPremium: isPremium,
                 });
             } catch (error) {
                 // Invalid token, remove it
@@ -63,11 +68,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Store token
         tokenStorage.setToken(response.token);
 
+        // Decode token to get isPremium
+        const payload = JSON.parse(atob(response.token.split('.')[1]));
+        const isPremium = payload['IsPremium'] === 'True';
+
         // Set user state
         setUser({
             id: response.userId,
             username: response.username,
             email: response.email,
+            isPremium: isPremium,
         });
 
         // Redirect to home
@@ -80,11 +90,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Store token
         tokenStorage.setToken(response.token);
 
+        // Decode token to get isPremium
+        const payload = JSON.parse(atob(response.token.split('.')[1]));
+        const isPremium = payload['IsPremium'] === 'True';
+
         // Set user state
         setUser({
             id: response.userId,
             username: response.username,
             email: response.email,
+            isPremium: isPremium,
         });
 
         // Redirect to home

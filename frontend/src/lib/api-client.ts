@@ -9,6 +9,20 @@ export class ApiError extends Error {
     }
 }
 
+export class PremiumRequiredError extends Error {
+    constructor(message: string = 'This feature requires a premium subscription') {
+        super(message);
+        this.name = 'PremiumRequiredError';
+    }
+}
+
+export class RateLimitError extends Error {
+    constructor(message: string = 'Rate limit exceeded. Please try again later.') {
+        super(message);
+        this.name = 'RateLimitError';
+    }
+}
+
 // Token storage functions using cookies
 const TOKEN_KEY = 'auth_token';
 
@@ -57,6 +71,18 @@ async function fetchApi<T>(
             window.location.href = '/login';
         }
         throw new ApiError(401, 'Unauthorized');
+    }
+
+    // Handle 403 Forbidden - Premium feature required
+    if (response.status === 403) {
+        const errorText = await response.text();
+        throw new PremiumRequiredError(errorText || 'This feature requires a premium subscription');
+    }
+
+    // Handle 429 Too Many Requests - Rate limit exceeded
+    if (response.status === 429) {
+        const errorText = await response.text();
+        throw new RateLimitError(errorText || 'Rate limit exceeded. Please try again later.');
     }
 
     if (!response.ok) {

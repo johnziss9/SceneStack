@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Label } from '@/components/ui/label';
 import { LogOut, User as UserIcon } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { AiUsageStats } from '@/components/AiUsageStats';
 
 export default function ProfilePage() {
     const { user, logout, loading } = useAuth();
@@ -89,6 +90,9 @@ export default function ProfilePage() {
                         </Button>
                     </CardContent>
                 </Card>
+
+                {/* AI Usage Stats (premium only) */}
+                {user?.isPremium && <AiUsageStats />}
 
                 {/* Back to Home */}
                 <div className="text-center">

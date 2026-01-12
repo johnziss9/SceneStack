@@ -32,7 +32,7 @@ describe('MovieCard', () => {
         
         // Default: user is authenticated
         mockUseAuth.mockReturnValue({
-            user: { id: 1, username: 'testuser', email: 'test@example.com' },
+            user: { id: 1, username: 'testuser', email: 'test@example.com', isPremium: false },
             loading: false,
             login: jest.fn(),
             register: jest.fn(),
@@ -144,7 +144,7 @@ describe('MovieCard', () => {
     describe('Authentication', () => {
         it('should show "Add to Watched" button when user is authenticated', () => {
             mockUseAuth.mockReturnValue({
-                user: { id: 1, username: 'testuser', email: 'test@example.com' },
+                user: { id: 1, username: 'testuser', email: 'test@example.com', isPremium: false },
                 loading: false,
                 login: jest.fn(),
                 register: jest.fn(),
@@ -188,7 +188,7 @@ describe('MovieCard', () => {
 
         it('should call onAddToWatched when authenticated user clicks button', async () => {
             mockUseAuth.mockReturnValue({
-                user: { id: 1, username: 'testuser', email: 'test@example.com' },
+                user: { id: 1, username: 'testuser', email: 'test@example.com', isPremium: false },
                 loading: false,
                 login: jest.fn(),
                 register: jest.fn(),

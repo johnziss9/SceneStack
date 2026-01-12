@@ -60,6 +60,7 @@ describe('AuthContext', () => {
                 id: 1,
                 username: 'testuser',
                 email: 'test@example.com',
+                isPremium: false,
             });
         });
 
@@ -126,6 +127,7 @@ describe('AuthContext', () => {
                 id: 1,
                 username: 'testuser',
                 email: 'test@example.com',
+                isPremium: false,
             });
 
             expect(mockPush).toHaveBeenCalledWith('/');
@@ -202,6 +204,7 @@ describe('AuthContext', () => {
                 id: 2,
                 username: 'newuser',
                 email: 'new@example.com',
+                isPremium: false,
             });
 
             expect(mockPush).toHaveBeenCalledWith('/');
@@ -254,6 +257,7 @@ describe('AuthContext', () => {
                     id: 1,
                     username: 'testuser',
                     email: 'test@example.com',
+                    isPremium: false,
                 });
             });
 
@@ -309,12 +313,13 @@ describe('AuthContext', () => {
 });
 
 // Helper function to create mock JWT tokens
-function createMockJWT(payload: { userId: number; username: string; email: string }): string {
+function createMockJWT(payload: { userId: number; username: string; email: string; isPremium?: boolean }): string {
     const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
     const claims = {
         'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier': payload.userId.toString(),
         'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name': payload.username,
         'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress': payload.email,
+        'IsPremium': payload.isPremium ? 'True' : 'False',
     };
     const body = btoa(JSON.stringify(claims));
     const signature = 'mock-signature';

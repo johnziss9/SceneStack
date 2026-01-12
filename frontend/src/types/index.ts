@@ -8,3 +8,12 @@ export type {
     UpdateWatchRequest
 } from './watch';
 export type { RegisterRequest, LoginRequest, AuthResponse } from './auth';
+export type {
+    AiInsight,
+    GenerateInsightRequest,
+    AiInsightResponse,
+    RegenerateInsightRequest,
+    AiSearchRequest,
+    AiSearchResponse,
+    AiUsageStats
+} from './ai';

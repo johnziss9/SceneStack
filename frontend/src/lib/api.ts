@@ -8,6 +8,12 @@ import type {
     RegisterRequest,
     LoginRequest,
     AuthResponse,
+    GenerateInsightRequest,
+    AiInsightResponse,
+    RegenerateInsightRequest,
+    AiSearchRequest,
+    AiSearchResponse,
+    AiUsageStats,
 } from '@/types';
 
 // Auth endpoints
@@ -61,4 +67,27 @@ export const watchApi = {
     // DELETE: api/watches/{id}
     deleteWatch: (id: number) =>
         api.delete<void>(`/api/watches/${id}`),
+};
+
+// AI endpoints
+export const aiApi = {
+    // POST: api/ai/insights
+    generateInsight: (data: GenerateInsightRequest) =>
+        api.post<AiInsightResponse>('/api/ai/insights', data),
+
+    // GET: api/ai/insights/{movieId}
+    getCachedInsight: (movieId: number) =>
+        api.get<AiInsightResponse>(`/api/ai/insights/${movieId}`),
+
+    // POST: api/ai/insights/{movieId}/regenerate
+    regenerateInsight: (data: RegenerateInsightRequest) =>
+        api.post<AiInsightResponse>(`/api/ai/insights/${data.movieId}/regenerate`, data),
+
+    // POST: api/ai/search
+    search: (data: AiSearchRequest) =>
+        api.post<AiSearchResponse>('/api/ai/search', data),
+
+    // GET: api/ai/usage
+    getUsageStats: () =>
+        api.get<AiUsageStats>('/api/ai/usage'),
 };

@@ -20,12 +20,14 @@ export interface Watch {
 // Matches WatchEntryResponse from backend
 export interface WatchEntry {
     id: number;
+    movieId: number;
     watchedDate: string;
     rating?: number | null;
     notes?: string | null;
     watchLocation?: string | null;
     watchedWith?: string | null;
     isRewatch: boolean;
+    movie: Movie;  // Navigation property
 }
 
 // Matches GroupedWatchesResponse from backend

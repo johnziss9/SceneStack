@@ -21,6 +21,8 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft, Plus, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { Skeleton } from '@/components/ui/skeleton';
+import { MovieInsight } from '@/components/MovieInsight';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface WatchDetailPageProps {
   params: Promise<{ id: string }>;
@@ -28,6 +30,7 @@ interface WatchDetailPageProps {
 
 export default function WatchDetailPage({ params }: WatchDetailPageProps) {
   const router = useRouter();
+  const { user } = useAuth();
   const [movieId, setMovieId] = useState<number | null>(null);
   const [watches, setWatches] = useState<Watch[]>([]);
   const [movie, setMovie] = useState<Movie | null>(null);
@@ -193,8 +196,11 @@ export default function WatchDetailPage({ params }: WatchDetailPageProps) {
         <div className="max-w-6xl mx-auto">
           <Button
             variant="ghost"
-            onClick={() => router.push('/watched')}
-            className="mb-6"
+            onClick={() => {
+              const searchParams = new URLSearchParams(window.location.search);
+              router.push(`/watched?${searchParams.toString()}`);
+            }}
+            className="justify-start"
           >
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Watched List
@@ -219,7 +225,10 @@ export default function WatchDetailPage({ params }: WatchDetailPageProps) {
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 mb-6">
           <Button
             variant="ghost"
-            onClick={() => router.push('/watched')}
+            onClick={() => {
+              const searchParams = new URLSearchParams(window.location.search);
+              router.push(`/watched?${searchParams.toString()}`);
+            }}
             className="justify-start"
           >
             <ArrowLeft className="mr-2 h-4 w-4" />
@@ -294,6 +303,13 @@ export default function WatchDetailPage({ params }: WatchDetailPageProps) {
             </div>
           </CardContent>
         </Card>
+
+        {/* AI Insight Section */}
+        <MovieInsight
+          movieId={movieId!}
+          watchCount={watches.length}
+          isPremium={user?.isPremium ?? false}
+        />
 
         {/* Watch Entries Table */}
         <Card>
