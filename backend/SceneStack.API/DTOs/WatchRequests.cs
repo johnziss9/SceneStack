@@ -9,6 +9,8 @@ public class CreateWatchRequest
     public string? WatchLocation { get; set; }
     public string? WatchedWith { get; set; }
     public bool IsRewatch { get; set; }
+    public bool IsPrivate { get; set; } = false;
+    public List<int> GroupIds { get; set; } = new();  // Groups to share this watch with
 }
 
 public class UpdateWatchRequest

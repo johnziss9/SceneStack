@@ -25,11 +25,12 @@ public class WatchesController : ControllerBase
     }
 
     // GET: api/watches
+    // GET: api/watches?groupId=5
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<WatchResponse>>> GetWatches()
+    public async Task<ActionResult<IEnumerable<WatchResponse>>> GetWatches([FromQuery] int? groupId = null)
     {
         var userId = User.GetUserId();
-        var watches = await _watchService.GetAllAsync(userId);
+        var watches = await _watchService.GetAllAsync(userId, groupId);
         var response = watches.Select(WatchMapper.ToResponse);
         return Ok(response);
     }
@@ -105,10 +106,11 @@ public class WatchesController : ControllerBase
                 Notes = request.Notes,
                 WatchLocation = request.WatchLocation,
                 WatchedWith = request.WatchedWith,
-                IsRewatch = request.IsRewatch
+                IsRewatch = request.IsRewatch,
+                IsPrivate = request.IsPrivate
             };
 
-            var createdWatch = await _watchService.CreateAsync(watch);
+            var createdWatch = await _watchService.CreateAsync(watch, request.GroupIds);
             _logger.LogInformation("Successfully created watch with ID: {WatchId}", createdWatch.Id);
 
             return CreatedAtAction(nameof(GetWatch), new { id = createdWatch.Id }, WatchMapper.ToResponse(createdWatch));
@@ -152,5 +154,39 @@ public class WatchesController : ControllerBase
             return NotFound();
 
         return NoContent();
+    }
+
+    /// <summary>
+    /// Get watch feed for a specific group
+    /// </summary>
+    /// <param name="groupId">Group ID</param>
+    /// <returns>List of watches shared with the group</returns>
+    // GET: api/watches/group/5/feed
+    [HttpGet("group/{groupId}/feed")]
+    public async Task<ActionResult<IEnumerable<WatchResponse>>> GetGroupFeed(int groupId)
+    {
+        var userId = User.GetUserId();
+        _logger.LogInformation("User {UserId} getting feed for group {GroupId}", userId, groupId);
+
+        try
+        {
+            var watches = await _watchService.GetGroupFeedAsync(groupId, userId);
+            
+            if (!watches.Any())
+            {
+                _logger.LogInformation("No watches found in group {GroupId} feed for user {UserId}", groupId, userId);
+                return Ok(new List<WatchResponse>());
+            }
+
+            var response = watches.Select(WatchMapper.ToResponse).ToList();
+            _logger.LogInformation("Returning {Count} watches in group {GroupId} feed", response.Count, groupId);
+            
+            return Ok(response);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting group feed for group {GroupId}", groupId);
+            return StatusCode(500, $"Error getting group feed: {ex.Message}");
+        }
     }
 }

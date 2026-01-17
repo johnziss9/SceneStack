@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using SceneStack.API.Data;
@@ -11,9 +12,11 @@ using SceneStack.API.Data;
 namespace SceneStack.API.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260113143801_AddGroupModels")]
+    partial class AddGroupModels
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -478,15 +481,6 @@ namespace SceneStack.API.Migrations
                     b.Property<bool>("IsPremium")
                         .HasColumnType("boolean");
 
-                    b.Property<bool>("ShareNotes")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("ShareRatings")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("ShareWatches")
-                        .HasColumnType("boolean");
-
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -523,9 +517,6 @@ namespace SceneStack.API.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
 
-                    b.Property<bool>("IsPrivate")
-                        .HasColumnType("boolean");
-
                     b.Property<bool>("IsRewatch")
                         .HasColumnType("boolean");
 
@@ -559,26 +550,6 @@ namespace SceneStack.API.Migrations
                     b.HasIndex("WatchedDate");
 
                     b.ToTable("Watches");
-                });
-
-            modelBuilder.Entity("SceneStack.API.Models.WatchGroup", b =>
-                {
-                    b.Property<int>("WatchId")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("GroupId")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime>("SharedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("WatchId", "GroupId");
-
-                    b.HasIndex("GroupId");
-
-                    b.HasIndex("WatchId");
-
-                    b.ToTable("WatchGroups");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
@@ -656,7 +627,8 @@ namespace SceneStack.API.Migrations
                     b.HasOne("SceneStack.API.Models.User", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("User");
                 });
@@ -666,7 +638,8 @@ namespace SceneStack.API.Migrations
                     b.HasOne("SceneStack.API.Models.User", "DomainUser")
                         .WithMany()
                         .HasForeignKey("DomainUserId")
-                        .OnDelete(DeleteBehavior.Restrict);
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
 
                     b.Navigation("DomainUser");
                 });
@@ -687,12 +660,14 @@ namespace SceneStack.API.Migrations
                     b.HasOne("SceneStack.API.Models.Group", "Group")
                         .WithMany("Members")
                         .HasForeignKey("GroupId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.HasOne("SceneStack.API.Models.User", "User")
                         .WithMany("GroupMemberships")
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("Group");
 
@@ -709,12 +684,14 @@ namespace SceneStack.API.Migrations
                     b.HasOne("SceneStack.API.Models.Group", "Group")
                         .WithMany()
                         .HasForeignKey("GroupId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.HasOne("SceneStack.API.Models.User", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Restrict);
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
 
                     b.Navigation("Actor");
 
@@ -742,28 +719,9 @@ namespace SceneStack.API.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("SceneStack.API.Models.WatchGroup", b =>
-                {
-                    b.HasOne("SceneStack.API.Models.Group", "Group")
-                        .WithMany("WatchGroups")
-                        .HasForeignKey("GroupId")
-                        .OnDelete(DeleteBehavior.Cascade);
-
-                    b.HasOne("SceneStack.API.Models.Watch", "Watch")
-                        .WithMany("WatchGroups")
-                        .HasForeignKey("WatchId")
-                        .OnDelete(DeleteBehavior.Cascade);
-
-                    b.Navigation("Group");
-
-                    b.Navigation("Watch");
-                });
-
             modelBuilder.Entity("SceneStack.API.Models.Group", b =>
                 {
                     b.Navigation("Members");
-
-                    b.Navigation("WatchGroups");
                 });
 
             modelBuilder.Entity("SceneStack.API.Models.Movie", b =>
@@ -782,11 +740,6 @@ namespace SceneStack.API.Migrations
                     b.Navigation("GroupMemberships");
 
                     b.Navigation("Watches");
-                });
-
-            modelBuilder.Entity("SceneStack.API.Models.Watch", b =>
-                {
-                    b.Navigation("WatchGroups");
                 });
 #pragma warning restore 612, 618
         }

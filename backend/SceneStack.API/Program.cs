@@ -86,6 +86,10 @@ builder.Services.AddHttpClient<ITmdbService, TmdbService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IAiInsightService, AiInsightService>();
 builder.Services.AddScoped<IAiSearchService, AiSearchService>();
+builder.Services.AddScoped<IGroupService, GroupService>();
+builder.Services.AddScoped<IPrivacyService, PrivacyService>();
+builder.Services.AddScoped<IGroupFeedService, GroupFeedService>();
+builder.Services.AddScoped<IGroupRecommendationsService, GroupRecommendationsService>();
 
 // Add Rate Limiting
 builder.Services.AddRateLimiter(options =>

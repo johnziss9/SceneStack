@@ -25,16 +25,22 @@ public class WatchService : IWatchService
             .FirstOrDefaultAsync(w => w.Id == id);
     }
 
-    public async Task<IEnumerable<Watch>> GetAllAsync(int? userId = null)
+    public async Task<IEnumerable<Watch>> GetAllAsync(int? userId = null, int? groupId = null)
     {
         var query = _context.Watches
             .Include(w => w.Movie)
             .Include(w => w.User)
+            .Include(w => w.WatchGroups)
             .AsQueryable();
 
         if (userId.HasValue)
         {
             query = query.Where(w => w.UserId == userId.Value);
+        }
+
+        if (groupId.HasValue)
+        {
+            query = query.Where(w => w.WatchGroups.Any(wg => wg.GroupId == groupId.Value));
         }
 
         return await query
@@ -98,11 +104,39 @@ public class WatchService : IWatchService
             .ToListAsync();
     }
 
-    public async Task<Watch> CreateAsync(Watch watch)
+    public async Task<Watch> CreateAsync(Watch watch, List<int> groupIds)
     {
         watch.CreatedAt = DateTime.UtcNow;
         _context.Watches.Add(watch);
         await _context.SaveChangesAsync();
+
+        // Associate watch with groups
+        if (groupIds != null && groupIds.Any())
+        {
+            foreach (var groupId in groupIds)
+            {
+                // Verify user is a member of the group
+                var isMember = await _context.GroupMembers
+                    .AnyAsync(gm => gm.GroupId == groupId && gm.UserId == watch.UserId);
+
+                if (isMember)
+                {
+                    var watchGroup = new WatchGroup
+                    {
+                        WatchId = watch.Id,
+                        GroupId = groupId,
+                        SharedAt = DateTime.UtcNow
+                    };
+                    _context.WatchGroups.Add(watchGroup);
+                }
+                else
+                {
+                    _logger.LogWarning("User {UserId} attempted to share watch with group {GroupId} but is not a member", watch.UserId, groupId);
+                }
+            }
+
+            await _context.SaveChangesAsync();
+        }
 
         // Reload with navigation properties
         return (await GetByIdAsync(watch.Id))!;
@@ -141,5 +175,58 @@ public class WatchService : IWatchService
 
         await _context.SaveChangesAsync();
         return true;
+    }
+
+    public async Task<List<Watch>> GetGroupFeedAsync(int groupId, int requestingUserId)
+    {
+        // Verify requesting user is a member of the group
+        var isMember = await _context.GroupMembers
+            .AnyAsync(gm => gm.GroupId == groupId && gm.UserId == requestingUserId);
+
+        if (!isMember)
+        {
+            _logger.LogWarning("User {UserId} attempted to access group feed for group {GroupId} without membership", requestingUserId, groupId);
+            return new List<Watch>();
+        }
+
+        // Get all watches shared with this group
+        var watches = await _context.WatchGroups
+            .Where(wg => wg.GroupId == groupId)
+            .Include(wg => wg.Watch)
+                .ThenInclude(w => w.Movie)
+            .Include(wg => wg.Watch)
+                .ThenInclude(w => w.User)
+            .Select(wg => wg.Watch)
+            .Where(w => !w.IsPrivate) // Exclude private watches
+            .OrderByDescending(w => w.WatchedDate)
+            .ToListAsync();
+
+        // Apply privacy filters
+        var filteredWatches = new List<Watch>();
+        foreach (var watch in watches)
+        {
+            // User can always see their own watches
+            if (watch.UserId == requestingUserId)
+            {
+                filteredWatches.Add(watch);
+                continue;
+            }
+
+            // Check owner's privacy settings
+            if (!watch.User.ShareWatches)
+                continue;
+
+            // Filter rating if not shared
+            if (!watch.User.ShareRatings)
+                watch.Rating = null;
+
+            // Filter notes if not shared
+            if (!watch.User.ShareNotes)
+                watch.Notes = null;
+
+            filteredWatches.Add(watch);
+        }
+
+        return filteredWatches;
     }
 }

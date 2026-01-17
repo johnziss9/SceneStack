@@ -11,6 +11,10 @@ public class Watch
     public string? WatchLocation { get; set; }  // Cinema, Home, Other
     public string? WatchedWith { get; set; }  // Free text or user tags
     public bool IsRewatch { get; set; }
+    
+    // Privacy settings (per-watch override)
+    public bool IsPrivate { get; set; } = false;  // If true, completely private (not shared with any groups)
+    
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public bool IsDeleted { get; set; } = false;
     public DateTime? DeletedAt { get; set; }
@@ -18,4 +22,5 @@ public class Watch
     // Navigation properties
     public User User { get; set; } = null!;
     public Movie Movie { get; set; } = null!;
+    public ICollection<WatchGroup> WatchGroups { get; set; } = new List<WatchGroup>();
 }

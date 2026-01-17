@@ -70,4 +70,29 @@ public class TmdbService : ITmdbService
             return null;
         }
     }
+
+    public async Task<TmdbMovieSearchResult?> GetPopularMoviesAsync(int page = 1)
+    {
+        try
+        {
+            var url = $"{_settings.BaseUrl}/movie/popular?api_key={_settings.ApiKey}&page={page}";
+            _logger.LogInformation("Calling TMDb URL: {Url}", url.Replace(_settings.ApiKey, "***"));
+            
+            var response = await _httpClient.GetAsync(url);
+            
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogError("TMDb API error: {StatusCode}", response.StatusCode);
+                return null;
+            }
+
+            var content = await response.Content.ReadAsStringAsync();
+            return JsonSerializer.Deserialize<TmdbMovieSearchResult>(content);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting popular movies");
+            return null;
+        }
+    }
 }

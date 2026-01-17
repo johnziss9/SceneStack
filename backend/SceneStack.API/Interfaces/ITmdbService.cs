@@ -6,4 +6,5 @@ public interface ITmdbService
 {
     Task<TmdbMovieSearchResult?> SearchMoviesAsync(string query, int page = 1);
     Task<TmdbMovie?> GetMovieDetailsAsync(int tmdbId);
+    Task<TmdbMovieSearchResult?> GetPopularMoviesAsync(int page = 1);
 }

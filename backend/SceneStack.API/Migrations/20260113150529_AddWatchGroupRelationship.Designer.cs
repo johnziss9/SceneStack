@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using SceneStack.API.Data;
@@ -11,9 +12,11 @@ using SceneStack.API.Data;
 namespace SceneStack.API.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260113150529_AddWatchGroupRelationship")]
+    partial class AddWatchGroupRelationship
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -478,15 +481,6 @@ namespace SceneStack.API.Migrations
                     b.Property<bool>("IsPremium")
                         .HasColumnType("boolean");
 
-                    b.Property<bool>("ShareNotes")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("ShareRatings")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("ShareWatches")
-                        .HasColumnType("boolean");
-
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -521,9 +515,6 @@ namespace SceneStack.API.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<bool>("IsDeleted")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("IsPrivate")
                         .HasColumnType("boolean");
 
                     b.Property<bool>("IsRewatch")

@@ -240,7 +240,7 @@ public class WatchesControllerTests
             User = new User { Id = 1, Username = "testuser", Email = "test@test.com" }
         };
 
-        watchService.CreateAsync(Arg.Any<Watch>()).Returns(createdWatch);
+        watchService.CreateAsync(Arg.Any<Watch>(), Arg.Any<List<int>>()).Returns(createdWatch);
 
         var request = new CreateWatchRequest
         {
@@ -389,5 +389,187 @@ public class WatchesControllerTests
 
         // Assert
         result.Should().BeOfType<NotFoundResult>();
+    }
+
+    [Fact]
+    public async Task GetGroupFeed_ValidGroup_ReturnsOkWithWatches()
+    {
+        // Arrange
+        var watchService = Substitute.For<IWatchService>();
+        var movieService = Substitute.For<IMovieService>();
+        var logger = Substitute.For<ILogger<WatchesController>>();
+        var controller = CreateControllerWithAuthenticatedUser(watchService, movieService, logger, userId: 1);
+
+        var watches = new List<Watch>
+        {
+            new Watch
+            {
+                Id = 1,
+                UserId = 2,
+                MovieId = 1,
+                WatchedDate = DateTime.UtcNow,
+                Rating = 9,
+                IsRewatch = false,
+                Movie = new Movie { Id = 1, TmdbId = 550, Title = "Fight Club", Year = 1999 },
+                User = new User { Id = 2, Username = "otheruser", Email = "other@test.com" }
+            },
+            new Watch
+            {
+                Id = 2,
+                UserId = 1,
+                MovieId = 1,
+                WatchedDate = DateTime.UtcNow.AddDays(-1),
+                Rating = 10,
+                IsRewatch = false,
+                Movie = new Movie { Id = 1, TmdbId = 550, Title = "Fight Club", Year = 1999 },
+                User = new User { Id = 1, Username = "testuser", Email = "test@test.com" }
+            }
+        };
+
+        watchService.GetGroupFeedAsync(1, 1).Returns(watches);
+
+        // Act
+        var result = await controller.GetGroupFeed(groupId: 1);
+
+        // Assert
+        var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject;
+        var returnedWatches = okResult.Value.Should().BeAssignableTo<IEnumerable<WatchResponse>>().Subject;
+        returnedWatches.Should().HaveCount(2);
+    }
+
+    [Fact]
+    public async Task GetGroupFeed_NoWatches_ReturnsOkWithEmptyList()
+    {
+        // Arrange
+        var watchService = Substitute.For<IWatchService>();
+        var movieService = Substitute.For<IMovieService>();
+        var logger = Substitute.For<ILogger<WatchesController>>();
+        var controller = CreateControllerWithAuthenticatedUser(watchService, movieService, logger, userId: 1);
+
+        watchService.GetGroupFeedAsync(999, 1).Returns(new List<Watch>());
+
+        // Act
+        var result = await controller.GetGroupFeed(groupId: 999);
+
+        // Assert
+        var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject;
+        var returnedWatches = okResult.Value.Should().BeAssignableTo<List<WatchResponse>>().Subject;
+        returnedWatches.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task GetGroupFeed_ServiceThrowsException_ReturnsInternalServerError()
+    {
+        // Arrange
+        var watchService = Substitute.For<IWatchService>();
+        var movieService = Substitute.For<IMovieService>();
+        var logger = Substitute.For<ILogger<WatchesController>>();
+        var controller = CreateControllerWithAuthenticatedUser(watchService, movieService, logger, userId: 1);
+
+        watchService.GetGroupFeedAsync(1, 1)
+            .Returns<List<Watch>>(_ => throw new Exception("Database error"));
+
+        // Act
+        var result = await controller.GetGroupFeed(groupId: 1);
+
+        // Assert
+        var objectResult = result.Result.Should().BeOfType<ObjectResult>().Subject;
+        objectResult.StatusCode.Should().Be(500);
+    }
+
+    [Fact]
+    public async Task CreateWatch_WithGroupIds_AssociatesWithGroups()
+    {
+        // Arrange
+        var watchService = Substitute.For<IWatchService>();
+        var movieService = Substitute.For<IMovieService>();
+        var logger = Substitute.For<ILogger<WatchesController>>();
+        var controller = CreateControllerWithAuthenticatedUser(watchService, movieService, logger);
+
+        var movie = new Movie { Id = 1, TmdbId = 550, Title = "Fight Club", Year = 1999 };
+        movieService.GetOrCreateFromTmdbAsync(550).Returns(movie);
+
+        var createdWatch = new Watch
+        {
+            Id = 1,
+            UserId = 1,
+            MovieId = 1,
+            WatchedDate = DateTime.UtcNow,
+            Rating = 9,
+            IsPrivate = false,
+            IsRewatch = false,
+            Movie = movie,
+            User = new User { Id = 1, Username = "testuser", Email = "test@test.com" },
+            WatchGroups = new List<WatchGroup>
+            {
+                new WatchGroup { WatchId = 1, GroupId = 1, SharedAt = DateTime.UtcNow },
+                new WatchGroup { WatchId = 1, GroupId = 2, SharedAt = DateTime.UtcNow }
+            }
+        };
+
+        watchService.CreateAsync(Arg.Any<Watch>(), Arg.Any<List<int>>()).Returns(createdWatch);
+
+        var request = new CreateWatchRequest
+        {
+            TmdbId = 550,
+            WatchedDate = DateTime.UtcNow,
+            Rating = 9,
+            IsPrivate = false,
+            GroupIds = new List<int> { 1, 2 },
+            IsRewatch = false
+        };
+
+        // Act
+        var result = await controller.CreateWatch(request);
+
+        // Assert
+        var createdResult = result.Result.Should().BeOfType<CreatedAtActionResult>().Subject;
+        var returnedWatch = createdResult.Value.Should().BeOfType<WatchResponse>().Subject;
+        returnedWatch.Rating.Should().Be(9);
+
+        // Verify CreateAsync was called with group IDs
+        await watchService.Received(1).CreateAsync(
+            Arg.Is<Watch>(w => w.IsPrivate == false),
+            Arg.Is<List<int>>(g => g.Count == 2 && g.Contains(1) && g.Contains(2))
+        );
+    }
+
+    [Fact]
+    public async Task GetWatches_WithGroupIdFilter_ReturnsFilteredWatches()
+    {
+        // Arrange
+        var watchService = Substitute.For<IWatchService>();
+        var movieService = Substitute.For<IMovieService>();
+        var logger = Substitute.For<ILogger<WatchesController>>();
+        var controller = CreateControllerWithAuthenticatedUser(watchService, movieService, logger);
+
+        var watches = new List<Watch>
+        {
+            new Watch
+            {
+                Id = 1,
+                UserId = 1,
+                MovieId = 1,
+                WatchedDate = DateTime.UtcNow,
+                Rating = 9,
+                IsRewatch = false,
+                Movie = new Movie { Id = 1, TmdbId = 550, Title = "Fight Club", Year = 1999 },
+                User = new User { Id = 1, Username = "testuser", Email = "test@test.com" }
+            }
+        };
+
+        watchService.GetAllAsync(1, 5).Returns(watches);
+
+        // Act - Call GetWatches with groupId query parameter
+        controller.ControllerContext.HttpContext.Request.QueryString = new QueryString("?groupId=5");
+        var result = await controller.GetWatches(groupId: 5);
+
+        // Assert
+        var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject;
+        var returnedWatches = okResult.Value.Should().BeAssignableTo<IEnumerable<WatchResponse>>().Subject;
+        returnedWatches.Should().HaveCount(1);
+
+        // Verify service was called with groupId
+        await watchService.Received(1).GetAllAsync(1, 5);
     }
 }
