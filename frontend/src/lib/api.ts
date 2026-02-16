@@ -5,6 +5,8 @@ import type {
     Watch,
     CreateWatchRequest,
     UpdateWatchRequest,
+    BulkUpdateWatchesRequest,
+    BulkUpdateResult,
     RegisterRequest,
     LoginRequest,
     AuthResponse,
@@ -14,6 +16,17 @@ import type {
     AiSearchRequest,
     AiSearchResponse,
     AiUsageStats,
+    Group,
+    GroupBasicInfo,
+    CreateGroupRequest,
+    UpdateGroupRequest,
+    AddMemberRequest,
+    UpdateMemberRoleRequest,
+    GroupMember,
+    GroupFeedItem,
+    GroupRecommendationStats,
+    UserPrivacySettings,
+    UpdatePrivacySettingsRequest,
 } from '@/types';
 
 // Auth endpoints
@@ -67,6 +80,10 @@ export const watchApi = {
     // DELETE: api/watches/{id}
     deleteWatch: (id: number) =>
         api.delete<void>(`/api/watches/${id}`),
+
+    // PUT: api/watches/bulk
+    bulkUpdate: (data: BulkUpdateWatchesRequest) =>
+        api.put<BulkUpdateResult>('/api/watches/bulk', data),
 };
 
 // AI endpoints
@@ -90,4 +107,66 @@ export const aiApi = {
     // GET: api/ai/usage
     getUsageStats: () =>
         api.get<AiUsageStats>('/api/ai/usage'),
+};
+
+// Group endpoints
+export const groupApi = {
+    // GET: api/groups
+    getUserGroups: () =>
+        api.get<GroupBasicInfo[]>('/api/groups'),
+
+    // GET: api/groups/{id}
+    getGroup: (id: number) =>
+        api.get<Group>(`/api/groups/${id}`),
+
+    // POST: api/groups
+    createGroup: (data: CreateGroupRequest) =>
+        api.post<Group>('/api/groups', data),
+
+    // PUT: api/groups/{id}
+    updateGroup: (id: number, data: UpdateGroupRequest) =>
+        api.put<Group>(`/api/groups/${id}`, data),
+
+    // DELETE: api/groups/{id}
+    deleteGroup: (id: number) =>
+        api.delete<void>(`/api/groups/${id}`),
+
+    // GET: api/groups/{id}/members
+    getMembers: (groupId: number) =>
+        api.get<GroupMember[]>(`/api/groups/${groupId}/members`),
+
+    // POST: api/groups/{id}/members
+    addMember: (groupId: number, data: AddMemberRequest) =>
+        api.post<GroupMember>(`/api/groups/${groupId}/members`, data),
+
+    // DELETE: api/groups/{id}/members/{userId}
+    removeMember: (groupId: number, userId: number) =>
+        api.delete<void>(`/api/groups/${groupId}/members/${userId}`),
+
+    // PUT: api/groups/{id}/members/{userId}/role
+    updateMemberRole: (groupId: number, userId: number, data: UpdateMemberRoleRequest) =>
+        api.put<GroupMember>(`/api/groups/${groupId}/members/${userId}/role`, data),
+
+    // GET: api/groups/{id}/feed?skip={skip}&take={take}
+    getFeed: (groupId: number, skip: number = 0, take: number = 20) =>
+        api.get<GroupFeedItem[]>(`/api/groups/${groupId}/feed?skip=${skip}&take=${take}`),
+
+    // GET: api/groups/{id}/recommendations?count={count}
+    getRecommendations: (groupId: number, count: number = 10) =>
+        api.get<GroupRecommendationStats>(`/api/groups/${groupId}/recommendations?count=${count}`),
+
+    // GET: api/groups/{id}/recommendations/stats
+    getRecommendationStats: (groupId: number) =>
+        api.get<GroupRecommendationStats>(`/api/groups/${groupId}/recommendations/stats`),
+};
+
+// Privacy endpoints
+export const privacyApi = {
+    // GET: api/privacy
+    getPrivacySettings: () =>
+        api.get<UserPrivacySettings>('/api/privacy'),
+
+    // PUT: api/privacy
+    updatePrivacySettings: (data: UpdatePrivacySettingsRequest) =>
+        api.put<UserPrivacySettings>('/api/privacy', data),
 };

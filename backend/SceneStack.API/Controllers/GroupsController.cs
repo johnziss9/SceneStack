@@ -15,15 +15,18 @@ namespace SceneStack.API.Controllers;
 public class GroupsController : ControllerBase
 {
     private readonly IGroupService _groupService;
+    private readonly IGroupFeedService _groupFeedService;
     private readonly IGroupRecommendationsService _groupRecommendationsService;
     private readonly ILogger<GroupsController> _logger;
 
     public GroupsController(
-        IGroupService groupService, 
+        IGroupService groupService,
+        IGroupFeedService groupFeedService,
         IGroupRecommendationsService groupRecommendationsService,
         ILogger<GroupsController> logger)
     {
         _groupService = groupService;
+        _groupFeedService = groupFeedService;
         _groupRecommendationsService = groupRecommendationsService;
         _logger = logger;
     }
@@ -262,6 +265,49 @@ public class GroupsController : ControllerBase
         }
 
         return Ok(members);
+    }
+
+    /// <summary>
+    /// Get the activity feed for a group
+    /// </summary>
+    /// <param name="id">Group ID</param>
+    /// <param name="skip">Number of items to skip</param>
+    /// <param name="take">Number of items to take</param>
+    /// <returns>List of watch activities</returns>
+    // GET: api/groups/5/feed
+    [HttpGet("{id}/feed")]
+    public async Task<ActionResult<IEnumerable<GroupFeedItemResponse>>> GetGroupFeed(
+        int id, 
+        [FromQuery] int skip = 0, 
+        [FromQuery] int take = 20)
+    {
+        var userId = User.GetUserId();
+        _logger.LogInformation("User {UserId} getting feed for group {GroupId} (skip: {Skip}, take: {Take})", 
+            userId, id, skip, take);
+
+        try
+        {
+            var feedItems = await _groupFeedService.GetGroupFeedAsync(id, userId, skip, take);
+
+            if (!feedItems.Any())
+            {
+                _logger.LogInformation("No feed items found for group {GroupId}", id);
+                return Ok(new List<GroupFeedItemResponse>());
+            }
+
+            _logger.LogInformation("Returning {Count} feed items for group {GroupId}", feedItems.Count, id);
+            return Ok(feedItems);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            _logger.LogWarning("User {UserId} not authorized to access feed for group {GroupId}", userId, id);
+            return Unauthorized("You must be a member of this group to view its feed");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting feed for group {GroupId}", id);
+            return StatusCode(500, $"Error getting group feed: {ex.Message}");
+        }
     }
 
     /// <summary>

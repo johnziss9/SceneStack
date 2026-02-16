@@ -5,7 +5,9 @@ export type {
     WatchEntry,
     GroupedWatch,
     CreateWatchRequest,
-    UpdateWatchRequest
+    UpdateWatchRequest,
+    BulkUpdateWatchesRequest,
+    BulkUpdateResult
 } from './watch';
 export type { RegisterRequest, LoginRequest, AuthResponse } from './auth';
 export type {
@@ -17,3 +19,20 @@ export type {
     AiSearchResponse,
     AiUsageStats
 } from './ai';
+export type {
+    Group,
+    GroupBasicInfo,
+    GroupMember,
+    CreateGroupRequest,
+    UpdateGroupRequest,
+    AddMemberRequest,
+    UpdateMemberRoleRequest,
+    GroupFeedItem,
+    GroupRecommendation,
+    GroupRecommendationStats
+} from './group';
+export { GroupRole, GroupMemberAction } from './group';
+export type {
+    UserPrivacySettings,
+    UpdatePrivacySettingsRequest
+} from './privacy';

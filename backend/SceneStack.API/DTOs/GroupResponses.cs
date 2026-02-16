@@ -35,6 +35,22 @@ public class GroupMemberResponse
     public UserBasicInfo User { get; set; } = null!;
 }
 
+public class GroupFeedItemResponse
+{
+    public int Id { get; set; }
+    public int UserId { get; set; }
+    public string Username { get; set; } = string.Empty;
+    public int MovieId { get; set; }
+    public string MovieTitle { get; set; } = string.Empty;
+    public string? PosterPath { get; set; }
+    public DateTime WatchedDate { get; set; }
+    public int? Rating { get; set; }
+    public string? Notes { get; set; }
+    public string? WatchLocation { get; set; }
+    public string? WatchedWith { get; set; }
+    public bool IsRewatch { get; set; }
+}
+
 public class GroupFeedStatsResponse
 {
     public int GroupId { get; set; }
@@ -60,9 +76,10 @@ public class GroupRecommendationStats
 {
     public int GroupId { get; set; }
     public string GroupName { get; set; } = string.Empty;
-    public int TotalMoviesWatched { get; set; }
-    public Dictionary<string, int> TopGenres { get; set; } = new(); // Genre name -> count
-    public List<string> PreferredGenres { get; set; } = new(); // Top 3 genres
+    public int TotalWatches { get; set; } // Total watch entries
+    public int UniqueMovies { get; set; } // Unique movies
+    public int UniqueViewers { get; set; } // Unique members who watched
+    public string? MostWatchedGenre { get; set; } // Top genre (optional)
     public double? AverageGroupRating { get; set; }
     public List<TmdbMovie> Recommendations { get; set; } = new();
 }

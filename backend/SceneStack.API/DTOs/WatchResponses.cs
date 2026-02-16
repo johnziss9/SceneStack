@@ -49,10 +49,22 @@ public class GroupedWatchesResponse
 public class WatchEntryResponse
 {
     public int Id { get; set; }
+    public int MovieId { get; set; }
     public DateTime WatchedDate { get; set; }
     public int? Rating { get; set; }
     public string? Notes { get; set; }
     public string? WatchLocation { get; set; }
     public string? WatchedWith { get; set; }
     public bool IsRewatch { get; set; }
+    public bool IsPrivate { get; set; }
+    public List<int> GroupIds { get; set; } = new();
+    public MovieBasicInfo Movie { get; set; } = null!;
+}
+
+public class BulkUpdateResult
+{
+    public bool Success { get; set; }
+    public int Updated { get; set; }
+    public int Failed { get; set; }
+    public List<string> Errors { get; set; } = new();
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -10,7 +10,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2 } from 'lucide-react';
 import { watchApi } from '@/lib';
-import type { TmdbMovie, CreateWatchRequest } from '@/types';
+import type { TmdbMovie, CreateWatchRequest, GroupBasicInfo } from '@/types';
+import { groupApi } from '@/lib/api';
+import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 
 interface WatchFormProps {
@@ -40,6 +42,32 @@ export function WatchForm({ movie, open, onOpenChange, onSuccess }: WatchFormPro
     const [customLocation, setCustomLocation] = useState('');
     const [watchedWith, setWatchedWith] = useState('');
     const [isRewatch, setIsRewatch] = useState(false);
+    const [isPrivate, setIsPrivate] = useState(true); // Default to private
+    const [selectedGroups, setSelectedGroups] = useState<number[]>([]);
+    const [shareWithAllGroups, setShareWithAllGroups] = useState(false);
+    const [userGroups, setUserGroups] = useState<GroupBasicInfo[]>([]);
+    const [isLoadingGroups, setIsLoadingGroups] = useState(false);
+    const [privacyError, setPrivacyError] = useState<string | null>(null);
+
+    // Fetch user's groups when dialog opens
+    useEffect(() => {
+        if (open && user) {
+            fetchUserGroups();
+        }
+    }, [open, user]);
+
+    const fetchUserGroups = async () => {
+        try {
+            setIsLoadingGroups(true);
+            const groups = await groupApi.getUserGroups();
+            setUserGroups(groups);
+        } catch (err) {
+            console.error('Failed to fetch groups:', err);
+            // Don't show error toast, groups are optional
+        } finally {
+            setIsLoadingGroups(false);
+        }
+    };
 
     // Validation function
     const validateForm = (): boolean => {
@@ -49,6 +77,7 @@ export function WatchForm({ movie, open, onOpenChange, onSuccess }: WatchFormPro
         setDateError(null);
         setRatingError(null);
         setLocationError(null);
+        setPrivacyError(null);
 
         // Validate watch date (required)
         if (!watchedDate) {
@@ -68,15 +97,13 @@ export function WatchForm({ movie, open, onOpenChange, onSuccess }: WatchFormPro
             isValid = false;
         }
 
-        return isValid;
-    };
+        // Validate privacy + groups combination
+        if (!isPrivate && selectedGroups.length === 0 && !shareWithAllGroups) {
+            setPrivacyError('Please select at least one group to share with, or mark as private');
+            isValid = false;
+        }
 
-    // Check if form is valid (for disabling submit button)
-    const isFormValid = (): boolean => {
-        if (!watchedDate) return false;
-        if (rating && (parseInt(rating) < 1 || parseInt(rating) > 10)) return false;
-        if (watchLocation === "Other" && !customLocation.trim()) return false;
-        return true;
+        return isValid;
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -101,6 +128,10 @@ export function WatchForm({ movie, open, onOpenChange, onSuccess }: WatchFormPro
                 watchLocation: watchLocation === "Other" ? customLocation : watchLocation || undefined,
                 watchedWith: watchedWith || undefined,
                 isRewatch,
+                isPrivate,
+                groupIds: shareWithAllGroups 
+                    ? userGroups.map(g => g.id) // Send all group IDs if "all groups" is selected
+                    : (selectedGroups.length > 0 ? selectedGroups : undefined),
             };
 
             await watchApi.createWatch(watchData);
@@ -131,10 +162,14 @@ export function WatchForm({ movie, open, onOpenChange, onSuccess }: WatchFormPro
         setCustomLocation('');
         setWatchedWith('');
         setIsRewatch(false);
+        setIsPrivate(true); // Reset to default (private)
+        setSelectedGroups([]);
+        setShareWithAllGroups(false);
         setError(null);
         setDateError(null);
         setRatingError(null);
         setLocationError(null);
+        setPrivacyError(null);
     };
 
     const handleOpenChange = (newOpen: boolean) => {
@@ -285,8 +320,131 @@ export function WatchForm({ movie, open, onOpenChange, onSuccess }: WatchFormPro
                         </Label>
                     </div>
 
-                    {/* Error Message */}
-                    {error && (
+                    {/* Privacy & Sharing Section - Orange Border Container */}
+                    <div className="border-2 border-primary rounded-lg p-4 space-y-4">
+                        {/* Privacy Checkbox */}
+                        <div className="flex items-center gap-2">
+                            <input
+                                id="isPrivate"
+                                type="checkbox"
+                                checked={isPrivate}
+                            onChange={(e) => {
+                                const checked = e.target.checked;
+                                setIsPrivate(checked);
+                                setPrivacyError(null); // Clear error when changing privacy
+                                // If marking as private, clear group selections
+                                if (checked) {
+                                    setSelectedGroups([]);
+                                    setShareWithAllGroups(false);
+                                }
+                            }}
+                            className="h-4 w-4 rounded border-input bg-background"
+                        />
+                        <Label htmlFor="isPrivate" className="cursor-pointer">
+                            Mark as private (only I can see this)
+                        </Label>
+                    </div>
+
+                    {/* Share with Groups */}
+                    <div className="space-y-2">
+                        <Label className={isPrivate ? 'text-muted-foreground' : ''}>
+                            Share with groups
+                        </Label>
+                        
+                        {/* Case 1: User has no groups */}
+                        {userGroups.length === 0 && !isLoadingGroups && (
+                            <div className="border rounded-md p-3 bg-muted/50">
+                                <p className="text-sm text-muted-foreground">
+                                    {isPrivate 
+                                        ? "You're not a member of any groups yet"
+                                        : "Join a group to share your watches, or keep this watch private"
+                                    }
+                                </p>
+                                <p className="text-xs text-muted-foreground mt-2">
+                                    💡 Create or join a group to share your watches
+                                </p>
+                            </div>
+                        )}
+
+                        {/* Case 2: User has groups */}
+                        {userGroups.length > 0 && (
+                            <>
+                                {/* All My Groups Checkbox */}
+                                <div className="flex items-center gap-2">
+                                    <Checkbox
+                                        id="shareWithAllGroups"
+                                        checked={shareWithAllGroups}
+                                        disabled={isPrivate || selectedGroups.length > 0}
+                                        onCheckedChange={(checked) => {
+                                            setShareWithAllGroups(checked as boolean);
+                                            setPrivacyError(null);
+                                            if (checked) {
+                                                setSelectedGroups([]); // Clear specific selections
+                                            }
+                                        }}
+                                    />
+                                    <Label
+                                        htmlFor="shareWithAllGroups"
+                                        className={`cursor-pointer ${isPrivate || selectedGroups.length > 0 ? 'text-muted-foreground' : ''}`}
+                                    >
+                                        All my groups
+                                    </Label>
+                                </div>
+
+                                {/* Specific Groups Selection */}
+                                <div className="space-y-2">
+                                    <Label className={isPrivate || shareWithAllGroups ? 'text-muted-foreground' : ''}>
+                                        Select specific groups:
+                                    </Label>
+                                    <div className="border rounded-md p-3 space-y-2 max-h-40 overflow-y-auto">
+                                        {isLoadingGroups ? (
+                                            <p className="text-sm text-muted-foreground">Loading groups...</p>
+                                        ) : (
+                                            userGroups.map((group) => (
+                                                <div key={group.id} className="flex items-center gap-2">
+                                                    <Checkbox
+                                                        id={`group-${group.id}`}
+                                                        checked={selectedGroups.includes(group.id)}
+                                                        disabled={isPrivate || shareWithAllGroups}
+                                                        onCheckedChange={(checked) => {
+                                                            setPrivacyError(null);
+                                                            if (checked) {
+                                                                setSelectedGroups([...selectedGroups, group.id]);
+                                                                setShareWithAllGroups(false); // Disable "all groups" when specific selected
+                                                            } else {
+                                                                setSelectedGroups(selectedGroups.filter(id => id !== group.id));
+                                                            }
+                                                        }}
+                                                    />
+                                                    <Label
+                                                        htmlFor={`group-${group.id}`}
+                                                        className={`cursor-pointer text-sm font-normal ${
+                                                            isPrivate || shareWithAllGroups ? 'text-muted-foreground' : ''
+                                                        }`}
+                                                    >
+                                                        {group.name}
+                                                        <span className="text-muted-foreground ml-2">
+                                                            ({group.memberCount} {group.memberCount === 1 ? 'member' : 'members'})
+                                                        </span>
+                                                    </Label>
+                                                </div>
+                                            ))
+                                        )}
+                                    </div>
+                                </div>
+                            </>
+                        )}
+
+                        {/* Privacy Error Message */}
+                        {privacyError && (
+                            <p className="text-sm text-destructive">⚠️ {privacyError}</p>
+                        )}
+                    </div>
+                </div>
+                {/* End Privacy & Sharing Section */}
+
+                {/* Error Message */}
+                {error && (
                         <p className="text-sm text-destructive">{error}</p>
                     )}
 
@@ -300,7 +458,7 @@ export function WatchForm({ movie, open, onOpenChange, onSuccess }: WatchFormPro
                         >
                             Cancel
                         </Button>
-                        <Button type="submit" disabled={isSubmitting || !isFormValid()}>
+                        <Button type="submit" disabled={isSubmitting}>
                             {isSubmitting ? (
                                 <>
                                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />

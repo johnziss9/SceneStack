@@ -1,14 +1,31 @@
 import { render, screen, waitFor } from '@/test-utils'
 import { WatchList } from '@/components/WatchList'
 import { watchApi } from '@/lib'
+import { groupApi } from '@/lib/api'
 import { useAuth } from '@/contexts/AuthContext'
 import userEvent from '@testing-library/user-event'
-import type { GroupedWatch } from '@/types'
+import type { GroupedWatch, GroupBasicInfo } from '@/types'
 
 // Mock the watchApi
 jest.mock('@/lib', () => ({
     watchApi: {
         getGroupedWatches: jest.fn(),
+        bulkUpdate: jest.fn(),
+    },
+}))
+
+// Mock the groupApi
+jest.mock('@/lib/api', () => ({
+    groupApi: {
+        getUserGroups: jest.fn(),
+    },
+}))
+
+// Mock sonner toast
+jest.mock('sonner', () => ({
+    toast: {
+        success: jest.fn(),
+        error: jest.fn(),
     },
 }))
 
@@ -27,9 +44,14 @@ afterAll(() => {
 })
 
 describe('WatchList', () => {
+    const mockGroups: GroupBasicInfo[] = [
+        { id: 1, name: 'Friday Movie Night', memberCount: 5 },
+        { id: 2, name: 'Classic Cinema', memberCount: 3 },
+    ]
+
     beforeEach(() => {
         jest.clearAllMocks()
-        
+
         // Mock authenticated user
         mockUseAuth.mockReturnValue({
             user: { id: 1, username: 'testuser', email: 'test@example.com' },
@@ -38,6 +60,9 @@ describe('WatchList', () => {
             register: jest.fn(),
             logout: jest.fn(),
         })
+
+        // Mock user groups by default
+        ;(groupApi.getUserGroups as jest.Mock).mockResolvedValue(mockGroups)
     })
 
     const mockGroupedWatches: GroupedWatch[] = [
@@ -63,6 +88,8 @@ describe('WatchList', () => {
                     watchLocation: 'Cinema',
                     watchedWith: 'Friends',
                     isRewatch: false,
+                    isPrivate: false,
+                    groupIds: [1], // Shared with Friday Movie Night
                 },
                 {
                     id: 2,
@@ -72,6 +99,8 @@ describe('WatchList', () => {
                     watchLocation: 'Home',
                     watchedWith: null,
                     isRewatch: true,
+                    isPrivate: true,
+                    groupIds: [],
                 },
             ],
         },
@@ -97,6 +126,8 @@ describe('WatchList', () => {
                     watchLocation: 'Cinema',
                     watchedWith: 'Solo',
                     isRewatch: false,
+                    isPrivate: false,
+                    groupIds: [1, 2], // Shared with both groups
                 },
             ],
         },
@@ -308,6 +339,8 @@ describe('WatchList', () => {
                     watchedDate: '2024-12-01',
                     rating: 8,
                     isRewatch: false,
+                    isPrivate: true,
+                    groupIds: [],
                 },
             ],
         }))
@@ -323,5 +356,366 @@ describe('WatchList', () => {
         // Should render all 20 cards
         const cards = screen.getAllByRole('link')
         expect(cards).toHaveLength(20)
+    })
+
+    // Group Features Tests
+    it('fetches user groups on mount', async () => {
+        ;(watchApi.getGroupedWatches as jest.Mock).mockResolvedValue(mockGroupedWatches)
+
+        render(<WatchList />)
+
+        await waitFor(() => {
+            expect(groupApi.getUserGroups).toHaveBeenCalledTimes(1)
+        })
+    })
+
+    it('displays group filter when user has groups', async () => {
+        ;(watchApi.getGroupedWatches as jest.Mock).mockResolvedValue(mockGroupedWatches)
+
+        render(<WatchList />)
+
+        await waitFor(() => {
+            expect(screen.getByText('Group:')).toBeInTheDocument()
+        })
+    })
+
+    it('filters watches by selected group', async () => {
+        const user = userEvent.setup()
+        ;(watchApi.getGroupedWatches as jest.Mock).mockResolvedValue(mockGroupedWatches)
+
+        render(<WatchList />)
+
+        await waitFor(() => {
+            expect(screen.getByText('Fight Club')).toBeInTheDocument()
+            expect(screen.getByText('The Matrix')).toBeInTheDocument()
+        })
+
+        // Select Classic Cinema group (id: 2)
+        const groupSelect = screen.getAllByRole('combobox')[1] // Second combobox is group filter
+        await user.click(groupSelect)
+
+        const classicCinemaOption = screen.getByRole('option', { name: 'Classic Cinema' })
+        await user.click(classicCinemaOption)
+
+        await waitFor(() => {
+            // The Matrix should be visible (shared with group 2)
+            expect(screen.getByText('The Matrix')).toBeInTheDocument()
+            // Fight Club should not be visible (only shared with group 1)
+            expect(screen.queryByText('Fight Club')).not.toBeInTheDocument()
+        })
+    })
+
+    // Privacy Filter Tests
+    it('displays privacy filter dropdown', async () => {
+        ;(watchApi.getGroupedWatches as jest.Mock).mockResolvedValue(mockGroupedWatches)
+
+        render(<WatchList />)
+
+        await waitFor(() => {
+            expect(screen.getByText('Show:')).toBeInTheDocument()
+        })
+    })
+
+    it('filters watches by privacy - private only', async () => {
+        const user = userEvent.setup()
+        ;(watchApi.getGroupedWatches as jest.Mock).mockResolvedValue(mockGroupedWatches)
+
+        render(<WatchList />)
+
+        await waitFor(() => {
+            expect(screen.getByText('Fight Club')).toBeInTheDocument()
+        })
+
+        // Select "Private only" filter
+        const privacySelect = screen.getAllByRole('combobox')[0] // First combobox is privacy filter
+        await user.click(privacySelect)
+
+        const privateOption = screen.getByRole('option', { name: 'Private only' })
+        await user.click(privateOption)
+
+        await waitFor(() => {
+            // Fight Club has a private watch, should be visible
+            expect(screen.getByText('Fight Club')).toBeInTheDocument()
+            // The Matrix has no private watches, should not be visible
+            expect(screen.queryByText('The Matrix')).not.toBeInTheDocument()
+        })
+    })
+
+    it('filters watches by privacy - shared only', async () => {
+        const user = userEvent.setup()
+        ;(watchApi.getGroupedWatches as jest.Mock).mockResolvedValue(mockGroupedWatches)
+
+        render(<WatchList />)
+
+        await waitFor(() => {
+            expect(screen.getByText('Fight Club')).toBeInTheDocument()
+        })
+
+        // Select "Shared only" filter
+        const privacySelect = screen.getAllByRole('combobox')[0]
+        await user.click(privacySelect)
+
+        const sharedOption = screen.getByRole('option', { name: 'Shared only' })
+        await user.click(sharedOption)
+
+        await waitFor(() => {
+            // Both movies have shared watches, both should be visible
+            expect(screen.getByText('Fight Club')).toBeInTheDocument()
+            expect(screen.getByText('The Matrix')).toBeInTheDocument()
+        })
+    })
+
+    // Bulk Mode Tests
+    it('displays bulk edit button', async () => {
+        ;(watchApi.getGroupedWatches as jest.Mock).mockResolvedValue(mockGroupedWatches)
+
+        render(<WatchList />)
+
+        await waitFor(() => {
+            expect(screen.getByRole('button', { name: /bulk edit/i })).toBeInTheDocument()
+        })
+    })
+
+    it('enters bulk mode when bulk edit button is clicked', async () => {
+        const user = userEvent.setup()
+        ;(watchApi.getGroupedWatches as jest.Mock).mockResolvedValue(mockGroupedWatches)
+
+        render(<WatchList />)
+
+        await waitFor(() => {
+            expect(screen.getByText('Fight Club')).toBeInTheDocument()
+        })
+
+        const bulkEditButton = screen.getByRole('button', { name: /bulk edit/i })
+        await user.click(bulkEditButton)
+
+        await waitFor(() => {
+            expect(screen.getByText(/select all/i)).toBeInTheDocument()
+            expect(screen.getByRole('button', { name: /exit bulk mode/i })).toBeInTheDocument()
+        })
+    })
+
+    it('exits bulk mode when exit button is clicked', async () => {
+        const user = userEvent.setup()
+        ;(watchApi.getGroupedWatches as jest.Mock).mockResolvedValue(mockGroupedWatches)
+
+        render(<WatchList />)
+
+        await waitFor(() => {
+            expect(screen.getByText('Fight Club')).toBeInTheDocument()
+        })
+
+        // Enter bulk mode
+        const bulkEditButton = screen.getByRole('button', { name: /bulk edit/i })
+        await user.click(bulkEditButton)
+
+        await waitFor(() => {
+            expect(screen.getByText(/select all/i)).toBeInTheDocument()
+        })
+
+        // Exit bulk mode
+        const exitButton = screen.getByRole('button', { name: /exit bulk mode/i })
+        await user.click(exitButton)
+
+        await waitFor(() => {
+            expect(screen.queryByText(/select all/i)).not.toBeInTheDocument()
+            expect(screen.getByRole('button', { name: /bulk edit/i })).toBeInTheDocument()
+        })
+    })
+
+    it('displays checkboxes in bulk mode', async () => {
+        const user = userEvent.setup()
+        ;(watchApi.getGroupedWatches as jest.Mock).mockResolvedValue(mockGroupedWatches)
+
+        render(<WatchList />)
+
+        await waitFor(() => {
+            expect(screen.getByText('Fight Club')).toBeInTheDocument()
+        })
+
+        // Enter bulk mode
+        const bulkEditButton = screen.getByRole('button', { name: /bulk edit/i })
+        await user.click(bulkEditButton)
+
+        await waitFor(() => {
+            expect(screen.getByText(/select all/i)).toBeInTheDocument()
+        })
+
+        // Checkboxes should be rendered for selection
+        const checkboxes = screen.getAllByRole('checkbox')
+        // Should have at least the select all checkbox
+        expect(checkboxes.length).toBeGreaterThan(0)
+    })
+
+    it('select all selects all visible movies', async () => {
+        const user = userEvent.setup()
+        ;(watchApi.getGroupedWatches as jest.Mock).mockResolvedValue(mockGroupedWatches)
+
+        render(<WatchList />)
+
+        await waitFor(() => {
+            expect(screen.getByText('Fight Club')).toBeInTheDocument()
+        })
+
+        // Enter bulk mode
+        const bulkEditButton = screen.getByRole('button', { name: /bulk edit/i })
+        await user.click(bulkEditButton)
+
+        await waitFor(() => {
+            expect(screen.getByText(/select all/i)).toBeInTheDocument()
+        })
+
+        // Click select all - first checkbox in bulk mode is the select all checkbox
+        const checkboxes = screen.getAllByRole('checkbox')
+        const selectAllCheckbox = checkboxes[0]
+        await user.click(selectAllCheckbox)
+
+        await waitFor(() => {
+            // Text appears in two places: select all bar and bulk actions bar
+            expect(screen.getAllByText(/2 movies selected/i).length).toBe(2)
+        })
+    })
+
+    it('deselect all clears all selections', async () => {
+        const user = userEvent.setup()
+        ;(watchApi.getGroupedWatches as jest.Mock).mockResolvedValue(mockGroupedWatches)
+
+        render(<WatchList />)
+
+        await waitFor(() => {
+            expect(screen.getByText('Fight Club')).toBeInTheDocument()
+        })
+
+        // Enter bulk mode
+        const bulkEditButton = screen.getByRole('button', { name: /bulk edit/i })
+        await user.click(bulkEditButton)
+
+        await waitFor(() => {
+            expect(screen.getByText(/select all/i)).toBeInTheDocument()
+        })
+
+        // Select all - first checkbox in bulk mode is the select all checkbox
+        const checkboxes = screen.getAllByRole('checkbox')
+        const selectAllCheckbox = checkboxes[0]
+        await user.click(selectAllCheckbox)
+
+        await waitFor(() => {
+            // Text appears in two places: select all bar and bulk actions bar
+            expect(screen.getAllByText(/2 movies selected/i).length).toBe(2)
+        })
+
+        // Deselect all
+        await user.click(selectAllCheckbox)
+
+        await waitFor(() => {
+            expect(screen.queryByText(/movies selected/i)).not.toBeInTheDocument()
+        })
+    })
+
+    // Bulk Operations Tests
+    it('opens make private dialog when make private button is clicked with selection', async () => {
+        const user = userEvent.setup()
+        ;(watchApi.getGroupedWatches as jest.Mock).mockResolvedValue(mockGroupedWatches)
+
+        render(<WatchList />)
+
+        await waitFor(() => {
+            expect(screen.getByText('Fight Club')).toBeInTheDocument()
+        })
+
+        // Enter bulk mode
+        const bulkEditButton = screen.getByRole('button', { name: /bulk edit/i })
+        await user.click(bulkEditButton)
+
+        await waitFor(() => {
+            expect(screen.getByText(/select all/i)).toBeInTheDocument()
+        })
+
+        // Select all movies - first checkbox in bulk mode is the select all checkbox
+        const checkboxes = screen.getAllByRole('checkbox')
+        const selectAllCheckbox = checkboxes[0]
+        await user.click(selectAllCheckbox)
+
+        await waitFor(() => {
+            // Text appears in two places: select all bar and bulk actions bar
+            expect(screen.getAllByText(/2 movies selected/i).length).toBe(2)
+        })
+
+        // Click make private button
+        const makePrivateButtons = screen.getAllByRole('button', { name: /make private/i })
+        await user.click(makePrivateButtons[makePrivateButtons.length - 1])
+
+        await waitFor(() => {
+            expect(screen.getByText('Make Movies Private')).toBeInTheDocument()
+        })
+
+        // Wait for dialog content to fully render
+        await waitFor(() => {
+            expect(screen.getByText(/You are about to make 2 movies private/i)).toBeInTheDocument()
+        })
+    })
+
+    it('opens share dialog when share button is clicked with selection', async () => {
+        const user = userEvent.setup()
+        ;(watchApi.getGroupedWatches as jest.Mock).mockResolvedValue(mockGroupedWatches)
+
+        render(<WatchList />)
+
+        await waitFor(() => {
+            expect(screen.getByText('Fight Club')).toBeInTheDocument()
+        })
+
+        // Enter bulk mode
+        const bulkEditButton = screen.getByRole('button', { name: /bulk edit/i })
+        await user.click(bulkEditButton)
+
+        await waitFor(() => {
+            expect(screen.getByText(/select all/i)).toBeInTheDocument()
+        })
+
+        // Select all movies - first checkbox in bulk mode is the select all checkbox
+        const checkboxes = screen.getAllByRole('checkbox')
+        const selectAllCheckbox = checkboxes[0]
+        await user.click(selectAllCheckbox)
+
+        await waitFor(() => {
+            // Text appears in two places: select all bar and bulk actions bar
+            expect(screen.getAllByText(/2 movies selected/i).length).toBe(2)
+        })
+
+        // Click share button
+        const shareButton = screen.getByRole('button', { name: /share with groups/i })
+        await user.click(shareButton)
+
+        await waitFor(() => {
+            // Dialog title appears along with the button text
+            expect(screen.getByRole('heading', { name: /share with groups/i })).toBeInTheDocument()
+        })
+
+        // Wait for groups to load in the dialog
+        await waitFor(() => {
+            expect(screen.getByText('Friday Movie Night')).toBeInTheDocument()
+        })
+    })
+
+    it('displays result count', async () => {
+        ;(watchApi.getGroupedWatches as jest.Mock).mockResolvedValue(mockGroupedWatches)
+
+        render(<WatchList />)
+
+        await waitFor(() => {
+            expect(screen.getByText(/2 movies/i)).toBeInTheDocument()
+        })
+    })
+
+    it('displays singular movie count', async () => {
+        const singleWatch: GroupedWatch[] = [mockGroupedWatches[0]]
+        ;(watchApi.getGroupedWatches as jest.Mock).mockResolvedValue(singleWatch)
+
+        render(<WatchList />)
+
+        await waitFor(() => {
+            expect(screen.getByText(/1 movie/i)).toBeInTheDocument()
+        })
     })
 })

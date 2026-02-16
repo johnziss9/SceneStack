@@ -21,4 +21,14 @@ public class UpdateWatchRequest
     public string? WatchLocation { get; set; }
     public string? WatchedWith { get; set; }
     public bool IsRewatch { get; set; }
+    public bool IsPrivate { get; set; }
+    public List<int>? GroupIds { get; set; }
+}
+
+public class BulkUpdateWatchesRequest
+{
+    public List<int> WatchIds { get; set; } = new();
+    public bool IsPrivate { get; set; }
+    public List<int>? GroupIds { get; set; }
+    public string GroupOperation { get; set; } = "replace"; // "add" or "replace"
 }

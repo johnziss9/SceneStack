@@ -18,7 +18,7 @@ public class GroupFeedService : IGroupFeedService
         _logger = logger;
     }
 
-    public async Task<List<Watch>> GetGroupFeedAsync(int groupId, int requestingUserId, int skip = 0, int take = 20)
+    public async Task<List<GroupFeedItemResponse>> GetGroupFeedAsync(int groupId, int requestingUserId, int skip = 0, int take = 20)
     {
         // Verify requesting user is a member of the group
         var isMember = await _context.GroupMembers
@@ -27,7 +27,7 @@ public class GroupFeedService : IGroupFeedService
         if (!isMember)
         {
             _logger.LogWarning("User {UserId} attempted to access feed for group {GroupId} without membership", requestingUserId, groupId);
-            return new List<Watch>();
+            throw new UnauthorizedAccessException("You must be a member of this group to view its feed");
         }
 
         // Get watches shared with this group
@@ -45,7 +45,24 @@ public class GroupFeedService : IGroupFeedService
             .ToListAsync();
 
         // Apply privacy filters
-        return ApplyPrivacyFilters(watches, requestingUserId);
+        var filteredWatches = ApplyPrivacyFilters(watches, requestingUserId);
+
+        // Map to GroupFeedItemResponse
+        return filteredWatches.Select(w => new GroupFeedItemResponse
+        {
+            Id = w.Id,
+            UserId = w.UserId,
+            Username = w.User.Username,
+            MovieId = w.MovieId,
+            MovieTitle = w.Movie.Title,
+            PosterPath = w.Movie.PosterPath,
+            WatchedDate = w.WatchedDate,
+            Rating = w.Rating,
+            Notes = w.Notes,
+            WatchLocation = w.WatchLocation,
+            WatchedWith = w.WatchedWith,
+            IsRewatch = w.IsRewatch
+        }).ToList();
     }
 
     public async Task<List<Watch>> GetCombinedFeedAsync(int userId, int skip = 0, int take = 20)

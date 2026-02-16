@@ -126,13 +126,20 @@ public class GroupRecommendationsService : IGroupRecommendationsService
         // Get recommendations
         var recommendations = await GetGroupRecommendationsAsync(groupId, requestingUserId, 10);
 
+        // Count unique viewers (members who have watched at least one movie)
+        var uniqueViewers = groupWatches.Select(w => w.UserId).Distinct().Count();
+
+        // Get watched movie TMDb IDs
+        var watchedTmdbIds = groupWatches.Select(w => w.Movie.TmdbId).Distinct().ToHashSet();
+
         return new GroupRecommendationStats
         {
             GroupId = groupId,
             GroupName = group.Name,
-            TotalMoviesWatched = totalMoviesWatched,
-            TopGenres = topGenres,
-            PreferredGenres = preferredGenres,
+            TotalWatches = groupWatches.Count, // Total number of watch entries
+            UniqueMovies = totalMoviesWatched, // Unique movies watched
+            UniqueViewers = uniqueViewers, // Unique members who watched
+            MostWatchedGenre = null, // Can be enhanced later
             AverageGroupRating = averageRating,
             Recommendations = recommendations
         };

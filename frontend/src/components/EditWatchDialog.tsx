@@ -14,6 +14,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
+import { groupApi } from '@/lib/api';
+import type { GroupBasicInfo } from '@/types';
+import { useAuth } from '@/contexts/AuthContext';
 import {
     Select,
     SelectContent,
@@ -44,11 +48,19 @@ export default function EditWatchDialog({
     const [isRewatch, setIsRewatch] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [isPrivate, setIsPrivate] = useState(false);
+    const [selectedGroups, setSelectedGroups] = useState<number[]>([]);
+    const [shareWithAllGroups, setShareWithAllGroups] = useState(false);
+    const [userGroups, setUserGroups] = useState<GroupBasicInfo[]>([]);
+    const [isLoadingGroups, setIsLoadingGroups] = useState(false);
+    const [privacyError, setPrivacyError] = useState<string | null>(null);
 
     // Validation errors
     const [dateError, setDateError] = useState<string | null>(null);
     const [ratingError, setRatingError] = useState<string | null>(null);
     const [locationError, setLocationError] = useState<string | null>(null);
+
+    const { user } = useAuth();
 
     // Populate form when watch changes OR when dialog opens
     useEffect(() => {
@@ -68,13 +80,53 @@ export default function EditWatchDialog({
             setWatchedWith(watch.watchedWith || '');
             setNotes(watch.notes || '');
             setIsRewatch(watch.isRewatch);
+            setIsPrivate(watch.isPrivate || false);
+            // Note: groupIds will be set after fetching groups
 
             // Clear validation errors when dialog opens
             setDateError(null);
             setRatingError(null);
             setLocationError(null);
+
+            // Fetch user's groups
+            if (user) {
+                fetchUserGroups();
+            }
         }
-    }, [watch, open]);
+    }, [watch, open, user]);
+
+    const fetchUserGroups = async () => {
+        try {
+            setIsLoadingGroups(true);
+            const groups = await groupApi.getUserGroups();
+            setUserGroups(groups);
+
+            // Set selected groups based on watch's groupIds
+            if (watch?.groupIds) {
+                // Check if all groups are selected (meaning "All my groups" was chosen)
+                const allGroupIds = groups.map(g => g.id).sort();
+                const watchGroupIds = [...watch.groupIds].sort();
+                const isAllGroups = allGroupIds.length === watchGroupIds.length && 
+                                allGroupIds.every((id, index) => id === watchGroupIds[index]);
+                
+                if (isAllGroups) {
+                    setShareWithAllGroups(true);
+                    setSelectedGroups([]);
+                } else {
+                    setShareWithAllGroups(false);
+                    setSelectedGroups(watch.groupIds);
+                }
+            } else {
+                setShareWithAllGroups(false);
+                setSelectedGroups([]);
+            }
+        } catch (err) {
+            console.error('Failed to fetch groups:', err);
+            // Don't show error toast, groups are optional
+        } finally {
+            setIsLoadingGroups(false);
+        }
+    };
 
     // Validation function
     const validateForm = (): boolean => {
@@ -84,6 +136,7 @@ export default function EditWatchDialog({
         setDateError(null);
         setRatingError(null);
         setLocationError(null);
+        setPrivacyError(null);
 
         // Validate watch date (required)
         if (!watchedDate) {
@@ -103,15 +156,13 @@ export default function EditWatchDialog({
             isValid = false;
         }
 
-        return isValid;
-    };
+        // Validate privacy + groups combination
+        if (!isPrivate && selectedGroups.length === 0 && !shareWithAllGroups) {
+            setPrivacyError('Please select at least one group to share with, or mark as private');
+            isValid = false;
+        }
 
-    // Check if form is valid (for disabling submit button)
-    const isFormValid = (): boolean => {
-        if (!watchedDate) return false;
-        if (rating && (parseInt(rating) < 1 || parseInt(rating) > 10)) return false;
-        if (location === 'Other' && !customLocation.trim()) return false;
-        return true;
+        return isValid;
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -136,6 +187,10 @@ export default function EditWatchDialog({
                 watchLocation: finalLocation || undefined,
                 watchedWith: watchedWith || undefined,
                 isRewatch,
+                isPrivate,
+                groupIds: shareWithAllGroups 
+                    ? userGroups.map(g => g.id) // Send all group IDs if "all groups" is selected
+                    : (selectedGroups.length > 0 ? selectedGroups : undefined),
             };
 
             await watchApi.updateWatch(watch.id, updateData);
@@ -148,9 +203,13 @@ export default function EditWatchDialog({
             setWatchedWith('');
             setNotes('');
             setIsRewatch(false);
+            setIsPrivate(false);
+            setSelectedGroups([]);
+            setShareWithAllGroups(false);
             setDateError(null);
             setRatingError(null);
             setLocationError(null);
+            setPrivacyError(null);
 
             toast.success('Watch updated successfully!', {
                 description: `Updated ${watch.movie.title}`,
@@ -302,8 +361,131 @@ export default function EditWatchDialog({
                         </Label>
                     </div>
 
-                    {/* Error Message */}
-                    {error && (
+                    {/* Privacy & Sharing Section - Orange Border Container */}
+                    <div className="border-2 border-primary rounded-lg p-4 space-y-4">
+                        {/* Privacy Checkbox */}
+                        <div className="flex items-center gap-2">
+                            <input
+                                id="isPrivate"
+                            type="checkbox"
+                            checked={isPrivate}
+                            onChange={(e) => {
+                                const checked = e.target.checked;
+                                setIsPrivate(checked);
+                                setPrivacyError(null); // Clear error when changing privacy
+                                // If marking as private, clear group selections
+                                if (checked) {
+                                    setSelectedGroups([]);
+                                    setShareWithAllGroups(false);
+                                }
+                            }}
+                            className="h-4 w-4 rounded border-input bg-background"
+                        />
+                        <Label htmlFor="isPrivate" className="cursor-pointer">
+                            Mark as private (only I can see this)
+                        </Label>
+                    </div>
+
+                    {/* Share with Groups */}
+                    <div className="space-y-2">
+                        <Label className={isPrivate ? 'text-muted-foreground' : ''}>
+                            Share with groups
+                        </Label>
+                        
+                        {/* Case 1: User has no groups */}
+                        {userGroups.length === 0 && !isLoadingGroups && (
+                            <div className="border rounded-md p-3 bg-muted/50">
+                                <p className="text-sm text-muted-foreground">
+                                    {isPrivate 
+                                        ? "You're not a member of any groups yet"
+                                        : "Join a group to share your watches, or keep this watch private"
+                                    }
+                                </p>
+                                <p className="text-xs text-muted-foreground mt-2">
+                                    💡 Create or join a group to share your watches
+                                </p>
+                            </div>
+                        )}
+
+                        {/* Case 2: User has groups */}
+                        {userGroups.length > 0 && (
+                            <>
+                                {/* All My Groups Checkbox */}
+                                <div className="flex items-center gap-2">
+                                    <Checkbox
+                                        id="edit-shareWithAllGroups"
+                                        checked={shareWithAllGroups}
+                                        disabled={isPrivate || selectedGroups.length > 0}
+                                        onCheckedChange={(checked) => {
+                                            setShareWithAllGroups(checked as boolean);
+                                            setPrivacyError(null);
+                                            if (checked) {
+                                                setSelectedGroups([]); // Clear specific selections
+                                            }
+                                        }}
+                                    />
+                                    <Label
+                                        htmlFor="edit-shareWithAllGroups"
+                                        className={`cursor-pointer ${isPrivate || selectedGroups.length > 0 ? 'text-muted-foreground' : ''}`}
+                                    >
+                                        All my groups
+                                    </Label>
+                                </div>
+
+                                {/* Specific Groups Selection */}
+                                <div className="space-y-2">
+                                    <Label className={isPrivate || shareWithAllGroups ? 'text-muted-foreground' : ''}>
+                                        Select specific groups:
+                                    </Label>
+                                    <div className="border rounded-md p-3 space-y-2 max-h-40 overflow-y-auto">
+                                        {isLoadingGroups ? (
+                                            <p className="text-sm text-muted-foreground">Loading groups...</p>
+                                        ) : (
+                                            userGroups.map((group) => (
+                                                <div key={group.id} className="flex items-center gap-2">
+                                                    <Checkbox
+                                                        id={`edit-group-${group.id}`}
+                                                        checked={selectedGroups.includes(group.id)}
+                                                        disabled={isPrivate || shareWithAllGroups}
+                                                        onCheckedChange={(checked) => {
+                                                            setPrivacyError(null);
+                                                            if (checked) {
+                                                                setSelectedGroups([...selectedGroups, group.id]);
+                                                                setShareWithAllGroups(false); // Disable "all groups" when specific selected
+                                                            } else {
+                                                                setSelectedGroups(selectedGroups.filter(id => id !== group.id));
+                                                            }
+                                                        }}
+                                                    />
+                                                    <Label
+                                                        htmlFor={`edit-group-${group.id}`}
+                                                        className={`cursor-pointer text-sm font-normal ${
+                                                            isPrivate || shareWithAllGroups ? 'text-muted-foreground' : ''
+                                                        }`}
+                                                    >
+                                                        {group.name}
+                                                        <span className="text-muted-foreground ml-2">
+                                                            ({group.memberCount} {group.memberCount === 1 ? 'member' : 'members'})
+                                                        </span>
+                                                    </Label>
+                                                </div>
+                                            ))
+                                        )}
+                                    </div>
+                                </div>
+                            </>
+                        )}
+
+                        {/* Privacy Error Message */}
+                        {privacyError && (
+                            <p className="text-sm text-destructive">⚠️ {privacyError}</p>
+                        )}
+                    </div>
+                </div>
+                {/* End Privacy & Sharing Section */}
+
+                {/* Error Message */}
+                {error && (
                         <p className="text-sm text-destructive">{error}</p>
                     )}
 
@@ -317,7 +499,7 @@ export default function EditWatchDialog({
                         >
                             Cancel
                         </Button>
-                        <Button type="submit" disabled={isSubmitting || !isFormValid()}>
+                        <Button type="submit" disabled={isSubmitting}>
                             {isSubmitting ? 'Saving...' : 'Save Changes'}
                         </Button>
                     </div>

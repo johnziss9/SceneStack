@@ -40,7 +40,7 @@ public class WatchesController : ControllerBase
     public async Task<ActionResult<WatchResponse>> GetWatch(int id)
     {
         var watch = await _watchService.GetByIdAsync(id);
-        
+
         if (watch == null)
             return NotFound();
 
@@ -53,9 +53,9 @@ public class WatchesController : ControllerBase
     {
         var userId = User.GetUserId();
         _logger.LogInformation("Getting grouped watches for user {UserId}", userId);
-        
+
         var grouped = await _watchService.GetGroupedWatchesAsync(userId);
-        
+
         return Ok(grouped);
     }
 
@@ -65,15 +65,15 @@ public class WatchesController : ControllerBase
     {
         var userId = User.GetUserId();
         _logger.LogInformation("Getting watches for movieId: {MovieId}, userId: {UserId}", movieId, userId);
-        
+
         var watches = await _watchService.GetByMovieIdAsync(movieId, userId);
-        
+
         if (watches == null || !watches.Any())
         {
             _logger.LogInformation("No watches found for movieId: {MovieId}, userId: {UserId}", movieId, userId);
             return Ok(new List<WatchResponse>()); // Return empty list, not 404
         }
-        
+
         var response = watches.Select(w => WatchMapper.ToResponse(w)).ToList();
         return Ok(response);
     }
@@ -88,7 +88,7 @@ public class WatchesController : ControllerBase
         {
             // Get or create the movie from TMDb
             var movie = await _movieService.GetOrCreateFromTmdbAsync(request.TmdbId);
-            
+
             if (movie == null)
             {
                 _logger.LogError("Failed to get or create movie from TMDb ID: {TmdbId}", request.TmdbId);
@@ -96,7 +96,7 @@ public class WatchesController : ControllerBase
             }
 
             var userId = User.GetUserId();
-            
+
             var watch = new Watch
             {
                 UserId = userId,
@@ -133,11 +133,12 @@ public class WatchesController : ControllerBase
             Notes = request.Notes,
             WatchLocation = request.WatchLocation,
             WatchedWith = request.WatchedWith,
-            IsRewatch = request.IsRewatch
+            IsRewatch = request.IsRewatch,
+            IsPrivate = request.IsPrivate
         };
 
-        var updatedWatch = await _watchService.UpdateAsync(id, watch);
-        
+        var updatedWatch = await _watchService.UpdateAsync(id, watch, request.GroupIds);
+
         if (updatedWatch == null)
             return NotFound();
 
@@ -149,7 +150,7 @@ public class WatchesController : ControllerBase
     public async Task<IActionResult> DeleteWatch(int id)
     {
         var result = await _watchService.DeleteAsync(id);
-        
+
         if (!result)
             return NotFound();
 
@@ -171,7 +172,7 @@ public class WatchesController : ControllerBase
         try
         {
             var watches = await _watchService.GetGroupFeedAsync(groupId, userId);
-            
+
             if (!watches.Any())
             {
                 _logger.LogInformation("No watches found in group {GroupId} feed for user {UserId}", groupId, userId);
@@ -180,13 +181,92 @@ public class WatchesController : ControllerBase
 
             var response = watches.Select(WatchMapper.ToResponse).ToList();
             _logger.LogInformation("Returning {Count} watches in group {GroupId} feed", response.Count, groupId);
-            
+
             return Ok(response);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting group feed for group {GroupId}", groupId);
             return StatusCode(500, $"Error getting group feed: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Bulk update privacy and group sharing for multiple watches
+    /// </summary>
+    /// <param name="request">Bulk update request with watch IDs, privacy setting, and group IDs</param>
+    /// <returns>Bulk update result with success/failure counts</returns>
+    // PUT: api/watches/bulk
+    [HttpPut("bulk")]
+    public async Task<ActionResult<BulkUpdateResult>> BulkUpdateWatches(BulkUpdateWatchesRequest request)
+    {
+        var userId = User.GetUserId();
+        _logger.LogInformation(
+            "User {UserId} bulk updating {Count} watches. IsPrivate: {IsPrivate}, GroupOperation: {GroupOperation}",
+            userId,
+            request.WatchIds.Count,
+            request.IsPrivate,
+            request.GroupOperation);
+
+        // Validation
+        if (request.WatchIds == null || !request.WatchIds.Any())
+        {
+            return BadRequest(new BulkUpdateResult
+            {
+                Success = false,
+                Updated = 0,
+                Failed = 0,
+                Errors = new List<string> { "WatchIds cannot be empty" }
+            });
+        }
+
+        if (string.IsNullOrEmpty(request.GroupOperation))
+        {
+            return BadRequest(new BulkUpdateResult
+            {
+                Success = false,
+                Updated = 0,
+                Failed = 0,
+                Errors = new List<string> { "GroupOperation is required (must be 'add' or 'replace')" }
+            });
+        }
+
+        try
+        {
+            var result = await _watchService.BulkUpdateAsync(
+                userId,
+                request.WatchIds,
+                request.IsPrivate,
+                request.GroupIds,
+                request.GroupOperation);
+
+            if (!result.Success)
+            {
+                _logger.LogWarning(
+                    "Bulk update partially failed for user {UserId}. Updated: {Updated}, Failed: {Failed}",
+                    userId,
+                    result.Updated,
+                    result.Failed);
+                return BadRequest(result);
+            }
+
+            _logger.LogInformation(
+                "Successfully bulk updated {Count} watches for user {UserId}",
+                result.Updated,
+                userId);
+
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error in bulk update for user {UserId}", userId);
+            return StatusCode(500, new BulkUpdateResult
+            {
+                Success = false,
+                Updated = 0,
+                Failed = request.WatchIds.Count,
+                Errors = new List<string> { $"Internal server error: {ex.Message}" }
+            });
         }
     }
 }

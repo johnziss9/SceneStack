@@ -3,7 +3,7 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { Film, User } from 'lucide-react';
+import { Film, User, Users } from 'lucide-react';
 
 export function Navigation() {
     const { user, loading } = useAuth();
@@ -29,6 +29,12 @@ export function Navigation() {
                                 <Link href="/watched">
                                     <Button variant="ghost">
                                         My Watches
+                                    </Button>
+                                </Link>
+                                <Link href="/groups">
+                                    <Button variant="ghost" className="gap-2">
+                                        <Users className="h-4 w-4" />
+                                        <span className="hidden sm:inline">Groups</span>
                                     </Button>
                                 </Link>
                                 <Link href="/profile">
