@@ -52,9 +52,9 @@ public class MoviesController : ControllerBase
     [AllowAnonymous]
     public async Task<ActionResult<MovieDetailResponse>> GetTmdbMovie(int tmdbId)
     {
-        // Try DB first; create (with full enrichment) on first access
-        var movie = await _movieService.GetByTmdbIdAsync(tmdbId)
-                    ?? await _movieService.GetOrCreateFromTmdbAsync(tmdbId);
+        // Always go through GetOrCreateFromTmdbAsync — it handles creation,
+        // soft-delete restoration, and back-fills enriched metadata for older records
+        var movie = await _movieService.GetOrCreateFromTmdbAsync(tmdbId);
 
         if (movie == null)
             return NotFound();

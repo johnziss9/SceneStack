@@ -3,6 +3,8 @@ import { api } from './api-client';
 import type { UserStats } from '@/types/stats';
 import type {
     TmdbSearchResponse,
+    MovieDetail,
+    MovieUserStatus,
     Watch,
     CreateWatchRequest,
     UpdateWatchRequest,
@@ -51,6 +53,29 @@ export const movieApi = {
     // GET: api/movies/search?query={query}
     searchMovies: (query: string, page: number = 1) =>
         api.get<TmdbSearchResponse>(`/api/movies/search?query=${encodeURIComponent(query)}&page=${page}`),
+
+    // GET: api/movies/tmdb/{tmdbId} — enriched detail from DB
+    getDetail: (tmdbId: number) =>
+        api.get<MovieDetail>(`/api/movies/tmdb/${tmdbId}`),
+
+    // GET: api/movies/tmdb/{tmdbId}/my-status — authenticated
+    getMyStatus: (tmdbId: number) =>
+        api.get<MovieUserStatus>(`/api/movies/tmdb/${tmdbId}/my-status`),
+};
+
+// Watchlist endpoints
+export const watchlistApi = {
+    // POST: api/watchlist
+    addToWatchlist: (tmdbId: number, notes?: string, priority: number = 0) =>
+        api.post<{ id: number; movieId: number }>('/api/watchlist', { tmdbId, notes, priority }),
+
+    // DELETE: api/watchlist/{movieId}
+    removeFromWatchlist: (movieId: number) =>
+        api.delete<void>(`/api/watchlist/${movieId}`),
+
+    // GET: api/watchlist/count
+    getWatchlistCount: () =>
+        api.get<{ count: number }>('/api/watchlist/count'),
 };
 
 // Watch endpoints

@@ -22,7 +22,8 @@ namespace SceneStack.API.Migrations
                 name: "Cast",
                 table: "Movies",
                 type: "jsonb",
-                nullable: false);
+                nullable: false,
+                defaultValue: "[]");
 
             migrationBuilder.AddColumn<string>(
                 name: "DirectorName",

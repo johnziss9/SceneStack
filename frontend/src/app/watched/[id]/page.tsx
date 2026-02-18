@@ -3,8 +3,10 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { watchApi } from '@/lib';
-import type { Watch, Movie } from '@/types';
+import { movieApi } from '@/lib/api';
+import type { Watch, Movie, MovieDetail } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Clock, Star } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -28,12 +30,19 @@ interface WatchDetailPageProps {
   params: Promise<{ id: string }>;
 }
 
+function formatRuntime(minutes: number): string {
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return h > 0 ? `${h}h ${m}m` : `${m}m`;
+}
+
 export default function WatchDetailPage({ params }: WatchDetailPageProps) {
   const router = useRouter();
   const { user } = useAuth();
   const [movieId, setMovieId] = useState<number | null>(null);
   const [watches, setWatches] = useState<Watch[]>([]);
   const [movie, setMovie] = useState<Movie | null>(null);
+  const [movieDetail, setMovieDetail] = useState<MovieDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editingWatch, setEditingWatch] = useState<Watch | null>(null);
@@ -44,7 +53,6 @@ export default function WatchDetailPage({ params }: WatchDetailPageProps) {
   const [isRewatchDialogOpen, setIsRewatchDialogOpen] = useState(false);
 
   const handleEditSuccess = async () => {
-    // Refetch watches after edit
     if (movieId) {
       try {
         const watchesData = await watchApi.getWatchesByMovie(movieId);
@@ -55,56 +63,35 @@ export default function WatchDetailPage({ params }: WatchDetailPageProps) {
     }
   };
 
-  const handleEditClick = (watch: Watch) => {
-    setEditingWatch(watch);
-    setIsEditDialogOpen(true);
-  };
-
-  const handleDeleteClick = (watch: Watch) => {
-    setDeletingWatch(watch);
-    setIsDeleteDialogOpen(true);
-  };
-
   const handleDeleteConfirm = async () => {
     if (!deletingWatch || !movieId) return;
-
     setIsDeleting(true);
     try {
       await watchApi.deleteWatch(deletingWatch.id);
-
-      // Refetch watches after delete
       const watchesData = await watchApi.getWatchesByMovie(movieId);
-
       if (watchesData.length === 0) {
-        // No more watches for this movie, redirect to watched list
         toast.success('Watch deleted successfully');
         router.push('/watched');
       } else {
         setWatches(watchesData);
         toast.success('Watch deleted successfully');
       }
-
       setIsDeleteDialogOpen(false);
       setDeletingWatch(null);
     } catch (err) {
       console.error('Error deleting watch:', err);
-      toast.error('Failed to delete watch', {
-        description: 'Please try again later',
-      });
+      toast.error('Failed to delete watch', { description: 'Please try again later' });
     } finally {
       setIsDeleting(false);
     }
   };
 
   const handleRewatchSuccess = async () => {
-    // Refetch watches after adding another watch
     if (movieId) {
       try {
         const watchesData = await watchApi.getWatchesByMovie(movieId);
         setWatches(watchesData);
-        if (watchesData.length > 0) {
-          setMovie(watchesData[0].movie); // Update movie data in case it changed
-        }
+        if (watchesData.length > 0) setMovie(watchesData[0].movie);
       } catch (err) {
         console.error('Error refetching watches:', err);
       }
@@ -118,9 +105,7 @@ export default function WatchDetailPage({ params }: WatchDetailPageProps) {
         const parsedId = parseInt(id);
         setMovieId(parsedId);
 
-        // Fetch watches for this movie
         const watchesData = await watchApi.getWatchesByMovie(parsedId);
-
         if (watchesData.length === 0) {
           setError('No watches found for this movie.');
           setIsLoading(false);
@@ -128,8 +113,16 @@ export default function WatchDetailPage({ params }: WatchDetailPageProps) {
         }
 
         setWatches(watchesData);
-        // Movie data comes with the watches
-        setMovie(watchesData[0].movie);
+        const basicMovie = watchesData[0].movie;
+        setMovie(basicMovie);
+
+        try {
+          const detail = await movieApi.getDetail(basicMovie.tmdbId);
+          setMovieDetail(detail);
+        } catch {
+          // Enriched detail is optional
+        }
+
         setIsLoading(false);
       } catch (err) {
         console.error('Error loading watch details:', err);
@@ -137,54 +130,25 @@ export default function WatchDetailPage({ params }: WatchDetailPageProps) {
         setIsLoading(false);
       }
     }
-
     loadData();
   }, [params]);
 
   if (isLoading) {
     return (
-      <main className="min-h-screen p-4 sm:p-8">
-        <div className="max-w-6xl mx-auto">
-          {/* Header Skeleton */}
-          <div className="flex items-center justify-between mb-6">
-            <Skeleton className="h-10 w-40" />
-            <Skeleton className="h-10 w-48" />
+      <main className="min-h-screen">
+        <Skeleton className="w-full h-56 sm:h-72 rounded-none" />
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 space-y-6">
+          <Skeleton className="h-8 w-2/3" />
+          <Skeleton className="h-4 w-1/3" />
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2 space-y-4">
+              {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-16 w-full" />)}
+            </div>
+            <div className="space-y-4">
+              <Skeleton className="h-32 w-full" />
+              <Skeleton className="h-48 w-full" />
+            </div>
           </div>
-
-          {/* Movie Info Card Skeleton */}
-          <Card className="mb-8">
-            <CardContent className="p-6">
-              <div className="flex gap-6">
-                <Skeleton className="w-48 h-72 rounded-lg flex-shrink-0" />
-                <div className="flex-1 space-y-4">
-                  <Skeleton className="h-8 w-3/4" />
-                  <Skeleton className="h-4 w-1/4" />
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-4 w-2/3" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Watch History Table Skeleton */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Watch History</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {[...Array(3)].map((_, i) => (
-                  <div key={i} className="flex gap-4">
-                    <Skeleton className="h-6 w-32" />
-                    <Skeleton className="h-6 w-16" />
-                    <Skeleton className="h-6 w-24" />
-                    <Skeleton className="h-6 flex-1" />
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
         </div>
       </main>
     );
@@ -193,14 +157,14 @@ export default function WatchDetailPage({ params }: WatchDetailPageProps) {
   if (error || !movie) {
     return (
       <main className="min-h-screen p-4 sm:p-8">
-        <div className="max-w-6xl mx-auto">
+        <div className="max-w-5xl mx-auto">
           <Button
             variant="ghost"
             onClick={() => {
               const searchParams = new URLSearchParams(window.location.search);
               router.push(`/watched?${searchParams.toString()}`);
             }}
-            className="justify-start"
+            className="justify-start mb-4"
           >
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Watched List
@@ -218,239 +182,312 @@ export default function WatchDetailPage({ params }: WatchDetailPageProps) {
     );
   }
 
+  const backdropUrl = movieDetail?.backdropPath
+    ? `https://image.tmdb.org/t/p/w1280${movieDetail.backdropPath}`
+    : null;
+
+  const avgRating = watches.some(w => w.rating)
+    ? (watches.reduce((sum, w) => sum + (w.rating || 0), 0) / watches.filter(w => w.rating).length).toFixed(1)
+    : null;
+
   return (
-    <main className="min-h-screen p-4 sm:p-8">
-      <div className="max-w-6xl mx-auto">
-        {/* Header with Back Button */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 mb-6">
-          <Button
-            variant="ghost"
-            onClick={() => {
-              const searchParams = new URLSearchParams(window.location.search);
-              router.push(`/watched?${searchParams.toString()}`);
-            }}
-            className="justify-start"
-          >
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Watched List
-          </Button>
-          <Button onClick={() => setIsRewatchDialogOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            Log Another Watch
-          </Button>
+    <main className="min-h-screen pb-12">
+      {/* Backdrop */}
+      <div className="relative w-full h-56 sm:h-72 bg-muted overflow-hidden">
+        {backdropUrl && (
+          <img src={backdropUrl} alt="" className="w-full h-full object-cover" />
+        )}
+        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent" />
+        <button
+          onClick={() => {
+            const searchParams = new URLSearchParams(window.location.search);
+            router.push(`/watched?${searchParams.toString()}`);
+          }}
+          className="absolute top-4 left-4 flex items-center gap-1.5 text-sm text-white/80 hover:text-white transition-colors"
+        >
+          <ArrowLeft className="h-4 w-4" /> Back to Watched
+        </button>
+      </div>
+
+      <div className="max-w-5xl mx-auto px-4 sm:px-6">
+        {/* Poster + Title row — overlaps backdrop */}
+        <div className="flex gap-5 -mt-16 sm:-mt-24 relative z-10 mb-6">
+          {/* Poster */}
+          <div className="hidden sm:block flex-shrink-0 w-32 rounded-lg overflow-hidden shadow-xl border border-border">
+            {movie.posterPath ? (
+              <img
+                src={`https://image.tmdb.org/t/p/w342${movie.posterPath}`}
+                alt={movie.title}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full aspect-[2/3] bg-muted flex items-center justify-center text-muted-foreground text-xs">
+                No poster
+              </div>
+            )}
+          </div>
+
+          {/* Title + meta + action */}
+          <div className="flex-1 pt-20 sm:pt-0 sm:self-end pb-2 space-y-2 min-w-0">
+            <h1 className="text-2xl sm:text-3xl font-bold leading-tight">
+              {movie.title}
+              {movie.year && (
+                <span className="text-muted-foreground font-normal ml-2 text-xl">({movie.year})</span>
+              )}
+            </h1>
+
+            {movieDetail?.tagline && (
+              <p className="text-sm text-muted-foreground italic">{movieDetail.tagline}</p>
+            )}
+
+            {/* TMDb rating */}
+            {movieDetail?.tmdbRating && (
+              <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
+                {movieDetail.tmdbRating.toFixed(1)}
+                {movieDetail.tmdbVoteCount && (
+                  <span className="text-xs">({movieDetail.tmdbVoteCount.toLocaleString()})</span>
+                )}
+              </div>
+            )}
+
+            {/* Genres + runtime as pills */}
+            <div className="flex flex-wrap gap-1.5">
+              {movieDetail?.runtime && (
+                <span className="px-2.5 py-0.5 rounded-full text-xs border border-border bg-muted flex items-center gap-1">
+                  <Clock className="h-3 w-3" />
+                  {formatRuntime(movieDetail.runtime)}
+                </span>
+              )}
+              {movieDetail?.genres?.map(genre => (
+                <span key={genre} className="px-2.5 py-0.5 rounded-full text-xs border border-border bg-muted">
+                  {genre}
+                </span>
+              ))}
+            </div>
+
+            <Button onClick={() => setIsRewatchDialogOpen(true)} size="sm" className="mt-1">
+              <Plus className="mr-2 h-4 w-4" />
+              Log Another Watch
+            </Button>
+          </div>
         </div>
 
-        {/* Movie Info Section */}
-        <Card className="mb-8">
-          <CardContent className="p-6">
-            <div className="flex flex-col md:flex-row gap-6">
-              {/* Movie Poster */}
-              <div className="flex-shrink-0 mx-auto md:mx-0">
-                {movie.posterPath ? (
-                  <img
-                    src={`https://image.tmdb.org/t/p/w342${movie.posterPath}`}
-                    alt={movie.title}
-                    className="w-32 sm:w-48 h-auto rounded-lg object-cover"
-                  />
-                ) : (
-                  <div className="w-32 sm:w-48 h-48 sm:h-72 bg-muted rounded-lg flex items-center justify-center">
-                    <span className="text-muted-foreground text-sm">No poster</span>
-                  </div>
-                )}
-              </div>
+        {/* Main content grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-              {/* Movie Details */}
-              <div className="flex-1">
-                <h1 className="text-xl sm:text-3xl font-bold mb-2">
-                  {movie.title}
-                  {movie.year && (
-                    <span className="text-muted-foreground ml-2">({movie.year})</span>
-                  )}
-                </h1>
+          {/* Left column: movie info + cast */}
+          <div className="lg:col-span-1 space-y-6">
 
-                {/* Watch Stats */}
-                <div className="flex gap-4 mb-4 text-sm">
-                  <div>
-                    <span className="text-muted-foreground">Total Watches:</span>
-                    <span className="ml-2 font-semibold">{watches.length}</span>
-                  </div>
-                  {watches.some(w => w.rating) && (
-                    <div>
-                      <span className="text-muted-foreground">Average Rating:</span>
-                      <span className="ml-2 font-semibold text-primary">
-                        {(watches.reduce((sum, w) => sum + (w.rating || 0), 0) / watches.filter(w => w.rating).length).toFixed(1)}/10
-                      </span>
-                    </div>
-                  )}
+            {/* Your stats */}
+            <Card>
+              <CardContent className="p-4 space-y-3">
+                <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Your Stats</h2>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Times watched</span>
+                  <span className="font-bold text-lg">{watches.length}</span>
                 </div>
-
-                {/* Synopsis */}
-                {movie.synopsis && (
-                  <div>
-                    <h3 className="text-sm font-semibold text-muted-foreground mb-2">Synopsis</h3>
-                    <p className="text-sm leading-relaxed">{movie.synopsis}</p>
+                {avgRating && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Your avg rating</span>
+                    <span className="font-bold text-lg text-primary">{avgRating}<span className="text-sm font-normal text-muted-foreground">/10</span></span>
                   </div>
                 )}
+              </CardContent>
+            </Card>
 
-                {/* AI Synopsis if available */}
-                {movie.aiSynopsis && (
-                  <div className="mt-4 pt-4 border-t">
-                    <h3 className="text-sm font-semibold text-muted-foreground mb-2">AI Summary</h3>
-                    <p className="text-sm leading-relaxed text-muted-foreground">{movie.aiSynopsis}</p>
-                  </div>
-                )}
+            {/* Synopsis */}
+            {movie.synopsis && (
+              <div>
+                <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-2">Overview</h2>
+                <p className="text-sm leading-relaxed text-muted-foreground">{movie.synopsis}</p>
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            )}
 
-        {/* AI Insight Section */}
-        <MovieInsight
-          movieId={movieId!}
-          watchCount={watches.length}
-          isPremium={user?.isPremium ?? false}
-        />
+            {/* AI Synopsis */}
+            {movie.aiSynopsis && (
+              <div>
+                <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-2">AI Summary</h2>
+                <p className="text-sm leading-relaxed text-muted-foreground">{movie.aiSynopsis}</p>
+              </div>
+            )}
 
-        {/* Watch Entries Table */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Watch History</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left py-3 px-4 font-semibold text-sm">Date Watched</th>
-                    <th className="text-left py-3 px-4 font-semibold text-sm">Rating</th>
-                    <th className="hidden sm:table-cell text-left py-3 px-4 font-semibold text-sm">Location</th>
-                    <th className="hidden sm:table-cell text-left py-3 px-4 font-semibold text-sm">Watched With</th>
-                    <th className="hidden md:table-cell text-left py-3 px-4 font-semibold text-sm">Notes</th>
-                    <th className="text-right py-3 px-4 font-semibold text-sm">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {watches.map((watch) => (
-                    <tr key={watch.id} className="border-b last:border-0 even:bg-muted/60 hover:bg-primary/20">
-                      <td className="py-4 px-4 text-sm">
-                        {new Date(watch.watchedDate).toLocaleDateString('en-GB', {
-                          day: 'numeric',
-                          month: 'short',
-                          year: 'numeric'
-                        })}
-                        {watch.isRewatch && (
-                          <span className="ml-2 text-xs bg-primary/20 text-primary px-2 py-0.5 rounded">
-                            Rewatch
-                          </span>
-                        )}
-                      </td>
-                      <td className="py-4 px-4 text-sm">
-                        {watch.rating ? (
-                          <span className="font-semibold text-primary">{watch.rating}/10</span>
-                        ) : (
-                          <span className="text-muted-foreground">—</span>
-                        )}
-                      </td>
-                      <td className="hidden sm:table-cell py-4 px-4 text-sm">
-                        {watch.watchLocation || <span className="text-muted-foreground">—</span>}
-                      </td>
-                      <td className="hidden sm:table-cell py-4 px-4 text-sm">
-                        {watch.watchedWith || <span className="text-muted-foreground">—</span>}
-                      </td>
-                      <td className="hidden md:table-cell py-4 px-4 text-sm max-w-md">
-                        {watch.notes ? (
-                          <p className="line-clamp-2">{watch.notes}</p>
-                        ) : (
-                          <span className="text-muted-foreground">—</span>
-                        )}
-                      </td>
-                      <td className="py-4 px-4 text-sm">
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleEditClick(watch)}
-                          >
-                            Edit
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDeleteClick(watch)}
-                          >
-                            Delete
-                          </Button>
+            {/* Director */}
+            {movieDetail?.directorName && (
+              <div>
+                <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">Director</h2>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 flex-shrink-0 rounded-full bg-primary/20 border-2 border-primary/40 flex items-center justify-center">
+                    <span className="text-sm font-bold text-primary">
+                      {movieDetail.directorName.charAt(0)}
+                    </span>
+                  </div>
+                  <p className="text-sm font-semibold">{movieDetail.directorName}</p>
+                </div>
+              </div>
+            )}
+
+            {/* Cast */}
+            {movieDetail?.cast && movieDetail.cast.length > 0 && (
+              <div>
+                <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">Cast</h2>
+                <div className="grid grid-cols-4 gap-3">
+                  {movieDetail.cast.slice(0, 8).map((member, i) => {
+                    const profileUrl = member.profilePath
+                      ? `https://image.tmdb.org/t/p/w185${member.profilePath}`
+                      : null;
+                    return (
+                      <div key={i} className="space-y-1">
+                        <div className="w-10 h-10 rounded-full overflow-hidden bg-muted flex items-center justify-center">
+                          {profileUrl ? (
+                            <img src={profileUrl} alt={member.name} className="w-full h-full object-cover" />
+                          ) : (
+                            <span className="text-sm font-bold text-muted-foreground">{member.name.charAt(0)}</span>
+                          )}
                         </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Edit Watch Dialog */}
-        <EditWatchDialog
-          watch={editingWatch}
-          open={isEditDialogOpen}
-          onOpenChange={setIsEditDialogOpen}
-          onSuccess={handleEditSuccess}
-        />
-
-        {/* Delete Confirmation Dialog */}
-        <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Delete Watch Entry</AlertDialogTitle>
-              <AlertDialogDescription asChild>
-                <div>
-                  <p>Are you sure you want to delete this watch entry?</p>
-                  {deletingWatch && (
-                    <div className="mt-2 text-sm">
-                      <strong>{deletingWatch.movie.title}</strong> watched on{' '}
-                      {new Date(deletingWatch.watchedDate).toLocaleDateString('en-GB', {
-                        day: 'numeric',
-                        month: 'short',
-                        year: 'numeric'
-                      })}
-                    </div>
-                  )}
-                  <p className="mt-2">This action cannot be undone.</p>
+                        <p className="text-xs font-medium leading-tight line-clamp-2">{member.name}</p>
+                      </div>
+                    );
+                  })}
                 </div>
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={handleDeleteConfirm}
-                disabled={isDeleting}
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              >
-                {isDeleting ? 'Deleting...' : 'Delete'}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+              </div>
+            )}
+          </div>
 
-        {/* Log Another Watch Dialog */}
-        {movie && (
-          <WatchForm
-            movie={{
-              id: movie.tmdbId,
-              title: movie.title,
-              release_date: movie.year ? `${movie.year}-01-01` : undefined,
-              poster_path: movie.posterPath || undefined,
-              overview: movie.synopsis || undefined,
-              vote_average: 0,
-              vote_count: 0,
-            }}
-            open={isRewatchDialogOpen}
-            onOpenChange={setIsRewatchDialogOpen}
-            onSuccess={handleRewatchSuccess}
-          />
-        )}
+          {/* Right column: watch history + AI insight */}
+          <div className="lg:col-span-2 space-y-6">
+
+            {/* AI Insight */}
+            <MovieInsight
+              movieId={movieId!}
+              watchCount={watches.length}
+              isPremium={user?.isPremium ?? false}
+            />
+
+            {/* Watch History */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">Watch History</CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left py-2 px-4 font-medium text-xs text-muted-foreground">Date</th>
+                        <th className="text-left py-2 px-4 font-medium text-xs text-muted-foreground">Rating</th>
+                        <th className="hidden sm:table-cell text-left py-2 px-4 font-medium text-xs text-muted-foreground">Location</th>
+                        <th className="hidden sm:table-cell text-left py-2 px-4 font-medium text-xs text-muted-foreground">With</th>
+                        <th className="hidden md:table-cell text-left py-2 px-4 font-medium text-xs text-muted-foreground">Notes</th>
+                        <th className="text-right py-2 px-4 font-medium text-xs text-muted-foreground">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {watches.map((watch) => (
+                        <tr key={watch.id} className="border-b last:border-0 hover:bg-muted/40 transition-colors">
+                          <td className="py-3 px-4 text-sm whitespace-nowrap">
+                            {new Date(watch.watchedDate).toLocaleDateString('en-GB', {
+                              day: 'numeric', month: 'short', year: 'numeric'
+                            })}
+                            {watch.isRewatch && (
+                              <span className="ml-2 text-xs bg-primary/20 text-primary px-1.5 py-0.5 rounded">
+                                Rewatch
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-3 px-4 text-sm">
+                            {watch.rating
+                              ? <span className="font-semibold text-primary">{watch.rating}/10</span>
+                              : <span className="text-muted-foreground">—</span>}
+                          </td>
+                          <td className="hidden sm:table-cell py-3 px-4 text-sm">
+                            {watch.watchLocation || <span className="text-muted-foreground">—</span>}
+                          </td>
+                          <td className="hidden sm:table-cell py-3 px-4 text-sm">
+                            {watch.watchedWith || <span className="text-muted-foreground">—</span>}
+                          </td>
+                          <td className="hidden md:table-cell py-3 px-4 text-sm max-w-xs">
+                            {watch.notes
+                              ? <p className="line-clamp-2 text-muted-foreground">{watch.notes}</p>
+                              : <span className="text-muted-foreground">—</span>}
+                          </td>
+                          <td className="py-3 px-4 text-sm">
+                            <div className="flex justify-end gap-1">
+                              <Button variant="ghost" size="sm" onClick={() => { setEditingWatch(watch); setIsEditDialogOpen(true); }}>
+                                Edit
+                              </Button>
+                              <Button variant="ghost" size="sm" onClick={() => { setDeletingWatch(watch); setIsDeleteDialogOpen(true); }}>
+                                Delete
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       </div>
+
+      {/* Dialogs */}
+      <EditWatchDialog
+        watch={editingWatch}
+        open={isEditDialogOpen}
+        onOpenChange={setIsEditDialogOpen}
+        onSuccess={handleEditSuccess}
+      />
+
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Watch Entry</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div>
+                <p>Are you sure you want to delete this watch entry?</p>
+                {deletingWatch && (
+                  <div className="mt-2 text-sm">
+                    <strong>{deletingWatch.movie.title}</strong> watched on{' '}
+                    {new Date(deletingWatch.watchedDate).toLocaleDateString('en-GB', {
+                      day: 'numeric', month: 'short', year: 'numeric'
+                    })}
+                  </div>
+                )}
+                <p className="mt-2">This action cannot be undone.</p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteConfirm}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? 'Deleting...' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {movie && (
+        <WatchForm
+          movie={{
+            id: movie.tmdbId,
+            title: movie.title,
+            release_date: movie.year ? `${movie.year}-01-01` : undefined,
+            poster_path: movie.posterPath || undefined,
+            overview: movie.synopsis || undefined,
+            vote_average: movieDetail?.tmdbRating ?? 0,
+            vote_count: movieDetail?.tmdbVoteCount ?? 0,
+          }}
+          open={isRewatchDialogOpen}
+          onOpenChange={setIsRewatchDialogOpen}
+          onSuccess={handleRewatchSuccess}
+        />
+      )}
     </main>
   );
 }

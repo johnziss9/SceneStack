@@ -94,7 +94,44 @@ public class MovieService : IMovieService
                 await _context.SaveChangesAsync();
             }
 
-            _logger.LogInformation("Movie already exists in database with ID: {MovieId}", existingMovie.Id);
+            // If the movie is missing enriched metadata (created before Phase 6), re-fetch from TMDb
+            bool needsEnrichment = existingMovie.Genres.Count == 0
+                && existingMovie.Cast.Count == 0
+                && existingMovie.Runtime == null;
+
+            if (!needsEnrichment)
+            {
+                _logger.LogInformation("Movie already exists in database with ID: {MovieId}", existingMovie.Id);
+                return existingMovie;
+            }
+
+            _logger.LogInformation("Re-enriching movie {MovieId} from TMDb (missing metadata)", existingMovie.Id);
+
+            var enrichDetailTask = _tmdbService.GetMovieDetailsAsync(tmdbId);
+            var enrichCreditsTask = _tmdbService.GetMovieCreditsAsync(tmdbId);
+            await Task.WhenAll(enrichDetailTask, enrichCreditsTask);
+
+            var enrichedDetail = await enrichDetailTask;
+            var enrichedCredits = await enrichCreditsTask;
+
+            if (enrichedDetail != null)
+            {
+                existingMovie.BackdropPath = enrichedDetail.BackdropPath;
+                existingMovie.Tagline = enrichedDetail.Tagline;
+                existingMovie.Runtime = enrichedDetail.Runtime;
+                existingMovie.Genres = enrichedDetail.Genres.Select(g => g.Name).ToList();
+                existingMovie.TmdbRating = enrichedDetail.VoteAverage > 0 ? enrichedDetail.VoteAverage : null;
+                existingMovie.TmdbVoteCount = enrichedDetail.VoteCount > 0 ? enrichedDetail.VoteCount : null;
+                existingMovie.DirectorName = enrichedCredits?.Crew.FirstOrDefault(c => c.Job == "Director")?.Name;
+                existingMovie.Cast = enrichedCredits?.Cast
+                    .OrderBy(c => c.Order)
+                    .Take(10)
+                    .Select(c => new CastMember { Name = c.Name, Character = c.Character, ProfilePath = c.ProfilePath })
+                    .ToList() ?? new List<CastMember>();
+
+                await _context.SaveChangesAsync();
+            }
+
             return existingMovie;
         }
 
