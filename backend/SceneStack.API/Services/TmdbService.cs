@@ -71,6 +71,31 @@ public class TmdbService : ITmdbService
         }
     }
 
+    public async Task<TmdbCreditsResult?> GetMovieCreditsAsync(int tmdbId)
+    {
+        try
+        {
+            var url = $"{_settings.BaseUrl}/movie/{tmdbId}/credits?api_key={_settings.ApiKey}";
+            _logger.LogInformation("Calling TMDb URL: {Url}", url.Replace(_settings.ApiKey, "***"));
+
+            var response = await _httpClient.GetAsync(url);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogError("TMDb API error: {StatusCode} for credits of movie {TmdbId}", response.StatusCode, tmdbId);
+                return null;
+            }
+
+            var content = await response.Content.ReadAsStringAsync();
+            return JsonSerializer.Deserialize<TmdbCreditsResult>(content);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting credits for TMDb ID: {TmdbId}", tmdbId);
+            return null;
+        }
+    }
+
     public async Task<TmdbMovieSearchResult?> GetPopularMoviesAsync(int page = 1)
     {
         try

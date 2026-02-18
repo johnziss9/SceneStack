@@ -1,3 +1,4 @@
+using SceneStack.API.DTOs;
 using SceneStack.API.Models;
 
 namespace SceneStack.API.Interfaces;
@@ -11,4 +12,5 @@ public interface IMovieService
     Task<bool> DeleteAsync(int id);
     Task<Movie?> GetByTmdbIdAsync(int tmdbId);
     Task<Movie?> GetOrCreateFromTmdbAsync(int tmdbId);
+    Task<MovieUserStatus> GetMyStatusAsync(int userId, int tmdbId);
 }

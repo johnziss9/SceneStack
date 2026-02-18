@@ -21,6 +21,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<GroupMember> GroupMembers { get; set; }
     public DbSet<GroupMemberHistory> GroupMemberHistories { get; set; }
     public DbSet<WatchGroup> WatchGroups { get; set; }
+    public DbSet<WatchlistItem> WatchlistItems { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -55,6 +56,10 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             entity.HasKey(e => e.Id);
             entity.HasIndex(e => e.TmdbId).IsUnique();
             entity.Property(e => e.Title).IsRequired().HasMaxLength(255);
+
+            // JSON columns for enriched metadata (stored once at creation time)
+            entity.Property(e => e.Genres).HasColumnType("jsonb");
+            entity.Property(e => e.Cast).HasColumnType("jsonb");
 
             // Global query filter to exclude soft-deleted movies
             entity.HasQueryFilter(m => !m.IsDeleted);
@@ -202,7 +207,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         {
             // Composite primary key
             entity.HasKey(wg => new { wg.WatchId, wg.GroupId });
-            
+
             entity.HasIndex(e => e.WatchId);
             entity.HasIndex(e => e.GroupId);
 
@@ -218,6 +223,29 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
                 .HasForeignKey(wg => wg.GroupId)
                 .OnDelete(DeleteBehavior.Cascade)  // Delete link if group is deleted
                 .IsRequired(false);  // Make optional to work with query filters
+        });
+
+        // Configure WatchlistItem
+        modelBuilder.Entity<WatchlistItem>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.UserId);
+            // Unique index: one entry per movie per user
+            entity.HasIndex(e => new { e.UserId, e.MovieId }).IsUnique();
+
+            // Global query filter to exclude soft-deleted watchlist items
+            entity.HasQueryFilter(wi => !wi.IsDeleted);
+
+            // Define relationships
+            entity.HasOne(wi => wi.User)
+                .WithMany()
+                .HasForeignKey(wi => wi.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(wi => wi.Movie)
+                .WithMany()
+                .HasForeignKey(wi => wi.MovieId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

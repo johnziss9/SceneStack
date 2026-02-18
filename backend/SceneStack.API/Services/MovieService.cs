@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using SceneStack.API.Data;
+using SceneStack.API.DTOs;
 using SceneStack.API.Interfaces;
 using SceneStack.API.Models;
 
@@ -55,15 +56,15 @@ public class MovieService : IMovieService
     public async Task<bool> DeleteAsync(int id)
     {
         var movie = await _context.Movies
-            .IgnoreQueryFilters() // Include soft-deleted to find it
+            .IgnoreQueryFilters()
             .FirstOrDefaultAsync(m => m.Id == id && !m.IsDeleted);
-        
+
         if (movie == null)
             return false;
 
         movie.IsDeleted = true;
         movie.DeletedAt = DateTime.UtcNow;
-        
+
         await _context.SaveChangesAsync();
         return true;
     }
@@ -85,7 +86,6 @@ public class MovieService : IMovieService
 
         if (existingMovie != null)
         {
-            // If movie was soft-deleted, restore it
             if (existingMovie.IsDeleted)
             {
                 _logger.LogInformation("Restoring soft-deleted movie with ID: {MovieId}", existingMovie.Id);
@@ -93,36 +93,89 @@ public class MovieService : IMovieService
                 existingMovie.DeletedAt = null;
                 await _context.SaveChangesAsync();
             }
-            
+
             _logger.LogInformation("Movie already exists in database with ID: {MovieId}", existingMovie.Id);
             return existingMovie;
         }
 
-        // Fetch from TMDb
-        var tmdbMovie = await _tmdbService.GetMovieDetailsAsync(tmdbId);
+        // Fetch detail + credits in parallel
+        var detailTask = _tmdbService.GetMovieDetailsAsync(tmdbId);
+        var creditsTask = _tmdbService.GetMovieCreditsAsync(tmdbId);
+        await Task.WhenAll(detailTask, creditsTask);
+
+        var tmdbMovie = await detailTask;
         if (tmdbMovie == null)
         {
             _logger.LogError("Movie with TMDb ID {TmdbId} not found in TMDb", tmdbId);
             return null;
         }
 
-        // Map TMDb movie to local Movie model
+        var credits = await creditsTask;
+
+        // Extract director (first crew member with job "Director")
+        var director = credits?.Crew.FirstOrDefault(c => c.Job == "Director")?.Name;
+
+        // Extract top 10 billed cast
+        var cast = credits?.Cast
+            .OrderBy(c => c.Order)
+            .Take(10)
+            .Select(c => new CastMember
+            {
+                Name = c.Name,
+                Character = c.Character,
+                ProfilePath = c.ProfilePath
+            })
+            .ToList() ?? new List<CastMember>();
+
         var movie = new Movie
         {
             TmdbId = tmdbMovie.Id,
             Title = tmdbMovie.Title,
-            Year = !string.IsNullOrEmpty(tmdbMovie.ReleaseDate) && DateTime.TryParse(tmdbMovie.ReleaseDate, out var releaseDate) 
-                ? releaseDate.Year 
+            Year = !string.IsNullOrEmpty(tmdbMovie.ReleaseDate) && DateTime.TryParse(tmdbMovie.ReleaseDate, out var releaseDate)
+                ? releaseDate.Year
                 : null,
             PosterPath = tmdbMovie.PosterPath,
+            BackdropPath = tmdbMovie.BackdropPath,
             Synopsis = tmdbMovie.Overview,
+            Tagline = tmdbMovie.Tagline,
+            Runtime = tmdbMovie.Runtime,
+            Genres = tmdbMovie.Genres.Select(g => g.Name).ToList(),
+            TmdbRating = tmdbMovie.VoteAverage > 0 ? tmdbMovie.VoteAverage : null,
+            TmdbVoteCount = tmdbMovie.VoteCount > 0 ? tmdbMovie.VoteCount : null,
+            DirectorName = director,
+            Cast = cast,
             CreatedAt = DateTime.UtcNow
         };
 
-        // Save to local database
         var createdMovie = await CreateAsync(movie);
-        _logger.LogInformation("Successfully created movie in database with ID: {MovieId}", createdMovie.Id);
+        _logger.LogInformation("Successfully created enriched movie in database with ID: {MovieId}", createdMovie.Id);
 
         return createdMovie;
+    }
+
+    public async Task<MovieUserStatus> GetMyStatusAsync(int userId, int tmdbId)
+    {
+        var movie = await _context.Movies
+            .FirstOrDefaultAsync(m => m.TmdbId == tmdbId);
+
+        if (movie == null)
+            return new MovieUserStatus();
+
+        var watches = await _context.Watches
+            .Where(w => w.UserId == userId && w.MovieId == movie.Id)
+            .OrderByDescending(w => w.WatchedDate)
+            .ToListAsync();
+
+        var watchlistItem = await _context.WatchlistItems
+            .FirstOrDefaultAsync(wi => wi.UserId == userId && wi.MovieId == movie.Id);
+
+        return new MovieUserStatus
+        {
+            LocalMovieId = movie.Id,
+            WatchCount = watches.Count,
+            LatestRating = watches.FirstOrDefault()?.Rating,
+            OnWatchlist = watchlistItem != null,
+            WatchlistItemId = watchlistItem?.Id
+        };
     }
 }
