@@ -61,6 +61,16 @@ public class WatchEntryResponse
     public MovieBasicInfo Movie { get; set; } = null!;
 }
 
+public class PaginatedGroupedWatchesResponse
+{
+    public List<GroupedWatchesResponse> Items { get; set; } = new();
+    public int TotalCount { get; set; }
+    public int Page { get; set; }
+    public int PageSize { get; set; }
+    public int TotalPages { get; set; }
+    public bool HasMore { get; set; }
+}
+
 public class BulkUpdateResult
 {
     public bool Success { get; set; }

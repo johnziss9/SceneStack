@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { GroupDetail } from "@/components/GroupDetail";
 import { GroupFeed } from "@/components/GroupFeed";
 import { GroupRecommendations } from "@/components/GroupRecommendations";
+import { GroupStats } from "@/components/GroupStats";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface GroupDetailPageProps {
@@ -26,7 +27,7 @@ export default function GroupDetailPage({ params }: GroupDetailPageProps) {
     }
 
     return (
-        <main className="min-h-screen p-8">
+        <main className="min-h-screen p-4 sm:p-8">
             <div className="max-w-6xl mx-auto">
                 {/* Group Detail Section */}
                 <GroupDetail groupId={groupId} />
@@ -34,15 +35,19 @@ export default function GroupDetailPage({ params }: GroupDetailPageProps) {
                 {/* Tabs for Feed and Recommendations */}
                 <div className="mt-8">
                     <Tabs defaultValue="feed" className="w-full">
-                        <TabsList className="grid w-full max-w-md grid-cols-2">
+                        <TabsList className="grid w-full max-w-lg grid-cols-3">
                             <TabsTrigger value="feed">Group Feed</TabsTrigger>
                             <TabsTrigger value="recommendations">Recommendations</TabsTrigger>
+                            <TabsTrigger value="stats">Stats</TabsTrigger>
                         </TabsList>
                         <TabsContent value="feed" className="mt-6">
                             <GroupFeed groupId={groupId} />
                         </TabsContent>
                         <TabsContent value="recommendations" className="mt-6">
                             <GroupRecommendations groupId={groupId} />
+                        </TabsContent>
+                        <TabsContent value="stats" className="mt-6">
+                            <GroupStats groupId={groupId} />
                         </TabsContent>
                     </Tabs>
                 </div>

@@ -44,6 +44,16 @@ export interface GroupedWatch {
     watches: WatchEntry[];
 }
 
+// Matches PaginatedGroupedWatchesResponse from backend
+export interface PaginatedGroupedWatches {
+    items: GroupedWatch[];
+    totalCount: number;
+    page: number;
+    pageSize: number;
+    totalPages: number;
+    hasMore: boolean;
+}
+
 // Matches CreateWatchRequest from backend
 export interface CreateWatchRequest {
     tmdbId: number;

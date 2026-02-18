@@ -263,13 +263,13 @@ export function GroupDetail({ groupId }: GroupDetailProps) {
             {/* Group Info */}
             <Card>
                 <CardHeader>
-                    <CardTitle className="text-2xl">{group.name}</CardTitle>
+                    <CardTitle className="text-xl sm:text-2xl">{group.name}</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     {group.description && (
                         <p className="text-muted-foreground">{group.description}</p>
                     )}
-                    <div className="flex gap-4 text-sm text-muted-foreground">
+                    <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 text-sm text-muted-foreground">
                         <div>
                             <span>Created by:</span>
                             <span className="ml-2 font-semibold text-foreground">
@@ -311,7 +311,7 @@ export function GroupDetail({ groupId }: GroupDetailProps) {
                         {group.members.map((member) => (
                             <div
                                 key={member.userId}
-                                className="flex items-center justify-between py-3 px-4 rounded-lg border hover:bg-muted/50"
+                                className="flex items-start sm:items-center justify-between py-3 px-4 rounded-lg border hover:bg-muted/50 gap-3"
                             >
                                 <div className="flex-1">
                                     <div className="flex items-center gap-3">

@@ -5,6 +5,7 @@ import { groupApi } from '@/lib/api'
 import { useAuth } from '@/contexts/AuthContext'
 import userEvent from '@testing-library/user-event'
 import type { GroupedWatch, GroupBasicInfo } from '@/types'
+import type { PaginatedGroupedWatches } from '@/types/watch'
 
 // Mock the watchApi
 jest.mock('@/lib', () => ({
@@ -41,6 +42,15 @@ beforeAll(() => {
 })
 afterAll(() => {
     console.error = originalError
+})
+
+const mockPaginated = (items: GroupedWatch[], hasMore = false): PaginatedGroupedWatches => ({
+    items,
+    totalCount: items.length,
+    page: 1,
+    pageSize: 20,
+    totalPages: 1,
+    hasMore,
 })
 
 describe('WatchList', () => {
@@ -146,7 +156,7 @@ describe('WatchList', () => {
     })
 
     it('fetches and displays grouped watches', async () => {
-        ; (watchApi.getGroupedWatches as jest.Mock).mockResolvedValue(mockGroupedWatches)
+        ; (watchApi.getGroupedWatches as jest.Mock).mockResolvedValue(mockPaginated(mockGroupedWatches))
 
         render(<WatchList />)
 
@@ -155,7 +165,7 @@ describe('WatchList', () => {
             expect(screen.getByText('The Matrix')).toBeInTheDocument()
         })
 
-        expect(watchApi.getGroupedWatches).toHaveBeenCalledWith()
+        expect(watchApi.getGroupedWatches).toHaveBeenCalledWith(1, 20)
     })
 
     it('displays error message on fetch failure', async () => {
@@ -200,7 +210,7 @@ describe('WatchList', () => {
         })
 
             // Second call succeeds
-            ; (watchApi.getGroupedWatches as jest.Mock).mockResolvedValueOnce(mockGroupedWatches)
+            ; (watchApi.getGroupedWatches as jest.Mock).mockResolvedValueOnce(mockPaginated(mockGroupedWatches))
 
         const retryButton = screen.getByRole('button', { name: /try again/i })
         await user.click(retryButton)
@@ -214,7 +224,7 @@ describe('WatchList', () => {
     })
 
     it('displays empty state when no watches', async () => {
-        ; (watchApi.getGroupedWatches as jest.Mock).mockResolvedValue([])
+        ; (watchApi.getGroupedWatches as jest.Mock).mockResolvedValue(mockPaginated([]))
 
         render(<WatchList />)
 
@@ -227,7 +237,7 @@ describe('WatchList', () => {
     })
 
     it('shows search movies link in empty state', async () => {
-        ; (watchApi.getGroupedWatches as jest.Mock).mockResolvedValue([])
+        ; (watchApi.getGroupedWatches as jest.Mock).mockResolvedValue(mockPaginated([]))
 
         render(<WatchList />)
 
@@ -239,7 +249,7 @@ describe('WatchList', () => {
     })
 
     it('renders correct number of watch cards', async () => {
-        ; (watchApi.getGroupedWatches as jest.Mock).mockResolvedValue(mockGroupedWatches)
+        ; (watchApi.getGroupedWatches as jest.Mock).mockResolvedValue(mockPaginated(mockGroupedWatches))
 
         render(<WatchList />)
 
@@ -253,7 +263,7 @@ describe('WatchList', () => {
     })
 
     it('displays watch cards in a grid layout', async () => {
-        ; (watchApi.getGroupedWatches as jest.Mock).mockResolvedValue(mockGroupedWatches)
+        ; (watchApi.getGroupedWatches as jest.Mock).mockResolvedValue(mockPaginated(mockGroupedWatches))
 
         const { container } = render(<WatchList />)
 
@@ -268,7 +278,7 @@ describe('WatchList', () => {
     })
 
     it('calls fetchWatches on component mount', async () => {
-        ; (watchApi.getGroupedWatches as jest.Mock).mockResolvedValue(mockGroupedWatches)
+        ; (watchApi.getGroupedWatches as jest.Mock).mockResolvedValue(mockPaginated(mockGroupedWatches))
 
         render(<WatchList />)
 
@@ -278,7 +288,7 @@ describe('WatchList', () => {
     })
 
     it('passes correct props to WatchCard components', async () => {
-        ; (watchApi.getGroupedWatches as jest.Mock).mockResolvedValue(mockGroupedWatches)
+        ; (watchApi.getGroupedWatches as jest.Mock).mockResolvedValue(mockPaginated(mockGroupedWatches))
 
         render(<WatchList />)
 
@@ -293,20 +303,20 @@ describe('WatchList', () => {
         expect(screen.queryByText('1x')).not.toBeInTheDocument()
     })
 
-    it('calls API without userId parameter (now from auth token)', async () => {
-        ; (watchApi.getGroupedWatches as jest.Mock).mockResolvedValue(mockGroupedWatches)
+    it('calls API with page 1 and page size 20 on initial load', async () => {
+        ; (watchApi.getGroupedWatches as jest.Mock).mockResolvedValue(mockPaginated(mockGroupedWatches))
 
         render(<WatchList />)
 
         await waitFor(() => {
-            expect(watchApi.getGroupedWatches).toHaveBeenCalledWith()
+            expect(watchApi.getGroupedWatches).toHaveBeenCalledWith(1, 20)
         })
     })
 
     it('handles single watch correctly', async () => {
         const singleWatch: GroupedWatch[] = [mockGroupedWatches[1]] // Just The Matrix
 
-            ; (watchApi.getGroupedWatches as jest.Mock).mockResolvedValue(singleWatch)
+            ; (watchApi.getGroupedWatches as jest.Mock).mockResolvedValue(mockPaginated(singleWatch))
 
         render(<WatchList />)
 
@@ -345,7 +355,7 @@ describe('WatchList', () => {
             ],
         }))
 
-            ; (watchApi.getGroupedWatches as jest.Mock).mockResolvedValue(manyWatches)
+            ; (watchApi.getGroupedWatches as jest.Mock).mockResolvedValue(mockPaginated(manyWatches))
 
         render(<WatchList />)
 
@@ -360,7 +370,7 @@ describe('WatchList', () => {
 
     // Group Features Tests
     it('fetches user groups on mount', async () => {
-        ;(watchApi.getGroupedWatches as jest.Mock).mockResolvedValue(mockGroupedWatches)
+        ;(watchApi.getGroupedWatches as jest.Mock).mockResolvedValue(mockPaginated(mockGroupedWatches))
 
         render(<WatchList />)
 
@@ -370,7 +380,7 @@ describe('WatchList', () => {
     })
 
     it('displays group filter when user has groups', async () => {
-        ;(watchApi.getGroupedWatches as jest.Mock).mockResolvedValue(mockGroupedWatches)
+        ;(watchApi.getGroupedWatches as jest.Mock).mockResolvedValue(mockPaginated(mockGroupedWatches))
 
         render(<WatchList />)
 
@@ -381,7 +391,7 @@ describe('WatchList', () => {
 
     it('filters watches by selected group', async () => {
         const user = userEvent.setup()
-        ;(watchApi.getGroupedWatches as jest.Mock).mockResolvedValue(mockGroupedWatches)
+        ;(watchApi.getGroupedWatches as jest.Mock).mockResolvedValue(mockPaginated(mockGroupedWatches))
 
         render(<WatchList />)
 
@@ -407,7 +417,7 @@ describe('WatchList', () => {
 
     // Privacy Filter Tests
     it('displays privacy filter dropdown', async () => {
-        ;(watchApi.getGroupedWatches as jest.Mock).mockResolvedValue(mockGroupedWatches)
+        ;(watchApi.getGroupedWatches as jest.Mock).mockResolvedValue(mockPaginated(mockGroupedWatches))
 
         render(<WatchList />)
 
@@ -418,7 +428,7 @@ describe('WatchList', () => {
 
     it('filters watches by privacy - private only', async () => {
         const user = userEvent.setup()
-        ;(watchApi.getGroupedWatches as jest.Mock).mockResolvedValue(mockGroupedWatches)
+        ;(watchApi.getGroupedWatches as jest.Mock).mockResolvedValue(mockPaginated(mockGroupedWatches))
 
         render(<WatchList />)
 
@@ -443,7 +453,7 @@ describe('WatchList', () => {
 
     it('filters watches by privacy - shared only', async () => {
         const user = userEvent.setup()
-        ;(watchApi.getGroupedWatches as jest.Mock).mockResolvedValue(mockGroupedWatches)
+        ;(watchApi.getGroupedWatches as jest.Mock).mockResolvedValue(mockPaginated(mockGroupedWatches))
 
         render(<WatchList />)
 
@@ -467,7 +477,7 @@ describe('WatchList', () => {
 
     // Bulk Mode Tests
     it('displays bulk edit button', async () => {
-        ;(watchApi.getGroupedWatches as jest.Mock).mockResolvedValue(mockGroupedWatches)
+        ;(watchApi.getGroupedWatches as jest.Mock).mockResolvedValue(mockPaginated(mockGroupedWatches))
 
         render(<WatchList />)
 
@@ -478,7 +488,7 @@ describe('WatchList', () => {
 
     it('enters bulk mode when bulk edit button is clicked', async () => {
         const user = userEvent.setup()
-        ;(watchApi.getGroupedWatches as jest.Mock).mockResolvedValue(mockGroupedWatches)
+        ;(watchApi.getGroupedWatches as jest.Mock).mockResolvedValue(mockPaginated(mockGroupedWatches))
 
         render(<WatchList />)
 
@@ -497,7 +507,7 @@ describe('WatchList', () => {
 
     it('exits bulk mode when exit button is clicked', async () => {
         const user = userEvent.setup()
-        ;(watchApi.getGroupedWatches as jest.Mock).mockResolvedValue(mockGroupedWatches)
+        ;(watchApi.getGroupedWatches as jest.Mock).mockResolvedValue(mockPaginated(mockGroupedWatches))
 
         render(<WatchList />)
 
@@ -525,7 +535,7 @@ describe('WatchList', () => {
 
     it('displays checkboxes in bulk mode', async () => {
         const user = userEvent.setup()
-        ;(watchApi.getGroupedWatches as jest.Mock).mockResolvedValue(mockGroupedWatches)
+        ;(watchApi.getGroupedWatches as jest.Mock).mockResolvedValue(mockPaginated(mockGroupedWatches))
 
         render(<WatchList />)
 
@@ -549,7 +559,7 @@ describe('WatchList', () => {
 
     it('select all selects all visible movies', async () => {
         const user = userEvent.setup()
-        ;(watchApi.getGroupedWatches as jest.Mock).mockResolvedValue(mockGroupedWatches)
+        ;(watchApi.getGroupedWatches as jest.Mock).mockResolvedValue(mockPaginated(mockGroupedWatches))
 
         render(<WatchList />)
 
@@ -578,7 +588,7 @@ describe('WatchList', () => {
 
     it('deselect all clears all selections', async () => {
         const user = userEvent.setup()
-        ;(watchApi.getGroupedWatches as jest.Mock).mockResolvedValue(mockGroupedWatches)
+        ;(watchApi.getGroupedWatches as jest.Mock).mockResolvedValue(mockPaginated(mockGroupedWatches))
 
         render(<WatchList />)
 
@@ -615,7 +625,7 @@ describe('WatchList', () => {
     // Bulk Operations Tests
     it('opens make private dialog when make private button is clicked with selection', async () => {
         const user = userEvent.setup()
-        ;(watchApi.getGroupedWatches as jest.Mock).mockResolvedValue(mockGroupedWatches)
+        ;(watchApi.getGroupedWatches as jest.Mock).mockResolvedValue(mockPaginated(mockGroupedWatches))
 
         render(<WatchList />)
 
@@ -657,7 +667,7 @@ describe('WatchList', () => {
 
     it('opens share dialog when share button is clicked with selection', async () => {
         const user = userEvent.setup()
-        ;(watchApi.getGroupedWatches as jest.Mock).mockResolvedValue(mockGroupedWatches)
+        ;(watchApi.getGroupedWatches as jest.Mock).mockResolvedValue(mockPaginated(mockGroupedWatches))
 
         render(<WatchList />)
 
@@ -699,7 +709,7 @@ describe('WatchList', () => {
     })
 
     it('displays result count', async () => {
-        ;(watchApi.getGroupedWatches as jest.Mock).mockResolvedValue(mockGroupedWatches)
+        ;(watchApi.getGroupedWatches as jest.Mock).mockResolvedValue(mockPaginated(mockGroupedWatches))
 
         render(<WatchList />)
 
@@ -710,12 +720,65 @@ describe('WatchList', () => {
 
     it('displays singular movie count', async () => {
         const singleWatch: GroupedWatch[] = [mockGroupedWatches[0]]
-        ;(watchApi.getGroupedWatches as jest.Mock).mockResolvedValue(singleWatch)
+        ;(watchApi.getGroupedWatches as jest.Mock).mockResolvedValue(mockPaginated(singleWatch))
 
         render(<WatchList />)
 
         await waitFor(() => {
             expect(screen.getByText(/1 movie/i)).toBeInTheDocument()
+        })
+    })
+
+    // Pagination Tests
+    it('shows load more button when hasMore is true', async () => {
+        ;(watchApi.getGroupedWatches as jest.Mock).mockResolvedValue(mockPaginated(mockGroupedWatches, true))
+
+        render(<WatchList />)
+
+        await waitFor(() => {
+            expect(screen.getByRole('button', { name: /load more/i })).toBeInTheDocument()
+        })
+    })
+
+    it('does not show load more button when hasMore is false', async () => {
+        ;(watchApi.getGroupedWatches as jest.Mock).mockResolvedValue(mockPaginated(mockGroupedWatches, false))
+
+        render(<WatchList />)
+
+        await waitFor(() => {
+            expect(screen.getByText('Fight Club')).toBeInTheDocument()
+        })
+
+        expect(screen.queryByRole('button', { name: /load more/i })).not.toBeInTheDocument()
+    })
+
+    it('loads more watches when load more button is clicked', async () => {
+        const user = userEvent.setup()
+        const page2Watches: GroupedWatch[] = [{
+            movieId: 3,
+            movie: { id: 3, tmdbId: 552, title: 'Inception', year: 2010, posterPath: null, synopsis: '' },
+            watchCount: 1,
+            averageRating: 10,
+            latestRating: 10,
+            watches: [{ id: 4, watchedDate: '2024-12-01', rating: 10, isRewatch: false, isPrivate: false, groupIds: [] }],
+        }]
+
+        ;(watchApi.getGroupedWatches as jest.Mock)
+            .mockResolvedValueOnce(mockPaginated(mockGroupedWatches, true))
+            .mockResolvedValueOnce({ ...mockPaginated(page2Watches, false), page: 2 })
+
+        render(<WatchList />)
+
+        await waitFor(() => {
+            expect(screen.getByText('Fight Club')).toBeInTheDocument()
+            expect(screen.getByRole('button', { name: /load more/i })).toBeInTheDocument()
+        })
+
+        await user.click(screen.getByRole('button', { name: /load more/i }))
+
+        await waitFor(() => {
+            expect(screen.getByText('Inception')).toBeInTheDocument()
+            expect(watchApi.getGroupedWatches).toHaveBeenCalledWith(2, 20)
         })
     })
 })

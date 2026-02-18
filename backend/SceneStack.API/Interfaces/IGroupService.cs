@@ -16,4 +16,5 @@ public interface IGroupService
     Task<IEnumerable<GroupMemberResponse>> GetGroupMembersAsync(int groupId, int requestingUserId);
     Task<bool> CanUserCreateGroupAsync(int userId);
     Task<bool> CanUserJoinGroupAsync(int userId);
+    Task<GroupStatsResponse?> GetGroupStatsAsync(int groupId, int requestingUserId);
 }

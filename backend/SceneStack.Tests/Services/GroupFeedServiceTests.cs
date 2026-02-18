@@ -84,7 +84,7 @@ public class GroupFeedServiceTests
     }
 
     [Fact]
-    public async Task GetGroupFeedAsync_UserNotMember_ReturnsEmpty()
+    public async Task GetGroupFeedAsync_UserNotMember_ThrowsUnauthorized()
     {
         // Arrange
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
@@ -110,11 +110,9 @@ public class GroupFeedServiceTests
         );
         await context.SaveChangesAsync();
 
-        // Act - user2 tries to access (not a member)
-        var result = await service.GetGroupFeedAsync(group.Id, user2.Id);
-
-        // Assert
-        result.Should().BeEmpty();
+        // Act & Assert - user2 tries to access (not a member), service throws
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(
+            () => service.GetGroupFeedAsync(group.Id, user2.Id));
     }
 
     [Fact]
@@ -181,7 +179,7 @@ public class GroupFeedServiceTests
 
         // Assert
         result.Should().HaveCount(1);
-        result.First().IsPrivate.Should().BeFalse();
+        result.First().IsRewatch.Should().BeFalse();
     }
 
     [Fact]

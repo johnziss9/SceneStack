@@ -299,7 +299,7 @@ public class GroupRecommendationsServiceTests
         result.Should().NotBeNull();
         result.GroupId.Should().Be(group.Id);
         result.GroupName.Should().Be("Movie Fans");
-        result.TotalMoviesWatched.Should().Be(2); // 2 unique movies
+        result.UniqueMovies.Should().Be(2); // 2 unique movies
         result.AverageGroupRating.Should().Be(9.0); // (9+10+8)/3
         result.Recommendations.Should().HaveCount(1);
         result.Recommendations.First().Title.Should().Be("Inception");
@@ -395,7 +395,7 @@ public class GroupRecommendationsServiceTests
         // Assert
         result.Should().NotBeNull();
         result.GroupName.Should().Be("New Group");
-        result.TotalMoviesWatched.Should().Be(0);
+        result.UniqueMovies.Should().Be(0);
         result.AverageGroupRating.Should().BeNull();
         result.Recommendations.Should().HaveCount(1);
     }

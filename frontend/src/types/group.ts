@@ -104,3 +104,36 @@ export interface GroupRecommendationStats {
     mostWatchedGenre?: string;
     recommendations: GroupRecommendation[];
 }
+
+// Matches GroupMemberStats from backend
+export interface GroupMemberStats {
+    userId: number;
+    username: string;
+    watchCount: number;
+    averageRating: number | null;
+}
+
+// Matches SharedMovieStats from backend
+export interface SharedMovieStats {
+    movie: {
+        id: number;
+        tmdbId: number;
+        title: string;
+        year: number | null;
+        posterPath: string | null;
+    };
+    watchedByCount: number;
+    watchedByUsernames: string[];
+}
+
+// Matches GroupStatsResponse from backend
+export interface GroupStats {
+    groupId: number;
+    groupName: string;
+    totalWatches: number;
+    uniqueMovies: number;
+    averageGroupRating: number | null;
+    mostActiveMember: string | null;
+    memberStats: GroupMemberStats[];
+    sharedMovies: SharedMovieStats[];
+}

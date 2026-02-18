@@ -58,11 +58,11 @@ export default function CreateGroupPage() {
 
             // Redirect to the new group's page
             router.push(`/groups/${group.id}`);
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error("Failed to create group:", err);
 
             // Check if it's a free tier limit error
-            if (err.message?.includes("limit")) {
+            if (err instanceof Error && err.message?.includes("limit")) {
                 toast.error("Cannot create group", {
                     description: "You've reached the free tier limit of 1 created group",
                 });

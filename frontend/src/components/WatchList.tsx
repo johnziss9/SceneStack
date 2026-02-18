@@ -13,10 +13,17 @@ import { groupApi } from "@/lib/api";
 import type { GroupBasicInfo } from "@/types";
 import { BulkMakePrivateDialog } from "./BulkMakePrivateDialog";
 import { BulkShareWithGroupsDialog } from "./BulkShareWithGroupsDialog";
+import { Film } from "lucide-react";
+
+const PAGE_SIZE = 20;
 
 export function WatchList() {
     const [groupedWatches, setGroupedWatches] = useState<GroupedWatch[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [isLoadingMore, setIsLoadingMore] = useState(false);
+    const [hasMore, setHasMore] = useState(false);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [totalCount, setTotalCount] = useState(0);
     const [error, setError] = useState<string | null>(null);
     const [userGroups, setUserGroups] = useState<GroupBasicInfo[]>([]);
     const [selectedGroupId, setSelectedGroupId] = useState<number | null>(null);
@@ -44,8 +51,11 @@ export function WatchList() {
         try {
             setIsLoading(true);
             setError(null);
-            const data = await watchApi.getGroupedWatches();
-            setGroupedWatches(data);
+            const data = await watchApi.getGroupedWatches(1, PAGE_SIZE);
+            setGroupedWatches(data.items ?? []);
+            setHasMore(data.hasMore ?? false);
+            setCurrentPage(1);
+            setTotalCount(data.totalCount ?? 0);
         } catch (err) {
             console.error("Failed to fetch watches:", err);
             toast.error("Failed to load watches", {
@@ -54,6 +64,23 @@ export function WatchList() {
             setError("Failed to load watches. Please try again.");
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    const loadMore = async () => {
+        if (isLoadingMore || !hasMore) return;
+        try {
+            setIsLoadingMore(true);
+            const nextPage = currentPage + 1;
+            const data = await watchApi.getGroupedWatches(nextPage, PAGE_SIZE);
+            setGroupedWatches(prev => [...prev, ...data.items]);
+            setHasMore(data.hasMore);
+            setCurrentPage(nextPage);
+        } catch (err) {
+            console.error("Failed to load more watches:", err);
+            toast.error("Failed to load more watches");
+        } finally {
+            setIsLoadingMore(false);
         }
     };
 
@@ -225,7 +252,7 @@ export function WatchList() {
     if (groupedWatches.length === 0) {
         return (
             <div className="flex flex-col items-center justify-center py-12 space-y-4">
-                <div className="text-muted-foreground text-6xl">📽️</div>
+                <Film className="h-16 w-16 text-muted-foreground" />
                 <p className="text-xl text-muted-foreground">No watches yet</p>
                 <p className="text-sm text-muted-foreground">
                     Start by searching for a movie to add to your watched list
@@ -244,8 +271,8 @@ export function WatchList() {
     return (
         <div className="space-y-6">
             {/* Header with Bulk Edit Button */}
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4 flex-wrap">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-3 flex-wrap">
                     {/* Privacy Filter */}
                     <div className="flex items-center gap-2">
                         <label className="text-sm font-medium whitespace-nowrap">
@@ -253,9 +280,9 @@ export function WatchList() {
                         </label>
                         <Select
                             value={privacyFilter}
-                            onValueChange={(value) => setPrivacyFilter(value as any)}
+                            onValueChange={(value) => setPrivacyFilter(value as 'all' | 'private' | 'shared')}
                         >
-                            <SelectTrigger className="w-[150px]">
+                            <SelectTrigger className="w-full sm:w-[150px]">
                                 <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
@@ -276,7 +303,7 @@ export function WatchList() {
                                 value={selectedGroupId?.toString() || "all"}
                                 onValueChange={(value) => setSelectedGroupId(value === "all" ? null : parseInt(value))}
                             >
-                                <SelectTrigger className="w-[200px]">
+                                <SelectTrigger className="w-full sm:w-[200px]">
                                     <SelectValue placeholder="All groups" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -293,7 +320,7 @@ export function WatchList() {
 
                     {/* Result Count */}
                     <span className="text-sm text-muted-foreground">
-                        {filteredWatches.length} {filteredWatches.length === 1 ? 'movie' : 'movies'}
+                        {filteredWatches.length} of {totalCount} {totalCount === 1 ? 'movie' : 'movies'}
                     </span>
                 </div>
 
@@ -363,22 +390,37 @@ export function WatchList() {
                 ))}
             </div>
 
+            {/* Load More */}
+            {hasMore && (
+                <div className="flex justify-center pt-2">
+                    <Button
+                        variant="outline"
+                        onClick={loadMore}
+                        disabled={isLoadingMore}
+                    >
+                        {isLoadingMore ? 'Loading...' : 'Load More'}
+                    </Button>
+                </div>
+            )}
+
             {/* Bulk Actions Bar (Fixed at bottom) */}
             {isBulkMode && selectedMovieIds.size > 0 && (
                 <div className="fixed bottom-0 left-0 right-0 bg-background border-t shadow-lg p-4 z-50">
-                    <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
+                    <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                         <span className="text-sm font-medium">
                             {selectedMovieIds.size} {selectedMovieIds.size === 1 ? 'movie' : 'movies'} selected
                         </span>
                         <div className="flex gap-2">
                             <Button
                                 variant="outline"
+                                className="flex-1 sm:flex-none"
                                 onClick={() => setShowMakePrivateDialog(true)}
                                 disabled={isProcessing}
                             >
                                 Make Private
                             </Button>
                             <Button
+                                className="flex-1 sm:flex-none"
                                 onClick={() => setShowShareDialog(true)}
                                 disabled={isProcessing}
                             >

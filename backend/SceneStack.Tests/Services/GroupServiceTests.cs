@@ -700,4 +700,104 @@ public class GroupServiceTests
         // Assert
         result.Should().BeTrue();
     }
+
+    // ── GetGroupStatsAsync ─────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task GetGroupStatsAsync_NonMember_ReturnsNull()
+    {
+        // Arrange
+        using var context = TestDbContextFactory.CreateInMemoryDbContext();
+        var logger = Substitute.For<ILogger<GroupService>>();
+        var service = new GroupService(context, logger);
+
+        var creator = context.Users.First(u => u.Username == "testuser");
+        var nonMember = context.Users.First(u => u.Username == "freeuser");
+        var group = await service.CreateAsync(creator.Id, new CreateGroupRequest { Name = "Test Group" });
+
+        // Act
+        var result = await service.GetGroupStatsAsync(group.Id, nonMember.Id);
+
+        // Assert
+        result.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task GetGroupStatsAsync_GroupDoesNotExist_ReturnsNull()
+    {
+        // Arrange
+        using var context = TestDbContextFactory.CreateInMemoryDbContext();
+        var logger = Substitute.For<ILogger<GroupService>>();
+        var service = new GroupService(context, logger);
+        var user = context.Users.First();
+
+        // Act
+        var result = await service.GetGroupStatsAsync(99999, user.Id);
+
+        // Assert
+        result.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task GetGroupStatsAsync_MemberWithNoSharedWatches_ReturnsZeroTotals()
+    {
+        // Arrange
+        using var context = TestDbContextFactory.CreateInMemoryDbContext();
+        var logger = Substitute.For<ILogger<GroupService>>();
+        var service = new GroupService(context, logger);
+        var creator = context.Users.First(u => u.Username == "testuser");
+        var group = await service.CreateAsync(creator.Id, new CreateGroupRequest { Name = "Empty Group" });
+
+        // Act
+        var result = await service.GetGroupStatsAsync(group.Id, creator.Id);
+
+        // Assert
+        result.Should().NotBeNull();
+        result!.TotalWatches.Should().Be(0);
+        result.UniqueMovies.Should().Be(0);
+        result.AverageGroupRating.Should().BeNull();
+        result.MostActiveMember.Should().BeNull();
+        result.SharedMovies.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task GetGroupStatsAsync_ValidRequest_ReturnsGroupNameAndId()
+    {
+        // Arrange
+        using var context = TestDbContextFactory.CreateInMemoryDbContext();
+        var logger = Substitute.For<ILogger<GroupService>>();
+        var service = new GroupService(context, logger);
+        var creator = context.Users.First(u => u.Username == "testuser");
+        var group = await service.CreateAsync(creator.Id, new CreateGroupRequest { Name = "Cinema Club" });
+
+        // Act
+        var result = await service.GetGroupStatsAsync(group.Id, creator.Id);
+
+        // Assert
+        result.Should().NotBeNull();
+        result!.GroupId.Should().Be(group.Id);
+        result.GroupName.Should().Be("Cinema Club");
+    }
+
+    [Fact]
+    public async Task GetGroupStatsAsync_MemberStats_IncludesAllGroupMembers()
+    {
+        // Arrange
+        using var context = TestDbContextFactory.CreateInMemoryDbContext();
+        var logger = Substitute.For<ILogger<GroupService>>();
+        var service = new GroupService(context, logger);
+        var creator = context.Users.First(u => u.Username == "testuser");
+        var secondUser = context.Users.First(u => u.Username == "freeuser");
+        var group = await service.CreateAsync(creator.Id, new CreateGroupRequest { Name = "Two Member Group" });
+        await service.AddMemberAsync(group.Id, creator.Id, new AddMemberRequest { UserId = secondUser.Id });
+
+        // Act
+        var result = await service.GetGroupStatsAsync(group.Id, creator.Id);
+
+        // Assert
+        result.Should().NotBeNull();
+        result!.MemberStats.Should().HaveCount(2);
+        result.MemberStats.Should().Contain(ms => ms.Username == "testuser");
+        result.MemberStats.Should().Contain(ms => ms.Username == "freeuser");
+    }
 }

@@ -90,6 +90,7 @@ builder.Services.AddScoped<IGroupService, GroupService>();
 builder.Services.AddScoped<IPrivacyService, PrivacyService>();
 builder.Services.AddScoped<IGroupFeedService, GroupFeedService>();
 builder.Services.AddScoped<IGroupRecommendationsService, GroupRecommendationsService>();
+builder.Services.AddScoped<IStatsService, StatsService>();
 
 // Add Rate Limiting
 builder.Services.AddRateLimiter(options =>

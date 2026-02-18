@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
+import { Skeleton } from '@/components/ui/skeleton';
 import { LogOut, User as UserIcon } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { AiUsageStats } from '@/components/AiUsageStats';
@@ -19,8 +20,41 @@ export default function ProfilePage() {
 
     if (loading) {
         return (
-            <div className="min-h-screen flex items-center justify-center">
-                <p className="text-muted-foreground">Loading...</p>
+            <div className="min-h-screen p-4 sm:p-8">
+                <div className="max-w-2xl mx-auto space-y-8">
+                    <div className="space-y-2">
+                        <Skeleton className="h-10 w-32" />
+                        <Skeleton className="h-4 w-56" />
+                    </div>
+                    <Card>
+                        <CardHeader>
+                            <Skeleton className="h-6 w-48" />
+                            <Skeleton className="h-4 w-32" />
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            <div className="space-y-2">
+                                <Skeleton className="h-4 w-20" />
+                                <Skeleton className="h-6 w-40" />
+                            </div>
+                            <div className="space-y-2">
+                                <Skeleton className="h-4 w-20" />
+                                <Skeleton className="h-6 w-56" />
+                            </div>
+                            <div className="space-y-2">
+                                <Skeleton className="h-4 w-20" />
+                                <Skeleton className="h-4 w-16" />
+                            </div>
+                        </CardContent>
+                    </Card>
+                    <Card>
+                        <CardHeader>
+                            <Skeleton className="h-6 w-24" />
+                        </CardHeader>
+                        <CardContent>
+                            <Skeleton className="h-9 w-28" />
+                        </CardContent>
+                    </Card>
+                </div>
             </div>
         );
     }
@@ -30,11 +64,11 @@ export default function ProfilePage() {
     }
 
     return (
-        <div className="min-h-screen p-8">
+        <div className="min-h-screen p-4 sm:p-8">
             <div className="max-w-2xl mx-auto space-y-8">
                 {/* Header */}
                 <div>
-                    <h1 className="text-4xl font-bold">Profile</h1>
+                    <h1 className="text-2xl sm:text-4xl font-bold">Profile</h1>
                     <p className="text-muted-foreground mt-2">
                         Manage your account settings
                     </p>

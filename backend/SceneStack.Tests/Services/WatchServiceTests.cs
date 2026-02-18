@@ -473,10 +473,10 @@ public class WatchServiceTests
         var result = await service.GetGroupedWatchesAsync(userId: user.Id);
 
         // Assert
-        result.Should().HaveCount(2); // Two unique movies
+        result.Items.Should().HaveCount(2); // Two unique movies
 
         // Check Fight Club group
-        var fightClubGroup = result.First(g => g.MovieId == 1);
+        var fightClubGroup = result.Items.First(g => g.MovieId == 1);
         fightClubGroup.WatchCount.Should().Be(2);
         fightClubGroup.AverageRating.Should().Be(9.5); // (9 + 10) / 2
         fightClubGroup.LatestRating.Should().Be(9); // Most recent watch
@@ -484,7 +484,7 @@ public class WatchServiceTests
         fightClubGroup.Movie.Title.Should().Be("Fight Club");
 
         // Check The Matrix group
-        var matrixGroup = result.First(g => g.MovieId == 2);
+        var matrixGroup = result.Items.First(g => g.MovieId == 2);
         matrixGroup.WatchCount.Should().Be(1);
         matrixGroup.AverageRating.Should().Be(8);
         matrixGroup.LatestRating.Should().Be(8);

@@ -15,9 +15,10 @@ public class GroupsControllerTests
 {
     private GroupsController CreateController(IGroupService groupService, int userId = 1)
     {
+        var feedService = Substitute.For<IGroupFeedService>();
         var recommendationsService = Substitute.For<IGroupRecommendationsService>();
         var logger = Substitute.For<ILogger<GroupsController>>();
-        var controller = new GroupsController(groupService, recommendationsService, logger);
+        var controller = new GroupsController(groupService, feedService, recommendationsService, logger);
 
         // Mock HttpContext and User claims for User.GetUserId()
         var user = new ClaimsPrincipal(new ClaimsIdentity(new[]
@@ -491,7 +492,8 @@ public class GroupsControllerTests
         var groupService = Substitute.For<IGroupService>();
         var recommendationsService = Substitute.For<IGroupRecommendationsService>();
         var logger = Substitute.For<ILogger<GroupsController>>();
-        var controller = new GroupsController(groupService, recommendationsService, logger);
+        var feedService = Substitute.For<IGroupFeedService>();
+        var controller = new GroupsController(groupService, feedService, recommendationsService, logger);
 
         // Mock HttpContext and User claims
         var user = new ClaimsPrincipal(new ClaimsIdentity(new[]
@@ -528,7 +530,8 @@ public class GroupsControllerTests
         var groupService = Substitute.For<IGroupService>();
         var recommendationsService = Substitute.For<IGroupRecommendationsService>();
         var logger = Substitute.For<ILogger<GroupsController>>();
-        var controller = new GroupsController(groupService, recommendationsService, logger);
+        var feedService = Substitute.For<IGroupFeedService>();
+        var controller = new GroupsController(groupService, feedService, recommendationsService, logger);
 
         var user = new ClaimsPrincipal(new ClaimsIdentity(new[]
         {
@@ -564,7 +567,8 @@ public class GroupsControllerTests
         var groupService = Substitute.For<IGroupService>();
         var recommendationsService = Substitute.For<IGroupRecommendationsService>();
         var logger = Substitute.For<ILogger<GroupsController>>();
-        var controller = new GroupsController(groupService, recommendationsService, logger);
+        var feedService = Substitute.For<IGroupFeedService>();
+        var controller = new GroupsController(groupService, feedService, recommendationsService, logger);
 
         var user = new ClaimsPrincipal(new ClaimsIdentity(new[]
         {
@@ -593,7 +597,8 @@ public class GroupsControllerTests
         var groupService = Substitute.For<IGroupService>();
         var recommendationsService = Substitute.For<IGroupRecommendationsService>();
         var logger = Substitute.For<ILogger<GroupsController>>();
-        var controller = new GroupsController(groupService, recommendationsService, logger);
+        var feedService = Substitute.For<IGroupFeedService>();
+        var controller = new GroupsController(groupService, feedService, recommendationsService, logger);
 
         var user = new ClaimsPrincipal(new ClaimsIdentity(new[]
         {
@@ -622,7 +627,8 @@ public class GroupsControllerTests
         var groupService = Substitute.For<IGroupService>();
         var recommendationsService = Substitute.For<IGroupRecommendationsService>();
         var logger = Substitute.For<ILogger<GroupsController>>();
-        var controller = new GroupsController(groupService, recommendationsService, logger);
+        var feedService = Substitute.For<IGroupFeedService>();
+        var controller = new GroupsController(groupService, feedService, recommendationsService, logger);
 
         var user = new ClaimsPrincipal(new ClaimsIdentity(new[]
         {
@@ -637,7 +643,7 @@ public class GroupsControllerTests
         {
             GroupId = 1,
             GroupName = "Movie Fans",
-            TotalMoviesWatched = 10,
+            UniqueMovies = 10,
             AverageGroupRating = 8.5,
             Recommendations = new List<TmdbMovie>
             {
@@ -654,7 +660,7 @@ public class GroupsControllerTests
         var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject;
         var returnedStats = okResult.Value.Should().BeOfType<GroupRecommendationStats>().Subject;
         returnedStats.GroupName.Should().Be("Movie Fans");
-        returnedStats.TotalMoviesWatched.Should().Be(10);
+        returnedStats.UniqueMovies.Should().Be(10);
         returnedStats.AverageGroupRating.Should().Be(8.5);
     }
 
@@ -665,7 +671,8 @@ public class GroupsControllerTests
         var groupService = Substitute.For<IGroupService>();
         var recommendationsService = Substitute.For<IGroupRecommendationsService>();
         var logger = Substitute.For<ILogger<GroupsController>>();
-        var controller = new GroupsController(groupService, recommendationsService, logger);
+        var feedService = Substitute.For<IGroupFeedService>();
+        var controller = new GroupsController(groupService, feedService, recommendationsService, logger);
 
         var user = new ClaimsPrincipal(new ClaimsIdentity(new[]
         {
@@ -698,7 +705,8 @@ public class GroupsControllerTests
         var groupService = Substitute.For<IGroupService>();
         var recommendationsService = Substitute.For<IGroupRecommendationsService>();
         var logger = Substitute.For<ILogger<GroupsController>>();
-        var controller = new GroupsController(groupService, recommendationsService, logger);
+        var feedService = Substitute.For<IGroupFeedService>();
+        var controller = new GroupsController(groupService, feedService, recommendationsService, logger);
 
         var user = new ClaimsPrincipal(new ClaimsIdentity(new[]
         {
@@ -731,7 +739,8 @@ public class GroupsControllerTests
         var groupService = Substitute.For<IGroupService>();
         var recommendationsService = Substitute.For<IGroupRecommendationsService>();
         var logger = Substitute.For<ILogger<GroupsController>>();
-        var controller = new GroupsController(groupService, recommendationsService, logger);
+        var feedService = Substitute.For<IGroupFeedService>();
+        var controller = new GroupsController(groupService, feedService, recommendationsService, logger);
 
         var user = new ClaimsPrincipal(new ClaimsIdentity(new[]
         {
@@ -747,6 +756,74 @@ public class GroupsControllerTests
 
         // Act
         var result = await controller.GetGroupRecommendationStats(1);
+
+        // Assert
+        var objectResult = result.Result.Should().BeOfType<ObjectResult>().Subject;
+        objectResult.StatusCode.Should().Be(500);
+    }
+
+    // ── GetGroupStats ──────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task GetGroupStats_MemberOfGroup_ReturnsOkWithStats()
+    {
+        // Arrange
+        var groupService = Substitute.For<IGroupService>();
+        var controller = CreateController(groupService, userId: 1);
+
+        var stats = new GroupStatsResponse
+        {
+            GroupId = 1,
+            GroupName = "Movie Fans",
+            TotalWatches = 10,
+            UniqueMovies = 8,
+            AverageGroupRating = 7.5,
+            MostActiveMember = "testuser",
+            MemberStats = new List<GroupMemberStats>
+            {
+                new GroupMemberStats { UserId = 1, Username = "testuser", WatchCount = 10, AverageRating = 7.5 }
+            },
+            SharedMovies = new List<SharedMovieStats>()
+        };
+
+        groupService.GetGroupStatsAsync(1, 1).Returns(stats);
+
+        // Act
+        var result = await controller.GetGroupStats(1);
+
+        // Assert
+        var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject;
+        var returnedStats = okResult.Value.Should().BeOfType<GroupStatsResponse>().Subject;
+        returnedStats.TotalWatches.Should().Be(10);
+        returnedStats.MostActiveMember.Should().Be("testuser");
+    }
+
+    [Fact]
+    public async Task GetGroupStats_NotMember_ReturnsNotFound()
+    {
+        // Arrange
+        var groupService = Substitute.For<IGroupService>();
+        var controller = CreateController(groupService, userId: 99);
+        groupService.GetGroupStatsAsync(1, 99).Returns((GroupStatsResponse?)null);
+
+        // Act
+        var result = await controller.GetGroupStats(1);
+
+        // Assert
+        result.Result.Should().BeOfType<NotFoundResult>();
+    }
+
+    [Fact]
+    public async Task GetGroupStats_ServiceThrows_Returns500()
+    {
+        // Arrange
+        var groupService = Substitute.For<IGroupService>();
+        var controller = CreateController(groupService, userId: 1);
+        groupService.GetGroupStatsAsync(Arg.Any<int>(), Arg.Any<int>())
+            .Returns<GroupStatsResponse?>(_ => throw new Exception("DB error"));
+
+        // Act
+        var result = await controller.GetGroupStats(1);
 
         // Assert
         var objectResult = result.Result.Should().BeOfType<ObjectResult>().Subject;

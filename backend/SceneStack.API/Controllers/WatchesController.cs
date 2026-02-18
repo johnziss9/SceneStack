@@ -47,14 +47,16 @@ public class WatchesController : ControllerBase
         return Ok(WatchMapper.ToResponse(watch));
     }
 
-    // GET: api/watches/grouped
+    // GET: api/watches/grouped?page=1&pageSize=20
     [HttpGet("grouped")]
-    public async Task<ActionResult<List<GroupedWatchesResponse>>> GetGroupedWatches()
+    public async Task<ActionResult<PaginatedGroupedWatchesResponse>> GetGroupedWatches(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20)
     {
         var userId = User.GetUserId();
-        _logger.LogInformation("Getting grouped watches for user {UserId}", userId);
+        _logger.LogInformation("Getting grouped watches for user {UserId}, page {Page}", userId, page);
 
-        var grouped = await _watchService.GetGroupedWatchesAsync(userId);
+        var grouped = await _watchService.GetGroupedWatchesAsync(userId, page, pageSize);
 
         return Ok(grouped);
     }

@@ -467,6 +467,37 @@ public class GroupsController : ControllerBase
     }
 
     /// <summary>
+    /// Get stats for a group — member activity, shared movies, overall averages
+    /// </summary>
+    /// <param name="id">Group ID</param>
+    /// <returns>Group statistics</returns>
+    // GET: api/groups/5/stats
+    [HttpGet("{id}/stats")]
+    public async Task<ActionResult<GroupStatsResponse>> GetGroupStats(int id)
+    {
+        var userId = User.GetUserId();
+        _logger.LogInformation("User {UserId} getting stats for group {GroupId}", userId, id);
+
+        try
+        {
+            var stats = await _groupService.GetGroupStatsAsync(id, userId);
+
+            if (stats == null)
+            {
+                _logger.LogWarning("Group {GroupId} not found or user {UserId} not authorized", id, userId);
+                return NotFound();
+            }
+
+            return Ok(stats);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting stats for group {GroupId}", id);
+            return StatusCode(500, $"Error getting group stats: {ex.Message}");
+        }
+    }
+
+    /// <summary>
     /// Get group viewing stats with recommendations
     /// </summary>
     /// <param name="id">Group ID</param>

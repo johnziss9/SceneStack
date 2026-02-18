@@ -41,9 +41,9 @@ export function MovieInsight({ movieId, watchCount, isPremium }: MovieInsightPro
         try {
             const cached = await aiApi.getCachedInsight(movieId);
             setInsight(cached);
-        } catch (err: any) {
+        } catch (err: unknown) {
             // 404 is expected if no cached insight exists - that's okay
-            if (err?.status === 404) {
+            if (typeof err === 'object' && err !== null && 'status' in err && (err as { status: number }).status === 404) {
                 return;
             }
             // Other errors can be silently ignored (we'll show generate button)

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Film } from 'lucide-react';
 import { MovieSearchBar } from "@/components/MovieSearchBar";
 import { MovieCard } from "@/components/MovieCard";
 import { WatchForm } from "@/components/WatchForm";
@@ -25,10 +26,10 @@ export default function Home() {
   };
 
   return (
-    <main className="min-h-screen p-8">
+    <main className="min-h-screen p-4 sm:p-8">
       <div className="max-w-7xl mx-auto space-y-8">
         <div>
-          <h1 className="text-4xl font-bold mb-2">SceneStack</h1>
+          <h1 className="text-2xl sm:text-4xl font-bold mb-2">SceneStack</h1>
           <p className="text-muted-foreground">Search for movies and track what you've watched</p>
         </div>
 
@@ -81,7 +82,7 @@ export default function Home() {
         {/* Empty State - No Results */}
         {!isSearching && searchResults.length === 0 && (
           <div className="flex flex-col items-center justify-center py-12 space-y-4">
-            <div className="text-muted-foreground text-6xl">🎬</div>
+            <Film className="h-16 w-16 text-muted-foreground" />
             <p className="text-xl text-muted-foreground">No movies found</p>
             <p className="text-sm text-muted-foreground">
               Try adjusting your search terms

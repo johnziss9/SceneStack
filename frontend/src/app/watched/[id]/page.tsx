@@ -143,7 +143,7 @@ export default function WatchDetailPage({ params }: WatchDetailPageProps) {
 
   if (isLoading) {
     return (
-      <main className="min-h-screen p-8">
+      <main className="min-h-screen p-4 sm:p-8">
         <div className="max-w-6xl mx-auto">
           {/* Header Skeleton */}
           <div className="flex items-center justify-between mb-6">
@@ -192,7 +192,7 @@ export default function WatchDetailPage({ params }: WatchDetailPageProps) {
 
   if (error || !movie) {
     return (
-      <main className="min-h-screen p-8">
+      <main className="min-h-screen p-4 sm:p-8">
         <div className="max-w-6xl mx-auto">
           <Button
             variant="ghost"
@@ -219,7 +219,7 @@ export default function WatchDetailPage({ params }: WatchDetailPageProps) {
   }
 
   return (
-    <main className="min-h-screen p-8">
+    <main className="min-h-screen p-4 sm:p-8">
       <div className="max-w-6xl mx-auto">
         {/* Header with Back Button */}
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 mb-6">
@@ -250,10 +250,10 @@ export default function WatchDetailPage({ params }: WatchDetailPageProps) {
                   <img
                     src={`https://image.tmdb.org/t/p/w342${movie.posterPath}`}
                     alt={movie.title}
-                    className="w-48 h-72 object-cover rounded-lg"
+                    className="w-32 sm:w-48 h-auto rounded-lg object-cover"
                   />
                 ) : (
-                  <div className="w-48 h-72 bg-muted rounded-lg flex items-center justify-center">
+                  <div className="w-32 sm:w-48 h-48 sm:h-72 bg-muted rounded-lg flex items-center justify-center">
                     <span className="text-muted-foreground text-sm">No poster</span>
                   </div>
                 )}
@@ -261,7 +261,7 @@ export default function WatchDetailPage({ params }: WatchDetailPageProps) {
 
               {/* Movie Details */}
               <div className="flex-1">
-                <h1 className="text-3xl font-bold mb-2">
+                <h1 className="text-xl sm:text-3xl font-bold mb-2">
                   {movie.title}
                   {movie.year && (
                     <span className="text-muted-foreground ml-2">({movie.year})</span>
@@ -323,9 +323,9 @@ export default function WatchDetailPage({ params }: WatchDetailPageProps) {
                   <tr className="border-b">
                     <th className="text-left py-3 px-4 font-semibold text-sm">Date Watched</th>
                     <th className="text-left py-3 px-4 font-semibold text-sm">Rating</th>
-                    <th className="text-left py-3 px-4 font-semibold text-sm">Location</th>
-                    <th className="text-left py-3 px-4 font-semibold text-sm">Watched With</th>
-                    <th className="text-left py-3 px-4 font-semibold text-sm">Notes</th>
+                    <th className="hidden sm:table-cell text-left py-3 px-4 font-semibold text-sm">Location</th>
+                    <th className="hidden sm:table-cell text-left py-3 px-4 font-semibold text-sm">Watched With</th>
+                    <th className="hidden md:table-cell text-left py-3 px-4 font-semibold text-sm">Notes</th>
                     <th className="text-right py-3 px-4 font-semibold text-sm">Actions</th>
                   </tr>
                 </thead>
@@ -351,13 +351,13 @@ export default function WatchDetailPage({ params }: WatchDetailPageProps) {
                           <span className="text-muted-foreground">—</span>
                         )}
                       </td>
-                      <td className="py-4 px-4 text-sm">
+                      <td className="hidden sm:table-cell py-4 px-4 text-sm">
                         {watch.watchLocation || <span className="text-muted-foreground">—</span>}
                       </td>
-                      <td className="py-4 px-4 text-sm">
+                      <td className="hidden sm:table-cell py-4 px-4 text-sm">
                         {watch.watchedWith || <span className="text-muted-foreground">—</span>}
                       </td>
-                      <td className="py-4 px-4 text-sm max-w-md">
+                      <td className="hidden md:table-cell py-4 px-4 text-sm max-w-md">
                         {watch.notes ? (
                           <p className="line-clamp-2">{watch.notes}</p>
                         ) : (

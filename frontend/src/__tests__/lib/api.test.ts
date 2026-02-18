@@ -206,7 +206,7 @@ describe('API Service Functions', () => {
 
                 const result = await watchApi.getGroupedWatches()
 
-                expect(api.get).toHaveBeenCalledWith('/api/watches/grouped')
+                expect(api.get).toHaveBeenCalledWith('/api/watches/grouped?page=1&pageSize=20')
                 expect(result).toEqual(mockResponse)
             })
         })

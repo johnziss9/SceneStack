@@ -67,6 +67,9 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             entity.HasIndex(e => e.UserId);
             entity.HasIndex(e => e.MovieId);
             entity.HasIndex(e => e.WatchedDate);
+            // Composite indexes for stats and grouped-watches queries
+            entity.HasIndex(e => new { e.UserId, e.WatchedDate });
+            entity.HasIndex(e => new { e.UserId, e.Rating });
 
             // Global query filter to exclude soft-deleted watches
             entity.HasQueryFilter(w => !w.IsDeleted);

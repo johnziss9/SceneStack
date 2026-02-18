@@ -1,5 +1,6 @@
-import { GroupedWatch } from '@/types/watch';
+import { GroupedWatch, PaginatedGroupedWatches } from '@/types/watch';
 import { api } from './api-client';
+import type { UserStats } from '@/types/stats';
 import type {
     TmdbSearchResponse,
     Watch,
@@ -25,6 +26,7 @@ import type {
     GroupMember,
     GroupFeedItem,
     GroupRecommendationStats,
+    GroupStats,
     UserPrivacySettings,
     UpdatePrivacySettingsRequest,
 } from '@/types';
@@ -61,9 +63,9 @@ export const watchApi = {
     getWatches: () =>
         api.get<Watch[]>('/api/watches'),
 
-    // GET: api/watches/grouped (userId now from JWT token)
-    getGroupedWatches: () =>
-        api.get<GroupedWatch[]>('/api/watches/grouped'),
+    // GET: api/watches/grouped?page=1&pageSize=20
+    getGroupedWatches: (page: number = 1, pageSize: number = 20) =>
+        api.get<PaginatedGroupedWatches>(`/api/watches/grouped?page=${page}&pageSize=${pageSize}`),
 
     // GET: api/watches/by-movie/{movieId} (userId now from JWT token)
     getWatchesByMovie: (movieId: number) =>
@@ -158,6 +160,17 @@ export const groupApi = {
     // GET: api/groups/{id}/recommendations/stats
     getRecommendationStats: (groupId: number) =>
         api.get<GroupRecommendationStats>(`/api/groups/${groupId}/recommendations/stats`),
+
+    // GET: api/groups/{id}/stats
+    getGroupStats: (groupId: number) =>
+        api.get<GroupStats>(`/api/groups/${groupId}/stats`),
+};
+
+// Stats endpoints
+export const statsApi = {
+    // GET: api/stats
+    getStats: () =>
+        api.get<UserStats>('/api/stats'),
 };
 
 // Privacy endpoints

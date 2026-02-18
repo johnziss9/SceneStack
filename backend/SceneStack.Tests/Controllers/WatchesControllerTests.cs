@@ -135,29 +135,37 @@ public class WatchesControllerTests
         var logger = Substitute.For<ILogger<WatchesController>>();
         var controller = CreateControllerWithAuthenticatedUser(watchService, movieService, logger);
 
-        var groupedWatches = new List<GroupedWatchesResponse>
+        var paginatedResponse = new PaginatedGroupedWatchesResponse
         {
-            new GroupedWatchesResponse
+            Items = new List<GroupedWatchesResponse>
             {
-                MovieId = 1,
-                Movie = new MovieBasicInfo { Id = 1, TmdbId = 550, Title = "Fight Club", Year = 1999 },
-                WatchCount = 2,
-                AverageRating = 9.5,
-                LatestRating = 10,
-                Watches = new List<WatchEntryResponse>()
-            }
+                new GroupedWatchesResponse
+                {
+                    MovieId = 1,
+                    Movie = new MovieBasicInfo { Id = 1, TmdbId = 550, Title = "Fight Club", Year = 1999 },
+                    WatchCount = 2,
+                    AverageRating = 9.5,
+                    LatestRating = 10,
+                    Watches = new List<WatchEntryResponse>()
+                }
+            },
+            TotalCount = 1,
+            Page = 1,
+            PageSize = 20,
+            TotalPages = 1,
+            HasMore = false
         };
 
-        watchService.GetGroupedWatchesAsync(1).Returns(groupedWatches);
+        watchService.GetGroupedWatchesAsync(1).Returns(paginatedResponse);
 
         // Act
         var result = await controller.GetGroupedWatches();
 
         // Assert
         var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject;
-        var returnedGroups = okResult.Value.Should().BeAssignableTo<List<GroupedWatchesResponse>>().Subject;
-        returnedGroups.Should().HaveCount(1);
-        returnedGroups.First().WatchCount.Should().Be(2);
+        var returnedData = okResult.Value.Should().BeOfType<PaginatedGroupedWatchesResponse>().Subject;
+        returnedData.Items.Should().HaveCount(1);
+        returnedData.Items.First().WatchCount.Should().Be(2);
     }
 
     [Fact]

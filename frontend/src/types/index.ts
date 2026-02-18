@@ -29,10 +29,22 @@ export type {
     UpdateMemberRoleRequest,
     GroupFeedItem,
     GroupRecommendation,
-    GroupRecommendationStats
+    GroupRecommendationStats,
+    GroupStats,
+    GroupMemberStats,
+    SharedMovieStats
 } from './group';
 export { GroupRole, GroupMemberAction } from './group';
 export type {
     UserPrivacySettings,
     UpdatePrivacySettingsRequest
 } from './privacy';
+export type {
+    UserStats,
+    RatingDistributionItem,
+    WatchesByYearItem,
+    WatchesByMonthItem,
+    WatchesByDecadeItem,
+    WatchLocationItem,
+    TopRewatchedMovie
+} from './stats';

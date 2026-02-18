@@ -42,11 +42,11 @@ export default function WatchedListPage() {
   };
 
   return (
-    <main className="min-h-screen p-8">
+    <main className="min-h-screen p-4 sm:p-8">
       <div className="max-w-7xl mx-auto">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
           <div>
-            <h1 className="text-4xl font-bold mb-2">My Watches</h1>
+            <h1 className="text-2xl sm:text-4xl font-bold mb-2">My Watches</h1>
             <p className="text-muted-foreground">
               Your personal movie watching history
             </p>
@@ -54,7 +54,7 @@ export default function WatchedListPage() {
 
           {/* Toggle between Regular and AI Search (only for premium users) */}
           {user?.isPremium && (
-            <Tabs value={mode} onValueChange={(v) => handleModeChange(v as any)}>
+            <Tabs value={mode} onValueChange={(v) => handleModeChange(v as 'regular' | 'ai-search')}>
               <TabsList>
                 <TabsTrigger value="regular">Regular View</TabsTrigger>
                 <TabsTrigger value="ai-search">AI Search</TabsTrigger>

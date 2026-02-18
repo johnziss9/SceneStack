@@ -83,3 +83,30 @@ public class GroupRecommendationStats
     public double? AverageGroupRating { get; set; }
     public List<TmdbMovie> Recommendations { get; set; } = new();
 }
+
+public class GroupStatsResponse
+{
+    public int GroupId { get; set; }
+    public string GroupName { get; set; } = string.Empty;
+    public int TotalWatches { get; set; }
+    public int UniqueMovies { get; set; }
+    public double? AverageGroupRating { get; set; }
+    public string? MostActiveMember { get; set; }
+    public List<GroupMemberStats> MemberStats { get; set; } = new();
+    public List<SharedMovieStats> SharedMovies { get; set; } = new();
+}
+
+public class GroupMemberStats
+{
+    public int UserId { get; set; }
+    public string Username { get; set; } = string.Empty;
+    public int WatchCount { get; set; }
+    public double? AverageRating { get; set; }
+}
+
+public class SharedMovieStats
+{
+    public MovieBasicInfo Movie { get; set; } = null!;
+    public int WatchedByCount { get; set; }
+    public List<string> WatchedByUsernames { get; set; } = new();
+}

@@ -48,64 +48,107 @@ public class WatchService : IWatchService
             .ToListAsync();
     }
 
-    public async Task<List<GroupedWatchesResponse>> GetGroupedWatchesAsync(int userId)
+    public async Task<PaginatedGroupedWatchesResponse> GetGroupedWatchesAsync(int userId, int page = 1, int pageSize = 20)
     {
+        // Step 1: Load only MovieId + WatchedDate to determine ordering and pagination in memory.
+        // This is far cheaper than loading full Watch + Movie objects for all rows.
+        var slim = await _context.Watches
+            .Where(w => w.UserId == userId)
+            .Select(w => new { w.MovieId, w.WatchedDate })
+            .ToListAsync();
+
+        var totalCount = slim.Select(x => x.MovieId).Distinct().Count();
+
+        var pagedMovieIds = slim
+            .GroupBy(x => x.MovieId)
+            .OrderByDescending(g => g.Max(x => x.WatchedDate))
+            .Select(g => g.Key)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToList();
+
+        if (!pagedMovieIds.Any())
+        {
+            return new PaginatedGroupedWatchesResponse
+            {
+                Items = new List<GroupedWatchesResponse>(),
+                TotalCount = totalCount,
+                Page = page,
+                PageSize = pageSize,
+                TotalPages = (int)Math.Ceiling(totalCount / (double)pageSize),
+                HasMore = false
+            };
+        }
+
+        // Step 2: Fetch all watches only for the movies in this page
         var watches = await _context.Watches
             .Include(w => w.Movie)
-            .Include(w => w.User)
-            .Include(w => w.WatchGroups) // FIX 3: Include WatchGroups
-            .Where(w => w.UserId == userId)
+            .Include(w => w.WatchGroups)
+            .Where(w => w.UserId == userId && pagedMovieIds.Contains(w.MovieId))
             .OrderByDescending(w => w.WatchedDate)
             .ToListAsync();
 
-        var grouped = watches
-            .GroupBy(w => w.MovieId)
-            .Select(g => new GroupedWatchesResponse
+        // Group in memory (only page-sized data) and preserve the DB ordering
+        var grouped = pagedMovieIds
+            .Select(movieId =>
             {
-                MovieId = g.Key,
-                Movie = new MovieBasicInfo
+                var g = watches.Where(w => w.MovieId == movieId).ToList();
+                return new GroupedWatchesResponse
                 {
-                    Id = g.First().Movie.Id,
-                    TmdbId = g.First().Movie.TmdbId,
-                    Title = g.First().Movie.Title,
-                    Year = g.First().Movie.Year,
-                    PosterPath = g.First().Movie.PosterPath,
-                    Synopsis = g.First().Movie.Synopsis,
-                    AiSynopsis = g.First().Movie.AiSynopsis
-                },
-                WatchCount = g.Count(),
-                AverageRating = g.Any(w => w.Rating.HasValue)
-                    ? Math.Round(g.Where(w => w.Rating.HasValue).Average(w => w.Rating!.Value), 1)
-                    : null,
-                LatestRating = g.OrderByDescending(w => w.WatchedDate).FirstOrDefault()?.Rating,
-                Watches = g.Select(w => new WatchEntryResponse
-                {
-                    Id = w.Id,
-                    MovieId = w.MovieId, // FIX 2: Add MovieId
-                    WatchedDate = w.WatchedDate,
-                    Rating = w.Rating,
-                    Notes = w.Notes,
-                    WatchLocation = w.WatchLocation,
-                    WatchedWith = w.WatchedWith,
-                    IsRewatch = w.IsRewatch,
-                    IsPrivate = w.IsPrivate, // FIX 2: Add IsPrivate
-                    GroupIds = w.WatchGroups?.Select(wg => wg.GroupId).ToList() ?? new List<int>(), // FIX 2: Add GroupIds
-                    Movie = new MovieBasicInfo // FIX 2: Add Movie info
+                    MovieId = movieId,
+                    Movie = new MovieBasicInfo
                     {
-                        Id = w.Movie.Id,
-                        TmdbId = w.Movie.TmdbId,
-                        Title = w.Movie.Title,
-                        Year = w.Movie.Year,
-                        PosterPath = w.Movie.PosterPath,
-                        Synopsis = w.Movie.Synopsis,
-                        AiSynopsis = w.Movie.AiSynopsis
-                    }
-                }).OrderByDescending(w => w.WatchedDate).ToList()
+                        Id = g.First().Movie.Id,
+                        TmdbId = g.First().Movie.TmdbId,
+                        Title = g.First().Movie.Title,
+                        Year = g.First().Movie.Year,
+                        PosterPath = g.First().Movie.PosterPath,
+                        Synopsis = g.First().Movie.Synopsis,
+                        AiSynopsis = g.First().Movie.AiSynopsis
+                    },
+                    WatchCount = g.Count,
+                    AverageRating = g.Any(w => w.Rating.HasValue)
+                        ? Math.Round(g.Where(w => w.Rating.HasValue).Average(w => w.Rating!.Value), 1)
+                        : null,
+                    LatestRating = g.OrderByDescending(w => w.WatchedDate).FirstOrDefault()?.Rating,
+                    Watches = g.Select(w => new WatchEntryResponse
+                    {
+                        Id = w.Id,
+                        MovieId = w.MovieId,
+                        WatchedDate = w.WatchedDate,
+                        Rating = w.Rating,
+                        Notes = w.Notes,
+                        WatchLocation = w.WatchLocation,
+                        WatchedWith = w.WatchedWith,
+                        IsRewatch = w.IsRewatch,
+                        IsPrivate = w.IsPrivate,
+                        GroupIds = w.WatchGroups?.Select(wg => wg.GroupId).ToList() ?? new List<int>(),
+                        Movie = new MovieBasicInfo
+                        {
+                            Id = w.Movie.Id,
+                            TmdbId = w.Movie.TmdbId,
+                            Title = w.Movie.Title,
+                            Year = w.Movie.Year,
+                            PosterPath = w.Movie.PosterPath,
+                            Synopsis = w.Movie.Synopsis,
+                            AiSynopsis = w.Movie.AiSynopsis
+                        }
+                    }).OrderByDescending(w => w.WatchedDate).ToList()
+                };
             })
-            .OrderByDescending(g => g.Watches.Max(w => w.WatchedDate))
             .ToList();
 
-        return grouped;
+        var totalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
+
+        return new PaginatedGroupedWatchesResponse
+        {
+            Items = grouped,
+            TotalCount = totalCount,
+            Page = page,
+            PageSize = pageSize,
+            TotalPages = totalPages,
+            HasMore = page < totalPages
+        };
     }
 
     public async Task<List<Watch>> GetByMovieIdAsync(int movieId, int userId)

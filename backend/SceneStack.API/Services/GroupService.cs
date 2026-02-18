@@ -401,4 +401,118 @@ public class GroupService : IGroupService
 
         return joinedGroupsCount < 2;
     }
+
+    public async Task<GroupStatsResponse?> GetGroupStatsAsync(int groupId, int requestingUserId)
+    {
+        // Verify requesting user is a member of the group
+        var group = await _context.Groups
+            .Include(g => g.Members)
+                .ThenInclude(m => m.User)
+            .FirstOrDefaultAsync(g => g.Id == groupId);
+
+        if (group == null)
+            return null;
+
+        if (!group.Members.Any(m => m.UserId == requestingUserId))
+        {
+            _logger.LogWarning("User {UserId} attempted to access stats for group {GroupId} without membership", requestingUserId, groupId);
+            return null;
+        }
+
+        // Load all watches shared with this group
+        var groupWatches = await _context.WatchGroups
+            .Where(wg => wg.GroupId == groupId)
+            .Include(wg => wg.Watch)
+                .ThenInclude(w => w.Movie)
+            .Include(wg => wg.Watch)
+                .ThenInclude(w => w.User)
+            .Select(wg => wg.Watch)
+            .Where(w => !w.IsPrivate)
+            .ToListAsync();
+
+        // Apply privacy filtering — always include requesting user's own watches
+        var visibleWatches = groupWatches
+            .Where(w => w.UserId == requestingUserId || w.User.ShareWatches)
+            .ToList();
+
+        var totalWatches = visibleWatches.Count;
+        var uniqueMovies = visibleWatches.Select(w => w.MovieId).Distinct().Count();
+
+        // Average rating — respect ShareRatings setting for other members
+        var ratedWatches = visibleWatches
+            .Where(w => w.Rating.HasValue &&
+                        (w.UserId == requestingUserId || w.User.ShareRatings))
+            .ToList();
+
+        double? averageGroupRating = ratedWatches.Any()
+            ? Math.Round(ratedWatches.Average(w => w.Rating!.Value), 1)
+            : null;
+
+        // Per-member stats
+        var memberStats = group.Members
+            .Select(m =>
+            {
+                var memberWatches = visibleWatches.Where(w => w.UserId == m.UserId).ToList();
+                var memberRated = memberWatches
+                    .Where(w => w.Rating.HasValue &&
+                                (w.UserId == requestingUserId || m.User.ShareRatings))
+                    .ToList();
+
+                return new GroupMemberStats
+                {
+                    UserId = m.UserId,
+                    Username = m.User.Username,
+                    WatchCount = memberWatches.Count,
+                    AverageRating = memberRated.Any()
+                        ? Math.Round(memberRated.Average(w => w.Rating!.Value), 1)
+                        : null
+                };
+            })
+            .OrderByDescending(ms => ms.WatchCount)
+            .ToList();
+
+        var mostActiveMember = memberStats.FirstOrDefault(ms => ms.WatchCount > 0)?.Username;
+
+        // Shared movies — watched by 2 or more distinct members
+        var sharedMovies = visibleWatches
+            .GroupBy(w => w.MovieId)
+            .Where(g => g.Select(w => w.UserId).Distinct().Count() >= 2)
+            .OrderByDescending(g => g.Select(w => w.UserId).Distinct().Count())
+            .Take(10)
+            .Select(g =>
+            {
+                var first = g.First();
+                return new SharedMovieStats
+                {
+                    Movie = new MovieBasicInfo
+                    {
+                        Id = first.Movie.Id,
+                        TmdbId = first.Movie.TmdbId,
+                        Title = first.Movie.Title,
+                        Year = first.Movie.Year,
+                        PosterPath = first.Movie.PosterPath,
+                        Synopsis = first.Movie.Synopsis,
+                        AiSynopsis = first.Movie.AiSynopsis
+                    },
+                    WatchedByCount = g.Select(w => w.UserId).Distinct().Count(),
+                    WatchedByUsernames = g
+                        .Select(w => w.User.Username)
+                        .Distinct()
+                        .ToList()
+                };
+            })
+            .ToList();
+
+        return new GroupStatsResponse
+        {
+            GroupId = groupId,
+            GroupName = group.Name,
+            TotalWatches = totalWatches,
+            UniqueMovies = uniqueMovies,
+            AverageGroupRating = averageGroupRating,
+            MostActiveMember = mostActiveMember,
+            MemberStats = memberStats,
+            SharedMovies = sharedMovies
+        };
+    }
 }
