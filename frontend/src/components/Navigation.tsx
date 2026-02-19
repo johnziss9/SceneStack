@@ -4,12 +4,11 @@ import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { Film, User, Users, BarChart2, Menu, X, Eye, LogIn, UserPlus } from 'lucide-react';
+import { Film, User, Users, BarChart2, Menu, X, Eye, LogIn, UserPlus, Bookmark } from 'lucide-react';
 
 export function Navigation() {
     const { user, loading } = useAuth();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
-
     const closeMenu = () => setIsMenuOpen(false);
 
     return (
@@ -34,6 +33,12 @@ export function Navigation() {
                                             <Button variant="ghost" className="gap-2">
                                                 <Eye className="h-4 w-4" />
                                                 My Watches
+                                            </Button>
+                                        </Link>
+                                        <Link href="/watchlist">
+                                            <Button variant="ghost" className="gap-2">
+                                                <Bookmark className="h-4 w-4" />
+                                                Watchlist
                                             </Button>
                                         </Link>
                                         <Link href="/groups">
@@ -94,6 +99,12 @@ export function Navigation() {
                                     <Button variant="ghost" className="w-full justify-start gap-3">
                                         <Eye className="h-4 w-4" />
                                         My Watches
+                                    </Button>
+                                </Link>
+                                <Link href="/watchlist" onClick={closeMenu}>
+                                    <Button variant="ghost" className="w-full justify-start gap-3">
+                                        <Bookmark className="h-4 w-4" />
+                                        Watchlist
                                     </Button>
                                 </Link>
                                 <Link href="/groups" onClick={closeMenu}>

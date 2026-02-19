@@ -24,12 +24,15 @@ public class WatchlistService : IWatchlistService
         _logger = logger;
     }
 
-    public async Task<PaginatedWatchlistResponse> GetWatchlistAsync(int userId, int page = 1, int pageSize = 20)
+    public async Task<PaginatedWatchlistResponse> GetWatchlistAsync(int userId, int page = 1, int pageSize = 20, string sortBy = "recent")
     {
-        var query = _context.WatchlistItems
+        var baseQuery = _context.WatchlistItems
             .Include(wi => wi.Movie)
-            .Where(wi => wi.UserId == userId)
-            .OrderByDescending(wi => wi.AddedAt);
+            .Where(wi => wi.UserId == userId);
+
+        var query = sortBy == "priority"
+            ? baseQuery.OrderByDescending(wi => wi.Priority).ThenByDescending(wi => wi.AddedAt)
+            : baseQuery.OrderByDescending(wi => wi.AddedAt);
 
         var totalCount = await query.CountAsync();
         var totalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
@@ -56,6 +59,26 @@ public class WatchlistService : IWatchlistService
         if (movie == null)
             throw new InvalidOperationException($"Failed to retrieve movie with TMDb ID {tmdbId}");
 
+        // Check for a previously soft-deleted entry and restore it rather than inserting a duplicate
+        var existing = await _context.WatchlistItems
+            .IgnoreQueryFilters()
+            .Include(wi => wi.Movie)
+            .FirstOrDefaultAsync(wi => wi.UserId == userId && wi.MovieId == movie.Id);
+
+        if (existing != null)
+        {
+            if (!existing.IsDeleted)
+                throw new InvalidOperationException("DUPLICATE"); // already on watchlist — controller handles as 409
+
+            existing.IsDeleted = false;
+            existing.DeletedAt = null;
+            existing.Notes = notes;
+            existing.Priority = priority;
+            existing.AddedAt = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
+            return existing;
+        }
+
         var item = new WatchlistItem
         {
             UserId = userId,
@@ -69,7 +92,6 @@ public class WatchlistService : IWatchlistService
         _context.WatchlistItems.Add(item);
         await _context.SaveChangesAsync();
 
-        // Reload with navigation properties
         return (await _context.WatchlistItems
             .Include(wi => wi.Movie)
             .FirstOrDefaultAsync(wi => wi.Id == item.Id))!;

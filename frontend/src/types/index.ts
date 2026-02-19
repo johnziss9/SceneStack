@@ -40,6 +40,11 @@ export type {
     UpdatePrivacySettingsRequest
 } from './privacy';
 export type {
+    WatchlistItem,
+    PaginatedWatchlistResponse,
+    UpdateWatchlistItemRequest,
+} from './watchlist';
+export type {
     UserStats,
     RatingDistributionItem,
     WatchesByYearItem,

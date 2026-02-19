@@ -21,14 +21,15 @@ public class WatchlistController : ControllerBase
         _logger = logger;
     }
 
-    // GET /api/watchlist?page=1&pageSize=20
+    // GET /api/watchlist?page=1&pageSize=20&sortBy=recent
     [HttpGet]
     public async Task<ActionResult<PaginatedWatchlistResponse>> GetWatchlist(
         [FromQuery] int page = 1,
-        [FromQuery] int pageSize = 20)
+        [FromQuery] int pageSize = 20,
+        [FromQuery] string sortBy = "recent")
     {
         var userId = User.GetUserId();
-        var result = await _watchlistService.GetWatchlistAsync(userId, page, pageSize);
+        var result = await _watchlistService.GetWatchlistAsync(userId, page, pageSize, sortBy);
         return Ok(result);
     }
 
@@ -72,6 +73,10 @@ public class WatchlistController : ControllerBase
                 Priority = item.Priority,
                 AddedAt = item.AddedAt
             });
+        }
+        catch (InvalidOperationException ex) when (ex.Message == "DUPLICATE")
+        {
+            return Conflict(new { message = "This movie is already on your watchlist." });
         }
         catch (InvalidOperationException ex) when (ex.Message.Contains("Failed to retrieve movie"))
         {

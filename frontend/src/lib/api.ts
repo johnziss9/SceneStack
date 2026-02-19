@@ -31,6 +31,9 @@ import type {
     GroupStats,
     UserPrivacySettings,
     UpdatePrivacySettingsRequest,
+    WatchlistItem,
+    PaginatedWatchlistResponse,
+    UpdateWatchlistItemRequest,
 } from '@/types';
 
 // Auth endpoints
@@ -65,13 +68,21 @@ export const movieApi = {
 
 // Watchlist endpoints
 export const watchlistApi = {
+    // GET: api/watchlist?page=&pageSize=
+    getWatchlist: (page: number = 1, pageSize: number = 20, sortBy: 'recent' | 'priority' = 'recent') =>
+        api.get<PaginatedWatchlistResponse>(`/api/watchlist?page=${page}&pageSize=${pageSize}&sortBy=${sortBy}`),
+
     // POST: api/watchlist
     addToWatchlist: (tmdbId: number, notes?: string, priority: number = 0) =>
-        api.post<{ id: number; movieId: number }>('/api/watchlist', { tmdbId, notes, priority }),
+        api.post<WatchlistItem>('/api/watchlist', { tmdbId, notes, priority }),
 
     // DELETE: api/watchlist/{movieId}
     removeFromWatchlist: (movieId: number) =>
         api.delete<void>(`/api/watchlist/${movieId}`),
+
+    // PUT: api/watchlist/{movieId}
+    updateWatchlistItem: (movieId: number, request: UpdateWatchlistItemRequest) =>
+        api.put<WatchlistItem>(`/api/watchlist/${movieId}`, request),
 
     // GET: api/watchlist/count
     getWatchlistCount: () =>
