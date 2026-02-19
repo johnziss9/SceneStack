@@ -3,7 +3,7 @@
 import { memo, useEffect, useState } from 'react';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Calendar, Star, Bookmark, BookmarkCheck, Loader2 } from 'lucide-react';
+import { Calendar, Star, Bookmark, BookmarkCheck, BookmarkX, Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import Link from 'next/link';
 import type { TmdbMovie } from '@/types';
@@ -19,7 +19,9 @@ interface MovieCardProps {
 export const MovieCard = memo(function MovieCard({ movie, onAddToWatched }: MovieCardProps) {
     const { user } = useAuth();
     const [onWatchlist, setOnWatchlist] = useState(false);
+    const [localMovieId, setLocalMovieId] = useState<number | null>(null);
     const [isSaving, setIsSaving] = useState(false);
+    const [isHoveringBookmark, setIsHoveringBookmark] = useState(false);
 
     const posterUrl = movie.poster_path
         ? `https://image.tmdb.org/t/p/w342${movie.poster_path}`
@@ -37,27 +39,37 @@ export const MovieCard = memo(function MovieCard({ movie, onAddToWatched }: Movi
     useEffect(() => {
         if (!user) return;
         movieApi.getMyStatus(movie.id)
-            .then(status => setOnWatchlist(status.onWatchlist))
+            .then(status => {
+                setOnWatchlist(status.onWatchlist);
+                setLocalMovieId(status.localMovieId ?? null);
+            })
             .catch(() => { /* silently ignore */ });
     }, [user, movie.id]);
 
-    const handleWatchlistAdd = async (e: React.MouseEvent) => {
+    const handleWatchlistToggle = async (e: React.MouseEvent) => {
         e.preventDefault();
         e.stopPropagation();
         if (!user || isSaving) return;
         setIsSaving(true);
         try {
-            await watchlistApi.addToWatchlist(movie.id);
-            setOnWatchlist(true);
-            toast.success('Saved to watchlist');
+            if (onWatchlist && localMovieId) {
+                await watchlistApi.removeFromWatchlist(localMovieId);
+                setOnWatchlist(false);
+                setLocalMovieId(null);
+                toast.success('Removed from watchlist');
+            } else {
+                const result = await watchlistApi.addToWatchlist(movie.id);
+                setOnWatchlist(true);
+                setLocalMovieId(result.movieId);
+                toast.success('Saved to watchlist');
+            }
         } catch (err) {
             if (err instanceof PremiumRequiredError) {
                 toast.error('Watchlist limit reached. Upgrade to Premium for unlimited saves.');
             } else if (err instanceof ApiError && err.status === 409) {
-                // Genuinely already on watchlist — just confirm state is accurate
                 setOnWatchlist(true);
             } else {
-                toast.error('Failed to save to watchlist');
+                toast.error(onWatchlist ? 'Failed to remove from watchlist' : 'Failed to save to watchlist');
             }
         } finally {
             setIsSaving(false);
@@ -80,17 +92,21 @@ export const MovieCard = memo(function MovieCard({ movie, onAddToWatched }: Movi
                         </div>
                     )}
 
-                    {/* Watchlist quick-add button (authenticated only) */}
+                    {/* Watchlist toggle button (authenticated only) */}
                     {user && (
                         <button
-                            onClick={handleWatchlistAdd}
-                            disabled={isSaving || onWatchlist}
-                            aria-label={onWatchlist ? 'On watchlist' : 'Save to watchlist'}
-                            title={onWatchlist ? 'On watchlist — manage on movie page' : 'Save to watchlist'}
-                            className="absolute top-2 right-2 w-8 h-8 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center shadow hover:bg-background transition-colors disabled:cursor-default"
+                            onClick={handleWatchlistToggle}
+                            onMouseEnter={() => setIsHoveringBookmark(true)}
+                            onMouseLeave={() => setIsHoveringBookmark(false)}
+                            disabled={isSaving}
+                            aria-label={onWatchlist ? 'Remove from watchlist' : 'Save to watchlist'}
+                            title={onWatchlist ? 'Remove from watchlist' : 'Save to watchlist'}
+                            className="absolute top-2 right-2 w-8 h-8 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center shadow hover:bg-background transition-colors"
                         >
                             {isSaving ? (
                                 <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                            ) : onWatchlist && isHoveringBookmark ? (
+                                <BookmarkX className="h-4 w-4 text-destructive" />
                             ) : onWatchlist ? (
                                 <BookmarkCheck className="h-4 w-4 text-primary fill-primary" />
                             ) : (
