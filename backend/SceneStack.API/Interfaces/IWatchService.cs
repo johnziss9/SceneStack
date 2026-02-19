@@ -7,7 +7,7 @@ public interface IWatchService
 {
     Task<Watch?> GetByIdAsync(int id);
     Task<IEnumerable<Watch>> GetAllAsync(int? userId = null, int? groupId = null);
-    Task<PaginatedGroupedWatchesResponse> GetGroupedWatchesAsync(int userId, int page = 1, int pageSize = 20);
+    Task<PaginatedGroupedWatchesResponse> GetGroupedWatchesAsync(GetGroupedWatchesRequest request);
     Task<List<Watch>> GetByMovieIdAsync(int movieId, int userId);
     Task<Watch> CreateAsync(Watch watch, List<int> groupIds);
     Task<Watch?> UpdateAsync(int id, Watch watch, List<int>? groupIds = null);

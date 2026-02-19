@@ -47,16 +47,41 @@ public class WatchesController : ControllerBase
         return Ok(WatchMapper.ToResponse(watch));
     }
 
-    // GET: api/watches/grouped?page=1&pageSize=20
+    // GET: api/watches/grouped?page=1&pageSize=20&search=&ratingMin=&ratingMax=&watchedFrom=&watchedTo=&rewatchOnly=&sortBy=&groupId=
     [HttpGet("grouped")]
     public async Task<ActionResult<PaginatedGroupedWatchesResponse>> GetGroupedWatches(
         [FromQuery] int page = 1,
-        [FromQuery] int pageSize = 20)
+        [FromQuery] int pageSize = 20,
+        [FromQuery] int? groupId = null,
+        [FromQuery] string? search = null,
+        [FromQuery] int? ratingMin = null,
+        [FromQuery] int? ratingMax = null,
+        [FromQuery] DateTime? watchedFrom = null,
+        [FromQuery] DateTime? watchedTo = null,
+        [FromQuery] bool? rewatchOnly = null,
+        [FromQuery] bool? unratedOnly = null,
+        [FromQuery] string? sortBy = null)
     {
         var userId = User.GetUserId();
-        _logger.LogInformation("Getting grouped watches for user {UserId}, page {Page}", userId, page);
+        _logger.LogInformation("Getting grouped watches for user {UserId}, page {Page}, search {Search}", userId, page, search);
 
-        var grouped = await _watchService.GetGroupedWatchesAsync(userId, page, pageSize);
+        var request = new GetGroupedWatchesRequest
+        {
+            UserId = userId,
+            Page = page,
+            PageSize = pageSize,
+            GroupId = groupId,
+            Search = search,
+            RatingMin = ratingMin,
+            RatingMax = ratingMax,
+            WatchedFrom = watchedFrom.HasValue ? DateTime.SpecifyKind(watchedFrom.Value, DateTimeKind.Utc) : null,
+            WatchedTo = watchedTo.HasValue ? DateTime.SpecifyKind(watchedTo.Value, DateTimeKind.Utc) : null,
+            RewatchOnly = rewatchOnly,
+            UnratedOnly = unratedOnly,
+            SortBy = sortBy
+        };
+
+        var grouped = await _watchService.GetGroupedWatchesAsync(request);
 
         return Ok(grouped);
     }

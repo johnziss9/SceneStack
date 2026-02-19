@@ -1,4 +1,4 @@
-import { GroupedWatch, PaginatedGroupedWatches } from '@/types/watch';
+import { GroupedWatch, PaginatedGroupedWatches, GetGroupedWatchesParams } from '@/types/watch';
 import { api } from './api-client';
 import type { UserStats } from '@/types/stats';
 import type {
@@ -99,9 +99,23 @@ export const watchApi = {
     getWatches: () =>
         api.get<Watch[]>('/api/watches'),
 
-    // GET: api/watches/grouped?page=1&pageSize=20
-    getGroupedWatches: (page: number = 1, pageSize: number = 20) =>
-        api.get<PaginatedGroupedWatches>(`/api/watches/grouped?page=${page}&pageSize=${pageSize}`),
+    // GET: api/watches/grouped with optional filter params
+    getGroupedWatches: (params: GetGroupedWatchesParams = {}) => {
+        const qs = new URLSearchParams();
+        if (params.page) qs.set('page', String(params.page));
+        if (params.pageSize) qs.set('pageSize', String(params.pageSize));
+        if (params.groupId) qs.set('groupId', String(params.groupId));
+        if (params.search) qs.set('search', params.search);
+        if (params.ratingMin != null) qs.set('ratingMin', String(params.ratingMin));
+        if (params.ratingMax != null) qs.set('ratingMax', String(params.ratingMax));
+        if (params.watchedFrom) qs.set('watchedFrom', params.watchedFrom);
+        if (params.watchedTo) qs.set('watchedTo', params.watchedTo);
+        if (params.rewatchOnly) qs.set('rewatchOnly', 'true');
+        if (params.unratedOnly) qs.set('unratedOnly', 'true');
+        if (params.sortBy && params.sortBy !== 'recentlyWatched') qs.set('sortBy', params.sortBy);
+        const query = qs.toString();
+        return api.get<PaginatedGroupedWatches>(`/api/watches/grouped${query ? `?${query}` : ''}`);
+    },
 
     // GET: api/watches/by-movie/{movieId} (userId now from JWT token)
     getWatchesByMovie: (movieId: number) =>

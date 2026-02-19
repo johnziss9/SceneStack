@@ -1,5 +1,21 @@
 namespace SceneStack.API.DTOs;
 
+public class GetGroupedWatchesRequest
+{
+    public int UserId { get; set; }
+    public int Page { get; set; } = 1;
+    public int PageSize { get; set; } = 20;
+    public int? GroupId { get; set; }
+    public string? Search { get; set; }
+    public int? RatingMin { get; set; }
+    public int? RatingMax { get; set; }
+    public DateTime? WatchedFrom { get; set; }
+    public DateTime? WatchedTo { get; set; }
+    public bool? RewatchOnly { get; set; }
+    public bool? UnratedOnly { get; set; }
+    public string? SortBy { get; set; } // "recentlyWatched" | "title" | "highestRated" | "mostWatched"
+}
+
 public class CreateWatchRequest
 {
     public int TmdbId { get; set; }

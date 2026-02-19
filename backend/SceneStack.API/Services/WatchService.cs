@@ -48,54 +48,102 @@ public class WatchService : IWatchService
             .ToListAsync();
     }
 
-    public async Task<PaginatedGroupedWatchesResponse> GetGroupedWatchesAsync(int userId, int page = 1, int pageSize = 20)
+    public async Task<PaginatedGroupedWatchesResponse> GetGroupedWatchesAsync(GetGroupedWatchesRequest request)
     {
-        // Step 1: Load only MovieId + WatchedDate to determine ordering and pagination in memory.
-        // This is far cheaper than loading full Watch + Movie objects for all rows.
-        var slim = await _context.Watches
-            .Where(w => w.UserId == userId)
-            .Select(w => new { w.MovieId, w.WatchedDate })
+        // Step 1: Build a server-side filtered + grouped + sorted query.
+        // All filters are pushed to the DB to support accurate server-side pagination.
+        var watchesQuery = _context.Watches
+            .Where(w => w.UserId == request.UserId)
+            .AsQueryable();
+
+        // Watch-level pre-group filters
+        if (!string.IsNullOrWhiteSpace(request.Search))
+            watchesQuery = watchesQuery.Where(w => EF.Functions.ILike(w.Movie.Title, $"%{request.Search}%"));
+
+        if (request.GroupId.HasValue)
+            watchesQuery = watchesQuery.Where(w => w.WatchGroups.Any(wg => wg.GroupId == request.GroupId.Value));
+
+        if (request.WatchedFrom.HasValue)
+            watchesQuery = watchesQuery.Where(w => w.WatchedDate >= request.WatchedFrom.Value);
+
+        if (request.WatchedTo.HasValue)
+            watchesQuery = watchesQuery.Where(w => w.WatchedDate <= request.WatchedTo.Value);
+
+        // Group by movie and compute per-movie aggregates
+        var slimQuery = watchesQuery
+            .GroupBy(w => new { w.MovieId, MovieTitle = w.Movie.Title })
+            .Select(g => new SlimGroup
+            {
+                MovieId = g.Key.MovieId,
+                MovieTitle = g.Key.MovieTitle,
+                MaxWatchDate = g.Max(w => w.WatchedDate),
+                AvgRating = g.Where(w => w.Rating != null).Average(w => (double?)w.Rating),
+                WatchCount = g.Count(),
+                HasRewatch = g.Any(w => w.IsRewatch)
+            })
+            .AsQueryable();
+
+        // Post-group filters
+        if (request.RewatchOnly == true)
+            slimQuery = slimQuery.Where(g => g.HasRewatch);
+
+        if (request.UnratedOnly == true)
+            slimQuery = slimQuery.Where(g => g.AvgRating == null);
+
+        if (request.RatingMin.HasValue)
+            slimQuery = slimQuery.Where(g => g.AvgRating >= request.RatingMin.Value);
+
+        if (request.RatingMax.HasValue)
+            slimQuery = slimQuery.Where(g => g.AvgRating <= request.RatingMax.Value);
+
+        // Sort
+        IQueryable<SlimGroup> orderedQuery = request.SortBy switch
+        {
+            "title"        => slimQuery.OrderBy(g => g.MovieTitle),
+            "highestRated" => slimQuery.OrderByDescending(g => g.AvgRating).ThenByDescending(g => g.MaxWatchDate),
+            "mostWatched"  => slimQuery.OrderByDescending(g => g.WatchCount).ThenByDescending(g => g.MaxWatchDate),
+            _              => slimQuery.OrderByDescending(g => g.MaxWatchDate)
+        };
+
+        var totalCount = await orderedQuery.CountAsync();
+        var totalPages = (int)Math.Ceiling(totalCount / (double)request.PageSize);
+
+        var pagedSlim = await orderedQuery
+            .Skip((request.Page - 1) * request.PageSize)
+            .Take(request.PageSize)
             .ToListAsync();
 
-        var totalCount = slim.Select(x => x.MovieId).Distinct().Count();
-
-        var pagedMovieIds = slim
-            .GroupBy(x => x.MovieId)
-            .OrderByDescending(g => g.Max(x => x.WatchedDate))
-            .Select(g => g.Key)
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
-            .ToList();
-
-        if (!pagedMovieIds.Any())
+        if (!pagedSlim.Any())
         {
             return new PaginatedGroupedWatchesResponse
             {
                 Items = new List<GroupedWatchesResponse>(),
                 TotalCount = totalCount,
-                Page = page,
-                PageSize = pageSize,
-                TotalPages = (int)Math.Ceiling(totalCount / (double)pageSize),
+                Page = request.Page,
+                PageSize = request.PageSize,
+                TotalPages = totalPages,
                 HasMore = false
             };
         }
 
-        // Step 2: Fetch all watches only for the movies in this page
+        var pagedMovieIds = pagedSlim.Select(g => g.MovieId).ToList();
+
+        // Step 2: Fetch full watch + movie data only for the paged movie IDs
         var watches = await _context.Watches
             .Include(w => w.Movie)
             .Include(w => w.WatchGroups)
-            .Where(w => w.UserId == userId && pagedMovieIds.Contains(w.MovieId))
+            .Where(w => w.UserId == request.UserId && pagedMovieIds.Contains(w.MovieId))
             .OrderByDescending(w => w.WatchedDate)
             .ToListAsync();
 
-        // Group in memory (only page-sized data) and preserve the DB ordering
-        var grouped = pagedMovieIds
-            .Select(movieId =>
+        // Group in memory (page-sized data only) preserving the DB sort order
+        var grouped = pagedSlim
+            .Select(slim =>
             {
-                var g = watches.Where(w => w.MovieId == movieId).ToList();
+                var g = watches.Where(w => w.MovieId == slim.MovieId).ToList();
                 return new GroupedWatchesResponse
                 {
-                    MovieId = movieId,
+                    MovieId = slim.MovieId,
                     Movie = new MovieBasicInfo
                     {
                         Id = g.First().Movie.Id,
@@ -138,16 +186,14 @@ public class WatchService : IWatchService
             })
             .ToList();
 
-        var totalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
-
         return new PaginatedGroupedWatchesResponse
         {
             Items = grouped,
             TotalCount = totalCount,
-            Page = page,
-            PageSize = pageSize,
+            Page = request.Page,
+            PageSize = request.PageSize,
             TotalPages = totalPages,
-            HasMore = page < totalPages
+            HasMore = request.Page < totalPages
         };
     }
 
@@ -462,4 +508,15 @@ public class WatchService : IWatchService
             return result;
         }
     }
+}
+
+// Private projection type used by GetGroupedWatchesAsync
+file record SlimGroup
+{
+    public int MovieId { get; init; }
+    public string MovieTitle { get; init; } = "";
+    public DateTime MaxWatchDate { get; init; }
+    public double? AvgRating { get; init; }
+    public int WatchCount { get; init; }
+    public bool HasRewatch { get; init; }
 }

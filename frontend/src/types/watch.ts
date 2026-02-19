@@ -94,3 +94,18 @@ export interface BulkUpdateResult {
     failed: number;
     errors: string[];
 }
+
+// Query params for GET /api/watches/grouped
+export interface GetGroupedWatchesParams {
+    page?: number;
+    pageSize?: number;
+    groupId?: number;
+    search?: string;
+    ratingMin?: number;
+    ratingMax?: number;
+    watchedFrom?: string; // ISO date string (YYYY-MM-DD)
+    watchedTo?: string;   // ISO date string (YYYY-MM-DD)
+    rewatchOnly?: boolean;
+    unratedOnly?: boolean;
+    sortBy?: 'recentlyWatched' | 'title' | 'highestRated' | 'mostWatched';
+}
