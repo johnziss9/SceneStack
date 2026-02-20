@@ -34,6 +34,10 @@ import type {
     WatchlistItem,
     PaginatedWatchlistResponse,
     UpdateWatchlistItemRequest,
+    UpdateProfileRequest,
+    ChangePasswordRequest,
+    DeleteAccountRequest,
+    UserProfile,
 } from '@/types';
 
 // Auth endpoints
@@ -232,4 +236,23 @@ export const privacyApi = {
     // PUT: api/privacy
     updatePrivacySettings: (data: UpdatePrivacySettingsRequest) =>
         api.put<UserPrivacySettings>('/api/privacy', data),
+};
+
+// User endpoints
+export const userApi = {
+    // GET: api/users/profile
+    getProfile: () =>
+        api.get<UserProfile>('/api/users/profile'),
+
+    // PUT: api/users/profile
+    updateProfile: (data: UpdateProfileRequest) =>
+        api.put<UserProfile>('/api/users/profile', data),
+
+    // PUT: api/users/password
+    changePassword: (data: ChangePasswordRequest) =>
+        api.put<{ message: string }>('/api/users/password', data),
+
+    // DELETE: api/users/account
+    deleteAccount: (data: DeleteAccountRequest) =>
+        api.delete<{ message: string }>('/api/users/account', data),
 };

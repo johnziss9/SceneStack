@@ -116,6 +116,9 @@ export const api = {
             body: data ? JSON.stringify(data) : undefined,
         }),
 
-    delete: <T>(endpoint: string) =>
-        fetchApi<T>(endpoint, { method: 'DELETE' }),
+    delete: <T>(endpoint: string, data?: unknown) =>
+        fetchApi<T>(endpoint, {
+            method: 'DELETE',
+            body: data ? JSON.stringify(data) : undefined,
+        }),
 };

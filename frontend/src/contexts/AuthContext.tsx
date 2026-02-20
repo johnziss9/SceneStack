@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
-import { authApi } from '@/lib/api';
+import { authApi, userApi } from '@/lib/api';
 import { tokenStorage } from '@/lib/api-client';
 import type { AuthResponse, RegisterRequest, LoginRequest } from '@/types';
 
@@ -11,6 +11,8 @@ interface AuthUser {
     username: string;
     email: string;
     isPremium: boolean;
+    bio?: string;
+    createdAt?: string;
 }
 
 interface AuthContextType {
@@ -19,6 +21,7 @@ interface AuthContextType {
     login: (data: LoginRequest) => Promise<void>;
     register: (data: RegisterRequest) => Promise<void>;
     logout: () => void;
+    refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -52,6 +55,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                     email: email,
                     isPremium: isPremium,
                 });
+
+                // Fetch full profile (with bio and createdAt) in background
+                userApi.getProfile().then((profile) => {
+                    setUser({
+                        id: profile.userId,
+                        username: profile.username,
+                        email: profile.email,
+                        isPremium: profile.isPremium,
+                        bio: profile.bio,
+                        createdAt: profile.createdAt,
+                    });
+                }).catch(() => {
+                    // Ignore error, we already have basic user info from token
+                });
             } catch (error) {
                 // Invalid token, remove it
                 console.error('Failed to decode token:', error);
@@ -80,6 +97,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             isPremium: isPremium,
         });
 
+        // Fetch full profile (with bio and createdAt)
+        try {
+            const profile = await userApi.getProfile();
+            setUser({
+                id: profile.userId,
+                username: profile.username,
+                email: profile.email,
+                isPremium: profile.isPremium,
+                bio: profile.bio,
+                createdAt: profile.createdAt,
+            });
+        } catch (error) {
+            // Ignore error, we already have basic user info
+        }
+
         // Redirect to home
         router.push('/');
     };
@@ -102,6 +134,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             isPremium: isPremium,
         });
 
+        // Fetch full profile (with bio and createdAt)
+        try {
+            const profile = await userApi.getProfile();
+            setUser({
+                id: profile.userId,
+                username: profile.username,
+                email: profile.email,
+                isPremium: profile.isPremium,
+                bio: profile.bio,
+                createdAt: profile.createdAt,
+            });
+        } catch (error) {
+            // Ignore error, we already have basic user info
+        }
+
         // Redirect to home
         router.push('/');
     };
@@ -122,8 +169,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         router.push('/login');
     };
 
+    const refreshUser = async () => {
+        try {
+            const profile = await userApi.getProfile();
+            setUser({
+                id: profile.userId,
+                username: profile.username,
+                email: profile.email,
+                isPremium: profile.isPremium,
+                bio: profile.bio,
+                createdAt: profile.createdAt,
+            });
+        } catch (error) {
+            console.error('Failed to refresh user:', error);
+            // If refresh fails, user might be logged out
+            // Keep existing user state rather than clearing it
+        }
+    };
+
     return (
-        <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+        <AuthContext.Provider value={{ user, loading, login, register, logout, refreshUser }}>
             {children}
         </AuthContext.Provider>
     );

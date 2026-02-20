@@ -90,6 +90,7 @@ builder.Services.AddScoped<IMovieService, MovieService>();
 builder.Services.AddScoped<IWatchService, WatchService>();
 builder.Services.AddHttpClient<ITmdbService, TmdbService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IAiInsightService, AiInsightService>();
 builder.Services.AddScoped<IAiSearchService, AiSearchService>();
 builder.Services.AddScoped<IGroupService, GroupService>();
