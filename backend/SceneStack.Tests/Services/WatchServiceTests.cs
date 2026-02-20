@@ -2,6 +2,7 @@ using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
+using SceneStack.API.DTOs;
 using SceneStack.API.Models;
 using SceneStack.API.Services;
 using SceneStack.Tests.Helpers;
@@ -470,7 +471,8 @@ public class WatchServiceTests
         await context.SaveChangesAsync();
 
         // Act
-        var result = await service.GetGroupedWatchesAsync(userId: user.Id);
+        var request = new GetGroupedWatchesRequest { UserId = user.Id };
+        var result = await service.GetGroupedWatchesAsync(request);
 
         // Assert
         result.Items.Should().HaveCount(2); // Two unique movies
@@ -764,5 +766,468 @@ public class WatchServiceTests
         // Assert
         result.Should().HaveCount(1); // Only public watch
         result.First().IsPrivate.Should().BeFalse();
+    }
+
+    [Fact(Skip = "EF.Functions.ILike requires PostgreSQL - not supported in in-memory database")]
+    public async Task GetGroupedWatchesAsync_SearchFilter_FiltersMoviesByTitle()
+    {
+        // Arrange
+        using var context = TestDbContextFactory.CreateInMemoryDbContext();
+        var logger = Substitute.For<ILogger<WatchService>>();
+        var service = new WatchService(context, logger);
+
+        // Use the second user (freeuser) who has no seeded watches
+        var user = context.Users.Skip(1).First();
+
+        var movie1 = new Movie { TmdbId = 100, Title = "The Matrix", Year = 1999, Genres = new List<string>(), Cast = new List<CastMember>(), Runtime = 100, CreatedAt = DateTime.UtcNow };
+        var movie2 = new Movie { TmdbId = 101, Title = "Fight Club", Year = 1999, Genres = new List<string>(), Cast = new List<CastMember>(), Runtime = 100, CreatedAt = DateTime.UtcNow };
+        context.Movies.AddRange(movie1, movie2);
+        await context.SaveChangesAsync();
+
+        context.Watches.AddRange(
+            new Watch { UserId = user.Id, MovieId = movie1.Id, WatchedDate = DateTime.UtcNow, CreatedAt = DateTime.UtcNow },
+            new Watch { UserId = user.Id, MovieId = movie2.Id, WatchedDate = DateTime.UtcNow, CreatedAt = DateTime.UtcNow }
+        );
+        await context.SaveChangesAsync();
+
+        var request = new GetGroupedWatchesRequest { UserId = user.Id, Search = "matrix" };
+
+        // Act
+        var result = await service.GetGroupedWatchesAsync(request);
+
+        // Assert
+        result.Items.Should().HaveCount(1);
+        result.Items.First().Movie.Title.Should().Be("The Matrix");
+    }
+
+    [Fact]
+    public async Task GetGroupedWatchesAsync_RatingMinFilter_FiltersGroupsByMinRating()
+    {
+        // Arrange
+        using var context = TestDbContextFactory.CreateInMemoryDbContext();
+        var logger = Substitute.For<ILogger<WatchService>>();
+        var service = new WatchService(context, logger);
+
+        var user = context.Users.Skip(1).First();
+
+        var movie1 = new Movie { TmdbId = 100, Title = "High Rated", Year = 1999, Genres = new List<string>(), Cast = new List<CastMember>(), Runtime = 100, CreatedAt = DateTime.UtcNow };
+        var movie2 = new Movie { TmdbId = 101, Title = "Low Rated", Year = 1999, Genres = new List<string>(), Cast = new List<CastMember>(), Runtime = 100, CreatedAt = DateTime.UtcNow };
+        context.Movies.AddRange(movie1, movie2);
+        await context.SaveChangesAsync();
+
+        context.Watches.AddRange(
+            new Watch { UserId = user.Id, MovieId = movie1.Id, WatchedDate = DateTime.UtcNow, Rating = 9, CreatedAt = DateTime.UtcNow },
+            new Watch { UserId = user.Id, MovieId = movie2.Id, WatchedDate = DateTime.UtcNow, Rating = 5, CreatedAt = DateTime.UtcNow }
+        );
+        await context.SaveChangesAsync();
+
+        var request = new GetGroupedWatchesRequest { UserId = user.Id, RatingMin = 8 };
+
+        // Act
+        var result = await service.GetGroupedWatchesAsync(request);
+
+        // Assert
+        result.Items.Should().HaveCount(1);
+        result.Items.First().Movie.Title.Should().Be("High Rated");
+        result.Items.First().AverageRating.Should().Be(9);
+    }
+
+    [Fact]
+    public async Task GetGroupedWatchesAsync_RatingMaxFilter_FiltersGroupsByMaxRating()
+    {
+        // Arrange
+        using var context = TestDbContextFactory.CreateInMemoryDbContext();
+        var logger = Substitute.For<ILogger<WatchService>>();
+        var service = new WatchService(context, logger);
+
+        var user = context.Users.Skip(1).First();
+
+        var movie1 = new Movie { TmdbId = 100, Title = "High Rated", Year = 1999, Genres = new List<string>(), Cast = new List<CastMember>(), Runtime = 100, CreatedAt = DateTime.UtcNow };
+        var movie2 = new Movie { TmdbId = 101, Title = "Low Rated", Year = 1999, Genres = new List<string>(), Cast = new List<CastMember>(), Runtime = 100, CreatedAt = DateTime.UtcNow };
+        context.Movies.AddRange(movie1, movie2);
+        await context.SaveChangesAsync();
+
+        context.Watches.AddRange(
+            new Watch { UserId = user.Id, MovieId = movie1.Id, WatchedDate = DateTime.UtcNow, Rating = 9, CreatedAt = DateTime.UtcNow },
+            new Watch { UserId = user.Id, MovieId = movie2.Id, WatchedDate = DateTime.UtcNow, Rating = 5, CreatedAt = DateTime.UtcNow }
+        );
+        await context.SaveChangesAsync();
+
+        var request = new GetGroupedWatchesRequest { UserId = user.Id, RatingMax = 6 };
+
+        // Act
+        var result = await service.GetGroupedWatchesAsync(request);
+
+        // Assert
+        result.Items.Should().HaveCount(1);
+        result.Items.First().Movie.Title.Should().Be("Low Rated");
+        result.Items.First().AverageRating.Should().Be(5);
+    }
+
+    [Fact]
+    public async Task GetGroupedWatchesAsync_RatingRangeFilter_FiltersGroupsByRatingRange()
+    {
+        // Arrange
+        using var context = TestDbContextFactory.CreateInMemoryDbContext();
+        var logger = Substitute.For<ILogger<WatchService>>();
+        var service = new WatchService(context, logger);
+
+        var user = context.Users.Skip(1).First();
+
+        var movie1 = new Movie { TmdbId = 100, Title = "Movie A", Year = 1999, Genres = new List<string>(), Cast = new List<CastMember>(), Runtime = 100, CreatedAt = DateTime.UtcNow };
+        var movie2 = new Movie { TmdbId = 101, Title = "Movie B", Year = 1999, Genres = new List<string>(), Cast = new List<CastMember>(), Runtime = 100, CreatedAt = DateTime.UtcNow };
+        var movie3 = new Movie { TmdbId = 102, Title = "Movie C", Year = 1999, Genres = new List<string>(), Cast = new List<CastMember>(), Runtime = 100, CreatedAt = DateTime.UtcNow };
+        context.Movies.AddRange(movie1, movie2, movie3);
+        await context.SaveChangesAsync();
+
+        context.Watches.AddRange(
+            new Watch { UserId = user.Id, MovieId = movie1.Id, WatchedDate = DateTime.UtcNow, Rating = 9, CreatedAt = DateTime.UtcNow },
+            new Watch { UserId = user.Id, MovieId = movie2.Id, WatchedDate = DateTime.UtcNow, Rating = 7, CreatedAt = DateTime.UtcNow },
+            new Watch { UserId = user.Id, MovieId = movie3.Id, WatchedDate = DateTime.UtcNow, Rating = 5, CreatedAt = DateTime.UtcNow }
+        );
+        await context.SaveChangesAsync();
+
+        var request = new GetGroupedWatchesRequest { UserId = user.Id, RatingMin = 6, RatingMax = 8 };
+
+        // Act
+        var result = await service.GetGroupedWatchesAsync(request);
+
+        // Assert
+        result.Items.Should().HaveCount(1);
+        result.Items.First().Movie.Title.Should().Be("Movie B");
+        result.Items.First().AverageRating.Should().Be(7);
+    }
+
+    [Fact]
+    public async Task GetGroupedWatchesAsync_WatchedFromFilter_FiltersGroupsByStartDate()
+    {
+        // Arrange
+        using var context = TestDbContextFactory.CreateInMemoryDbContext();
+        var logger = Substitute.For<ILogger<WatchService>>();
+        var service = new WatchService(context, logger);
+
+        var user = context.Users.Skip(1).First();
+
+        var movie1 = new Movie { TmdbId = 100, Title = "Recent", Year = 1999, Genres = new List<string>(), Cast = new List<CastMember>(), Runtime = 100, CreatedAt = DateTime.UtcNow };
+        var movie2 = new Movie { TmdbId = 101, Title = "Old", Year = 1999, Genres = new List<string>(), Cast = new List<CastMember>(), Runtime = 100, CreatedAt = DateTime.UtcNow };
+        context.Movies.AddRange(movie1, movie2);
+        await context.SaveChangesAsync();
+
+        var recentDate = DateTime.UtcNow.AddDays(-5);
+        var oldDate = DateTime.UtcNow.AddDays(-30);
+
+        context.Watches.AddRange(
+            new Watch { UserId = user.Id, MovieId = movie1.Id, WatchedDate = recentDate, CreatedAt = DateTime.UtcNow },
+            new Watch { UserId = user.Id, MovieId = movie2.Id, WatchedDate = oldDate, CreatedAt = DateTime.UtcNow }
+        );
+        await context.SaveChangesAsync();
+
+        var request = new GetGroupedWatchesRequest { UserId = user.Id, WatchedFrom = DateTime.UtcNow.AddDays(-10) };
+
+        // Act
+        var result = await service.GetGroupedWatchesAsync(request);
+
+        // Assert
+        result.Items.Should().HaveCount(1);
+        result.Items.First().Movie.Title.Should().Be("Recent");
+    }
+
+    [Fact]
+    public async Task GetGroupedWatchesAsync_WatchedToFilter_FiltersGroupsByEndDate()
+    {
+        // Arrange
+        using var context = TestDbContextFactory.CreateInMemoryDbContext();
+        var logger = Substitute.For<ILogger<WatchService>>();
+        var service = new WatchService(context, logger);
+
+        var user = context.Users.Skip(1).First();
+
+        var movie1 = new Movie { TmdbId = 100, Title = "Recent", Year = 1999, Genres = new List<string>(), Cast = new List<CastMember>(), Runtime = 100, CreatedAt = DateTime.UtcNow };
+        var movie2 = new Movie { TmdbId = 101, Title = "Old", Year = 1999, Genres = new List<string>(), Cast = new List<CastMember>(), Runtime = 100, CreatedAt = DateTime.UtcNow };
+        context.Movies.AddRange(movie1, movie2);
+        await context.SaveChangesAsync();
+
+        var recentDate = DateTime.UtcNow.AddDays(-5);
+        var oldDate = DateTime.UtcNow.AddDays(-30);
+
+        context.Watches.AddRange(
+            new Watch { UserId = user.Id, MovieId = movie1.Id, WatchedDate = recentDate, CreatedAt = DateTime.UtcNow },
+            new Watch { UserId = user.Id, MovieId = movie2.Id, WatchedDate = oldDate, CreatedAt = DateTime.UtcNow }
+        );
+        await context.SaveChangesAsync();
+
+        var request = new GetGroupedWatchesRequest { UserId = user.Id, WatchedTo = DateTime.UtcNow.AddDays(-10) };
+
+        // Act
+        var result = await service.GetGroupedWatchesAsync(request);
+
+        // Assert
+        result.Items.Should().HaveCount(1);
+        result.Items.First().Movie.Title.Should().Be("Old");
+    }
+
+    [Fact]
+    public async Task GetGroupedWatchesAsync_DateRangeFilter_FiltersGroupsByDateRange()
+    {
+        // Arrange
+        using var context = TestDbContextFactory.CreateInMemoryDbContext();
+        var logger = Substitute.For<ILogger<WatchService>>();
+        var service = new WatchService(context, logger);
+
+        var user = context.Users.Skip(1).First();
+
+        var movie1 = new Movie { TmdbId = 100, Title = "In Range", Year = 1999, Genres = new List<string>(), Cast = new List<CastMember>(), Runtime = 100, CreatedAt = DateTime.UtcNow };
+        var movie2 = new Movie { TmdbId = 101, Title = "Out of Range", Year = 1999, Genres = new List<string>(), Cast = new List<CastMember>(), Runtime = 100, CreatedAt = DateTime.UtcNow };
+        context.Movies.AddRange(movie1, movie2);
+        await context.SaveChangesAsync();
+
+        context.Watches.AddRange(
+            new Watch { UserId = user.Id, MovieId = movie1.Id, WatchedDate = DateTime.UtcNow.AddDays(-15), CreatedAt = DateTime.UtcNow },
+            new Watch { UserId = user.Id, MovieId = movie2.Id, WatchedDate = DateTime.UtcNow.AddDays(-40), CreatedAt = DateTime.UtcNow }
+        );
+        await context.SaveChangesAsync();
+
+        var request = new GetGroupedWatchesRequest
+        {
+            UserId = user.Id,
+            WatchedFrom = DateTime.UtcNow.AddDays(-20),
+            WatchedTo = DateTime.UtcNow.AddDays(-10)
+        };
+
+        // Act
+        var result = await service.GetGroupedWatchesAsync(request);
+
+        // Assert
+        result.Items.Should().HaveCount(1);
+        result.Items.First().Movie.Title.Should().Be("In Range");
+    }
+
+    [Fact]
+    public async Task GetGroupedWatchesAsync_RewatchOnlyFilter_ReturnsOnlyGroupsWithRewatches()
+    {
+        // Arrange
+        using var context = TestDbContextFactory.CreateInMemoryDbContext();
+        var logger = Substitute.For<ILogger<WatchService>>();
+        var service = new WatchService(context, logger);
+
+        var user = context.Users.Skip(1).First();
+
+        var movie1 = new Movie { TmdbId = 100, Title = "Rewatched", Year = 1999, Genres = new List<string>(), Cast = new List<CastMember>(), Runtime = 100, CreatedAt = DateTime.UtcNow };
+        var movie2 = new Movie { TmdbId = 101, Title = "Watched Once", Year = 1999, Genres = new List<string>(), Cast = new List<CastMember>(), Runtime = 100, CreatedAt = DateTime.UtcNow };
+        context.Movies.AddRange(movie1, movie2);
+        await context.SaveChangesAsync();
+
+        context.Watches.AddRange(
+            new Watch { UserId = user.Id, MovieId = movie1.Id, WatchedDate = DateTime.UtcNow.AddDays(-10), IsRewatch = false, CreatedAt = DateTime.UtcNow },
+            new Watch { UserId = user.Id, MovieId = movie1.Id, WatchedDate = DateTime.UtcNow, IsRewatch = true, CreatedAt = DateTime.UtcNow },
+            new Watch { UserId = user.Id, MovieId = movie2.Id, WatchedDate = DateTime.UtcNow, IsRewatch = false, CreatedAt = DateTime.UtcNow }
+        );
+        await context.SaveChangesAsync();
+
+        var request = new GetGroupedWatchesRequest { UserId = user.Id, RewatchOnly = true };
+
+        // Act
+        var result = await service.GetGroupedWatchesAsync(request);
+
+        // Assert
+        result.Items.Should().HaveCount(1);
+        result.Items.First().Movie.Title.Should().Be("Rewatched");
+        result.Items.First().WatchCount.Should().Be(2);
+    }
+
+    [Fact]
+    public async Task GetGroupedWatchesAsync_SortByTitle_SortsAlphabetically()
+    {
+        // Arrange
+        using var context = TestDbContextFactory.CreateInMemoryDbContext();
+        var logger = Substitute.For<ILogger<WatchService>>();
+        var service = new WatchService(context, logger);
+
+        var user = context.Users.Skip(1).First();
+
+        var movie1 = new Movie { TmdbId = 100, Title = "Zebra Movie", Year = 1999, Genres = new List<string>(), Cast = new List<CastMember>(), Runtime = 100, CreatedAt = DateTime.UtcNow };
+        var movie2 = new Movie { TmdbId = 101, Title = "Apple Movie", Year = 1999, Genres = new List<string>(), Cast = new List<CastMember>(), Runtime = 100, CreatedAt = DateTime.UtcNow };
+        var movie3 = new Movie { TmdbId = 102, Title = "Banana Movie", Year = 1999, Genres = new List<string>(), Cast = new List<CastMember>(), Runtime = 100, CreatedAt = DateTime.UtcNow };
+        context.Movies.AddRange(movie1, movie2, movie3);
+        await context.SaveChangesAsync();
+
+        context.Watches.AddRange(
+            new Watch { UserId = user.Id, MovieId = movie1.Id, WatchedDate = DateTime.UtcNow, CreatedAt = DateTime.UtcNow },
+            new Watch { UserId = user.Id, MovieId = movie2.Id, WatchedDate = DateTime.UtcNow.AddDays(-1), CreatedAt = DateTime.UtcNow },
+            new Watch { UserId = user.Id, MovieId = movie3.Id, WatchedDate = DateTime.UtcNow.AddDays(-2), CreatedAt = DateTime.UtcNow }
+        );
+        await context.SaveChangesAsync();
+
+        var request = new GetGroupedWatchesRequest { UserId = user.Id, SortBy = "title" };
+
+        // Act
+        var result = await service.GetGroupedWatchesAsync(request);
+
+        // Assert
+        result.Items.Should().HaveCount(3);
+        result.Items[0].Movie.Title.Should().Be("Apple Movie");
+        result.Items[1].Movie.Title.Should().Be("Banana Movie");
+        result.Items[2].Movie.Title.Should().Be("Zebra Movie");
+    }
+
+    [Fact]
+    public async Task GetGroupedWatchesAsync_SortByHighestRated_SortsByRatingDesc()
+    {
+        // Arrange
+        using var context = TestDbContextFactory.CreateInMemoryDbContext();
+        var logger = Substitute.For<ILogger<WatchService>>();
+        var service = new WatchService(context, logger);
+
+        var user = context.Users.Skip(1).First();
+
+        var movie1 = new Movie { TmdbId = 100, Title = "Low Rated", Year = 1999, Genres = new List<string>(), Cast = new List<CastMember>(), Runtime = 100, CreatedAt = DateTime.UtcNow };
+        var movie2 = new Movie { TmdbId = 101, Title = "High Rated", Year = 1999, Genres = new List<string>(), Cast = new List<CastMember>(), Runtime = 100, CreatedAt = DateTime.UtcNow };
+        var movie3 = new Movie { TmdbId = 102, Title = "Medium Rated", Year = 1999, Genres = new List<string>(), Cast = new List<CastMember>(), Runtime = 100, CreatedAt = DateTime.UtcNow };
+        context.Movies.AddRange(movie1, movie2, movie3);
+        await context.SaveChangesAsync();
+
+        context.Watches.AddRange(
+            new Watch { UserId = user.Id, MovieId = movie1.Id, WatchedDate = DateTime.UtcNow, Rating = 5, CreatedAt = DateTime.UtcNow },
+            new Watch { UserId = user.Id, MovieId = movie2.Id, WatchedDate = DateTime.UtcNow, Rating = 10, CreatedAt = DateTime.UtcNow },
+            new Watch { UserId = user.Id, MovieId = movie3.Id, WatchedDate = DateTime.UtcNow, Rating = 7, CreatedAt = DateTime.UtcNow }
+        );
+        await context.SaveChangesAsync();
+
+        var request = new GetGroupedWatchesRequest { UserId = user.Id, SortBy = "highestRated" };
+
+        // Act
+        var result = await service.GetGroupedWatchesAsync(request);
+
+        // Assert
+        result.Items.Should().HaveCount(3);
+        result.Items[0].Movie.Title.Should().Be("High Rated");
+        result.Items[0].AverageRating.Should().Be(10);
+        result.Items[1].Movie.Title.Should().Be("Medium Rated");
+        result.Items[1].AverageRating.Should().Be(7);
+        result.Items[2].Movie.Title.Should().Be("Low Rated");
+        result.Items[2].AverageRating.Should().Be(5);
+    }
+
+    [Fact]
+    public async Task GetGroupedWatchesAsync_SortByMostWatched_SortsByWatchCountDesc()
+    {
+        // Arrange
+        using var context = TestDbContextFactory.CreateInMemoryDbContext();
+        var logger = Substitute.For<ILogger<WatchService>>();
+        var service = new WatchService(context, logger);
+
+        var user = context.Users.Skip(1).First();
+
+        var movie1 = new Movie { TmdbId = 100, Title = "Watched Once", Year = 1999, Genres = new List<string>(), Cast = new List<CastMember>(), Runtime = 100, CreatedAt = DateTime.UtcNow };
+        var movie2 = new Movie { TmdbId = 101, Title = "Watched Thrice", Year = 1999, Genres = new List<string>(), Cast = new List<CastMember>(), Runtime = 100, CreatedAt = DateTime.UtcNow };
+        var movie3 = new Movie { TmdbId = 102, Title = "Watched Twice", Year = 1999, Genres = new List<string>(), Cast = new List<CastMember>(), Runtime = 100, CreatedAt = DateTime.UtcNow };
+        context.Movies.AddRange(movie1, movie2, movie3);
+        await context.SaveChangesAsync();
+
+        context.Watches.AddRange(
+            new Watch { UserId = user.Id, MovieId = movie1.Id, WatchedDate = DateTime.UtcNow, CreatedAt = DateTime.UtcNow },
+            new Watch { UserId = user.Id, MovieId = movie2.Id, WatchedDate = DateTime.UtcNow.AddDays(-1), CreatedAt = DateTime.UtcNow },
+            new Watch { UserId = user.Id, MovieId = movie2.Id, WatchedDate = DateTime.UtcNow.AddDays(-2), IsRewatch = true, CreatedAt = DateTime.UtcNow },
+            new Watch { UserId = user.Id, MovieId = movie2.Id, WatchedDate = DateTime.UtcNow.AddDays(-3), IsRewatch = true, CreatedAt = DateTime.UtcNow },
+            new Watch { UserId = user.Id, MovieId = movie3.Id, WatchedDate = DateTime.UtcNow.AddDays(-4), CreatedAt = DateTime.UtcNow },
+            new Watch { UserId = user.Id, MovieId = movie3.Id, WatchedDate = DateTime.UtcNow.AddDays(-5), IsRewatch = true, CreatedAt = DateTime.UtcNow }
+        );
+        await context.SaveChangesAsync();
+
+        var request = new GetGroupedWatchesRequest { UserId = user.Id, SortBy = "mostWatched" };
+
+        // Act
+        var result = await service.GetGroupedWatchesAsync(request);
+
+        // Assert
+        result.Items.Should().HaveCount(3);
+        result.Items[0].Movie.Title.Should().Be("Watched Thrice");
+        result.Items[0].WatchCount.Should().Be(3);
+        result.Items[1].Movie.Title.Should().Be("Watched Twice");
+        result.Items[1].WatchCount.Should().Be(2);
+        result.Items[2].Movie.Title.Should().Be("Watched Once");
+        result.Items[2].WatchCount.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task GetGroupedWatchesAsync_DefaultSort_SortsByRecentlyWatched()
+    {
+        // Arrange
+        using var context = TestDbContextFactory.CreateInMemoryDbContext();
+        var logger = Substitute.For<ILogger<WatchService>>();
+        var service = new WatchService(context, logger);
+
+        var user = context.Users.Skip(1).First();
+
+        var movie1 = new Movie { TmdbId = 100, Title = "Old", Year = 1999, Genres = new List<string>(), Cast = new List<CastMember>(), Runtime = 100, CreatedAt = DateTime.UtcNow };
+        var movie2 = new Movie { TmdbId = 101, Title = "Recent", Year = 1999, Genres = new List<string>(), Cast = new List<CastMember>(), Runtime = 100, CreatedAt = DateTime.UtcNow };
+        var movie3 = new Movie { TmdbId = 102, Title = "Middle", Year = 1999, Genres = new List<string>(), Cast = new List<CastMember>(), Runtime = 100, CreatedAt = DateTime.UtcNow };
+        context.Movies.AddRange(movie1, movie2, movie3);
+        await context.SaveChangesAsync();
+
+        context.Watches.AddRange(
+            new Watch { UserId = user.Id, MovieId = movie1.Id, WatchedDate = DateTime.UtcNow.AddDays(-10), CreatedAt = DateTime.UtcNow },
+            new Watch { UserId = user.Id, MovieId = movie2.Id, WatchedDate = DateTime.UtcNow, CreatedAt = DateTime.UtcNow },
+            new Watch { UserId = user.Id, MovieId = movie3.Id, WatchedDate = DateTime.UtcNow.AddDays(-5), CreatedAt = DateTime.UtcNow }
+        );
+        await context.SaveChangesAsync();
+
+        var request = new GetGroupedWatchesRequest { UserId = user.Id }; // No sortBy specified
+
+        // Act
+        var result = await service.GetGroupedWatchesAsync(request);
+
+        // Assert
+        result.Items.Should().HaveCount(3);
+        result.Items[0].Movie.Title.Should().Be("Recent");
+        result.Items[1].Movie.Title.Should().Be("Middle");
+        result.Items[2].Movie.Title.Should().Be("Old");
+    }
+
+    [Fact(Skip = "EF.Functions.ILike requires PostgreSQL - not supported in in-memory database")]
+    public async Task GetGroupedWatchesAsync_CombinedFilters_AppliesAllFiltersCorrectly()
+    {
+        // Arrange
+        using var context = TestDbContextFactory.CreateInMemoryDbContext();
+        var logger = Substitute.For<ILogger<WatchService>>();
+        var service = new WatchService(context, logger);
+
+        var user = context.Users.Skip(1).First();
+
+        var movie1 = new Movie { TmdbId = 100, Title = "The Matrix", Year = 1999, Genres = new List<string>(), Cast = new List<CastMember>(), Runtime = 100, CreatedAt = DateTime.UtcNow };
+        var movie2 = new Movie { TmdbId = 101, Title = "Fight Club", Year = 1999, Genres = new List<string>(), Cast = new List<CastMember>(), Runtime = 100, CreatedAt = DateTime.UtcNow };
+        var movie3 = new Movie { TmdbId = 102, Title = "The Dark Knight", Year = 2008, Genres = new List<string>(), Cast = new List<CastMember>(), Runtime = 100, CreatedAt = DateTime.UtcNow };
+        context.Movies.AddRange(movie1, movie2, movie3);
+        await context.SaveChangesAsync();
+
+        context.Watches.AddRange(
+            // The Matrix - high rated, in date range, has rewatch, title matches
+            new Watch { UserId = user.Id, MovieId = movie1.Id, WatchedDate = DateTime.UtcNow.AddDays(-5), Rating = 9, IsRewatch = false, CreatedAt = DateTime.UtcNow },
+            new Watch { UserId = user.Id, MovieId = movie1.Id, WatchedDate = DateTime.UtcNow.AddDays(-3), Rating = 10, IsRewatch = true, CreatedAt = DateTime.UtcNow },
+            // Fight Club - doesn't match "the", in date range
+            new Watch { UserId = user.Id, MovieId = movie2.Id, WatchedDate = DateTime.UtcNow.AddDays(-4), Rating = 8, IsRewatch = false, CreatedAt = DateTime.UtcNow },
+            // The Dark Knight - matches "the", but outside date range
+            new Watch { UserId = user.Id, MovieId = movie3.Id, WatchedDate = DateTime.UtcNow.AddDays(-15), Rating = 9, IsRewatch = false, CreatedAt = DateTime.UtcNow }
+        );
+        await context.SaveChangesAsync();
+
+        var request = new GetGroupedWatchesRequest
+        {
+            UserId = user.Id,
+            Search = "the",
+            RatingMin = 9,
+            WatchedFrom = DateTime.UtcNow.AddDays(-7),
+            RewatchOnly = true,
+            SortBy = "highestRated"
+        };
+
+        // Act
+        var result = await service.GetGroupedWatchesAsync(request);
+
+        // Assert
+        result.Items.Should().HaveCount(1);
+        result.Items.First().Movie.Title.Should().Be("The Matrix");
+        result.Items.First().AverageRating.Should().Be(9.5); // (9 + 10) / 2
+        result.Items.First().WatchCount.Should().Be(2);
     }
 }

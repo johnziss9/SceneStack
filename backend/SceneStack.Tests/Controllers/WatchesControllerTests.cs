@@ -156,7 +156,7 @@ public class WatchesControllerTests
             HasMore = false
         };
 
-        watchService.GetGroupedWatchesAsync(1).Returns(paginatedResponse);
+        watchService.GetGroupedWatchesAsync(Arg.Is<GetGroupedWatchesRequest>(r => r.UserId == 1)).Returns(paginatedResponse);
 
         // Act
         var result = await controller.GetGroupedWatches();

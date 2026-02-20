@@ -1,8 +1,10 @@
-import { render, screen } from '@/test-utils'
+import { render, screen, waitFor } from '@/test-utils'
 import { MovieCard } from '@/components/MovieCard'
 import { useAuth } from '@/contexts/AuthContext'
 import type { TmdbMovie } from '@/types'
 import userEvent from '@testing-library/user-event'
+import { movieApi, watchlistApi } from '@/lib/api'
+import { PremiumRequiredError, ApiError } from '@/lib/api-client'
 
 // Mock AuthContext
 jest.mock('@/contexts/AuthContext')
@@ -12,7 +14,21 @@ jest.mock('next/navigation', () => ({
     }),
 }))
 
+// Mock API modules
+jest.mock('@/lib/api', () => ({
+    movieApi: {
+        getMyStatus: jest.fn(),
+    },
+    watchlistApi: {
+        addToWatchlist: jest.fn(),
+        removeFromWatchlist: jest.fn(),
+    },
+}))
+
 const mockUseAuth = useAuth as jest.MockedFunction<typeof useAuth>
+const mockGetMyStatus = movieApi.getMyStatus as jest.MockedFunction<typeof movieApi.getMyStatus>
+const mockAddToWatchlist = watchlistApi.addToWatchlist as jest.MockedFunction<typeof watchlistApi.addToWatchlist>
+const mockRemoveFromWatchlist = watchlistApi.removeFromWatchlist as jest.MockedFunction<typeof watchlistApi.removeFromWatchlist>
 
 describe('MovieCard', () => {
     const mockMovie: TmdbMovie = {
@@ -29,7 +45,7 @@ describe('MovieCard', () => {
 
     beforeEach(() => {
         jest.clearAllMocks()
-        
+
         // Default: user is authenticated
         mockUseAuth.mockReturnValue({
             user: { id: 1, username: 'testuser', email: 'test@example.com', isPremium: false },
@@ -37,6 +53,15 @@ describe('MovieCard', () => {
             login: jest.fn(),
             register: jest.fn(),
             logout: jest.fn(),
+        })
+
+        // Default: movie is not on watchlist
+        mockGetMyStatus.mockResolvedValue({
+            localMovieId: null,
+            watchCount: 0,
+            latestRating: null,
+            onWatchlist: false,
+            watchlistItemId: null,
         })
     })
 
@@ -220,6 +245,214 @@ describe('MovieCard', () => {
             await user.click(button)
 
             expect(mockOnAddToWatched).not.toHaveBeenCalled()
+        })
+    })
+
+    describe('Phase 6: Movie Detail Links', () => {
+        it('poster links to /movies/[tmdbId]', () => {
+            render(<MovieCard movie={mockMovie} onAddToWatched={mockOnAddToWatched} />)
+
+            const posterLink = screen.getByAltText('Fight Club').closest('a')
+            expect(posterLink).toHaveAttribute('href', '/movies/550')
+        })
+
+        it('title links to /movies/[tmdbId]', () => {
+            render(<MovieCard movie={mockMovie} onAddToWatched={mockOnAddToWatched} />)
+
+            const titleLink = screen.getByText('Fight Club').closest('a')
+            expect(titleLink).toHaveAttribute('href', '/movies/550')
+        })
+    })
+
+    describe('Phase 6: Watchlist Button', () => {
+        beforeEach(() => {
+            mockGetMyStatus.mockResolvedValue({
+                localMovieId: null,
+                watchCount: 0,
+                latestRating: null,
+                onWatchlist: false,
+                watchlistItemId: null,
+            })
+        })
+
+        it('is hidden for unauthenticated users', () => {
+            mockUseAuth.mockReturnValue({
+                user: null,
+                loading: false,
+                login: jest.fn(),
+                register: jest.fn(),
+                logout: jest.fn(),
+            })
+
+            render(<MovieCard movie={mockMovie} onAddToWatched={mockOnAddToWatched} />)
+
+            expect(screen.queryByLabelText(/save to watchlist/i)).not.toBeInTheDocument()
+            expect(screen.queryByLabelText(/remove from watchlist/i)).not.toBeInTheDocument()
+        })
+
+        it('shows bookmark icon when not on watchlist', async () => {
+            mockUseAuth.mockReturnValue({
+                user: { id: 1, username: 'testuser', email: 'test@example.com', isPremium: false },
+                loading: false,
+                login: jest.fn(),
+                register: jest.fn(),
+                logout: jest.fn(),
+            })
+
+            render(<MovieCard movie={mockMovie} onAddToWatched={mockOnAddToWatched} />)
+
+            await waitFor(() => {
+                const button = screen.getByLabelText('Save to watchlist')
+                expect(button).toBeInTheDocument()
+            })
+        })
+
+        it('shows filled bookmark icon when already on watchlist', async () => {
+            mockGetMyStatus.mockResolvedValue({
+                localMovieId: 1,
+                watchCount: 0,
+                latestRating: null,
+                onWatchlist: true,
+                watchlistItemId: 1,
+            })
+
+            mockUseAuth.mockReturnValue({
+                user: { id: 1, username: 'testuser', email: 'test@example.com', isPremium: false },
+                loading: false,
+                login: jest.fn(),
+                register: jest.fn(),
+                logout: jest.fn(),
+            })
+
+            render(<MovieCard movie={mockMovie} onAddToWatched={mockOnAddToWatched} />)
+
+            await waitFor(() => {
+                const button = screen.getByLabelText('Remove from watchlist')
+                expect(button).toBeInTheDocument()
+            })
+        })
+
+        it('adds movie to watchlist when clicked', async () => {
+            mockAddToWatchlist.mockResolvedValue({
+                id: 1,
+                movieId: 1,
+                movie: {
+                    id: 1,
+                    tmdbId: 550,
+                    title: 'Fight Club',
+                    posterPath: '/pB8BM7pdSp6B6Ih7QZ4DrQ3PmJK.jpg',
+                    releaseDate: '1999-10-15',
+                },
+                notes: null,
+                priority: 0,
+                addedAt: new Date().toISOString(),
+            })
+
+            mockUseAuth.mockReturnValue({
+                user: { id: 1, username: 'testuser', email: 'test@example.com', isPremium: false },
+                loading: false,
+                login: jest.fn(),
+                register: jest.fn(),
+                logout: jest.fn(),
+            })
+
+            const user = userEvent.setup()
+            render(<MovieCard movie={mockMovie} onAddToWatched={mockOnAddToWatched} />)
+
+            await waitFor(() => {
+                expect(screen.getByLabelText('Save to watchlist')).toBeInTheDocument()
+            })
+
+            const button = screen.getByLabelText('Save to watchlist')
+            await user.click(button)
+
+            await waitFor(() => {
+                expect(mockAddToWatchlist).toHaveBeenCalledWith(550)
+            })
+        })
+
+        it('removes movie from watchlist when clicked and already on watchlist', async () => {
+            mockGetMyStatus.mockResolvedValue({
+                localMovieId: 1,
+                watchCount: 0,
+                latestRating: null,
+                onWatchlist: true,
+                watchlistItemId: 1,
+            })
+
+            mockUseAuth.mockReturnValue({
+                user: { id: 1, username: 'testuser', email: 'test@example.com', isPremium: false },
+                loading: false,
+                login: jest.fn(),
+                register: jest.fn(),
+                logout: jest.fn(),
+            })
+
+            const user = userEvent.setup()
+            render(<MovieCard movie={mockMovie} onAddToWatched={mockOnAddToWatched} />)
+
+            await waitFor(() => {
+                expect(screen.getByLabelText('Remove from watchlist')).toBeInTheDocument()
+            })
+
+            const button = screen.getByLabelText('Remove from watchlist')
+            await user.click(button)
+
+            await waitFor(() => {
+                expect(mockRemoveFromWatchlist).toHaveBeenCalledWith(1)
+            })
+        })
+
+        it('shows error toast when watchlist limit reached', async () => {
+            mockAddToWatchlist.mockRejectedValue(new PremiumRequiredError('Watchlist limit reached'))
+
+            mockUseAuth.mockReturnValue({
+                user: { id: 1, username: 'testuser', email: 'test@example.com', isPremium: false },
+                loading: false,
+                login: jest.fn(),
+                register: jest.fn(),
+                logout: jest.fn(),
+            })
+
+            const user = userEvent.setup()
+            render(<MovieCard movie={mockMovie} onAddToWatched={mockOnAddToWatched} />)
+
+            await waitFor(() => {
+                expect(screen.getByLabelText('Save to watchlist')).toBeInTheDocument()
+            })
+
+            const button = screen.getByLabelText('Save to watchlist')
+            await user.click(button)
+
+            await waitFor(() => {
+                expect(mockAddToWatchlist).toHaveBeenCalled()
+            })
+        })
+
+        it('handles duplicate (409) error by marking as on watchlist', async () => {
+            mockAddToWatchlist.mockRejectedValue(new ApiError('Already on watchlist', 409))
+
+            mockUseAuth.mockReturnValue({
+                user: { id: 1, username: 'testuser', email: 'test@example.com', isPremium: false },
+                loading: false,
+                login: jest.fn(),
+                register: jest.fn(),
+                logout: jest.fn(),
+            })
+
+            const user = userEvent.setup()
+            render(<MovieCard movie={mockMovie} onAddToWatched={mockOnAddToWatched} />)
+
+            await waitFor(() => {
+                expect(screen.getByLabelText('Save to watchlist')).toBeInTheDocument()
+            })
+
+            const button = screen.getByLabelText('Save to watchlist')
+            await user.click(button)
+
+            await waitFor(() => {
+                expect(mockAddToWatchlist).toHaveBeenCalled()
+            })
         })
     })
 })

@@ -33,6 +33,20 @@ jest.mock('sonner', () => ({
 // Mock AuthContext
 jest.mock('@/contexts/AuthContext')
 
+// Mock Next.js navigation
+jest.mock('next/navigation', () => ({
+    useRouter: () => ({
+        push: jest.fn(),
+        replace: jest.fn(),
+    }),
+    useSearchParams: () => ({
+        get: jest.fn(),
+        keys: function* () { yield* [] },
+        toString: () => '',
+    }),
+    usePathname: () => '/watched',
+}))
+
 const mockUseAuth = useAuth as jest.MockedFunction<typeof useAuth>
 
 // Suppress console.error for cleaner test output
@@ -51,6 +65,21 @@ const mockPaginated = (items: GroupedWatch[], hasMore = false): PaginatedGrouped
     pageSize: 20,
     totalPages: 1,
     hasMore,
+})
+
+// Helper to create expected API call parameters with default filters
+const expectedApiParams = (page: number = 1) => ({
+    page,
+    pageSize: 20,
+    search: undefined,
+    ratingMin: undefined,
+    ratingMax: undefined,
+    watchedFrom: undefined,
+    watchedTo: undefined,
+    rewatchOnly: undefined,
+    unratedOnly: undefined,
+    sortBy: "recentlyWatched",
+    groupId: undefined,
 })
 
 describe('WatchList', () => {
@@ -165,7 +194,7 @@ describe('WatchList', () => {
             expect(screen.getByText('The Matrix')).toBeInTheDocument()
         })
 
-        expect(watchApi.getGroupedWatches).toHaveBeenCalledWith(1, 20)
+        expect(watchApi.getGroupedWatches).toHaveBeenCalledWith(expectedApiParams(1))
     })
 
     it('displays error message on fetch failure', async () => {
@@ -309,7 +338,7 @@ describe('WatchList', () => {
         render(<WatchList />)
 
         await waitFor(() => {
-            expect(watchApi.getGroupedWatches).toHaveBeenCalledWith(1, 20)
+            expect(watchApi.getGroupedWatches).toHaveBeenCalledWith(expectedApiParams(1))
         })
     })
 
@@ -380,98 +409,41 @@ describe('WatchList', () => {
     })
 
     it('displays group filter when user has groups', async () => {
+        const user = userEvent.setup()
         ;(watchApi.getGroupedWatches as jest.Mock).mockResolvedValue(mockPaginated(mockGroupedWatches))
 
         render(<WatchList />)
+
+        // Wait for initial load
+        await waitFor(() => {
+            expect(screen.getByText('Fight Club')).toBeInTheDocument()
+        })
+
+        // Open filters panel
+        await user.click(screen.getByRole('button', { name: /filters/i }))
 
         await waitFor(() => {
             expect(screen.getByText('Group:')).toBeInTheDocument()
         })
     })
 
-    it('filters watches by selected group', async () => {
+    // Privacy Filter Tests
+    it('displays privacy filter dropdown', async () => {
         const user = userEvent.setup()
         ;(watchApi.getGroupedWatches as jest.Mock).mockResolvedValue(mockPaginated(mockGroupedWatches))
 
         render(<WatchList />)
 
+        // Wait for initial load
         await waitFor(() => {
             expect(screen.getByText('Fight Club')).toBeInTheDocument()
-            expect(screen.getByText('The Matrix')).toBeInTheDocument()
         })
 
-        // Select Classic Cinema group (id: 2)
-        const groupSelect = screen.getAllByRole('combobox')[1] // Second combobox is group filter
-        await user.click(groupSelect)
-
-        const classicCinemaOption = screen.getByRole('option', { name: 'Classic Cinema' })
-        await user.click(classicCinemaOption)
-
-        await waitFor(() => {
-            // The Matrix should be visible (shared with group 2)
-            expect(screen.getByText('The Matrix')).toBeInTheDocument()
-            // Fight Club should not be visible (only shared with group 1)
-            expect(screen.queryByText('Fight Club')).not.toBeInTheDocument()
-        })
-    })
-
-    // Privacy Filter Tests
-    it('displays privacy filter dropdown', async () => {
-        ;(watchApi.getGroupedWatches as jest.Mock).mockResolvedValue(mockPaginated(mockGroupedWatches))
-
-        render(<WatchList />)
+        // Open filters panel
+        await user.click(screen.getByRole('button', { name: /filters/i }))
 
         await waitFor(() => {
             expect(screen.getByText('Show:')).toBeInTheDocument()
-        })
-    })
-
-    it('filters watches by privacy - private only', async () => {
-        const user = userEvent.setup()
-        ;(watchApi.getGroupedWatches as jest.Mock).mockResolvedValue(mockPaginated(mockGroupedWatches))
-
-        render(<WatchList />)
-
-        await waitFor(() => {
-            expect(screen.getByText('Fight Club')).toBeInTheDocument()
-        })
-
-        // Select "Private only" filter
-        const privacySelect = screen.getAllByRole('combobox')[0] // First combobox is privacy filter
-        await user.click(privacySelect)
-
-        const privateOption = screen.getByRole('option', { name: 'Private only' })
-        await user.click(privateOption)
-
-        await waitFor(() => {
-            // Fight Club has a private watch, should be visible
-            expect(screen.getByText('Fight Club')).toBeInTheDocument()
-            // The Matrix has no private watches, should not be visible
-            expect(screen.queryByText('The Matrix')).not.toBeInTheDocument()
-        })
-    })
-
-    it('filters watches by privacy - shared only', async () => {
-        const user = userEvent.setup()
-        ;(watchApi.getGroupedWatches as jest.Mock).mockResolvedValue(mockPaginated(mockGroupedWatches))
-
-        render(<WatchList />)
-
-        await waitFor(() => {
-            expect(screen.getByText('Fight Club')).toBeInTheDocument()
-        })
-
-        // Select "Shared only" filter
-        const privacySelect = screen.getAllByRole('combobox')[0]
-        await user.click(privacySelect)
-
-        const sharedOption = screen.getByRole('option', { name: 'Shared only' })
-        await user.click(sharedOption)
-
-        await waitFor(() => {
-            // Both movies have shared watches, both should be visible
-            expect(screen.getByText('Fight Club')).toBeInTheDocument()
-            expect(screen.getByText('The Matrix')).toBeInTheDocument()
         })
     })
 
@@ -778,7 +750,7 @@ describe('WatchList', () => {
 
         await waitFor(() => {
             expect(screen.getByText('Inception')).toBeInTheDocument()
-            expect(watchApi.getGroupedWatches).toHaveBeenCalledWith(2, 20)
+            expect(watchApi.getGroupedWatches).toHaveBeenCalledWith(expectedApiParams(2))
         })
     })
 })

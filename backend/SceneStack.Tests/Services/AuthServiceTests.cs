@@ -8,6 +8,7 @@ using SceneStack.API.Services;
 using Xunit;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
+using SceneStack.Tests.Helpers;
 
 namespace SceneStack.Tests.Services;
 
@@ -20,11 +21,11 @@ public class AuthServiceTests
 
     public AuthServiceTests()
     {
-        // Setup in-memory database
+        // Setup in-memory database with JSON column support
         var options = new DbContextOptionsBuilder<ApplicationDbContext>()
             .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
             .Options;
-        _context = new ApplicationDbContext(options);
+        _context = new TestApplicationDbContext(options);
 
         // Setup UserManager mock
         var userStore = Substitute.For<IUserStore<ApplicationUser>>();

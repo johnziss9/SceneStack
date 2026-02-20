@@ -1,6 +1,6 @@
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { AuthProvider, useAuth } from '../../contexts/AuthContext';
-import { authApi } from '@/lib/api';
+import { authApi, userApi } from '@/lib/api';
 import { tokenStorage } from '@/lib/api-client';
 import { useRouter } from 'next/navigation';
 
@@ -12,6 +12,7 @@ jest.mock('next/navigation', () => ({
 }));
 
 const mockAuthApi = authApi as jest.Mocked<typeof authApi>;
+const mockUserApi = userApi as jest.Mocked<typeof userApi>;
 const mockTokenStorage = tokenStorage as jest.Mocked<typeof tokenStorage>;
 const mockUseRouter = useRouter as jest.Mock;
 
@@ -22,6 +23,10 @@ describe('AuthContext', () => {
         jest.clearAllMocks();
         mockPush = jest.fn();
         mockUseRouter.mockReturnValue({ push: mockPush });
+
+        // Default mock for userApi.getProfile to prevent "Cannot read properties of undefined (reading 'then')" errors
+        // Reject by default so tests that don't need the full profile can use basic token data
+        mockUserApi.getProfile.mockRejectedValue(new Error('Network error'));
     });
 
     describe('Initial State', () => {

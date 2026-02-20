@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using SceneStack.API.Data;
 using SceneStack.API.Models;
+using System.Text.Json;
 
 namespace SceneStack.Tests.Helpers;
 
@@ -12,7 +13,7 @@ public static class TestDbContextFactory
             .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString()) // Unique DB per test
             .Options;
 
-        var context = new ApplicationDbContext(options);
+        var context = new TestApplicationDbContext(options);
 
         // Seed test data
         SeedTestData(context);
@@ -46,7 +47,7 @@ public static class TestDbContextFactory
         };
         context.Users.Add(freeUser);
 
-        // Add a test movie
+        // Add a test movie with enriched metadata
         var testMovie = new Movie
         {
             TmdbId = 550,
@@ -54,6 +55,9 @@ public static class TestDbContextFactory
             Year = 1999,
             PosterPath = "/poster.jpg",
             Synopsis = "An insomniac office worker and a devil-may-care soap maker form an underground fight club.",
+            Genres = new List<string> { "Drama", "Thriller" }, // Enriched
+            Cast = new List<CastMember> { new CastMember { Name = "Brad Pitt", Character = "Tyler Durden" } }, // Enriched
+            Runtime = 139, // Enriched
             CreatedAt = DateTime.UtcNow,
             IsDeleted = false
         };
@@ -82,5 +86,33 @@ public static class TestDbContextFactory
 
         // Note: AiInsights and AiUsages are NOT seeded by default
         // Tests should add these as needed for their specific scenarios
+    }
+}
+
+// Custom DbContext for testing that handles JSON columns for in-memory database
+public class TestApplicationDbContext : ApplicationDbContext
+{
+    public TestApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options)
+    {
+    }
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        base.OnModelCreating(modelBuilder);
+
+        // Override the Movie configuration to use JSON value converters for in-memory database
+        modelBuilder.Entity<Movie>(entity =>
+        {
+            // Replace jsonb with JSON value converters that work with in-memory database
+            entity.Property(e => e.Genres)
+                .HasConversion(
+                    v => JsonSerializer.Serialize(v, (JsonSerializerOptions)null!),
+                    v => JsonSerializer.Deserialize<List<string>>(v, (JsonSerializerOptions)null!) ?? new List<string>());
+
+            entity.Property(e => e.Cast)
+                .HasConversion(
+                    v => JsonSerializer.Serialize(v, (JsonSerializerOptions)null!),
+                    v => JsonSerializer.Deserialize<List<CastMember>>(v, (JsonSerializerOptions)null!) ?? new List<CastMember>());
+        });
     }
 }

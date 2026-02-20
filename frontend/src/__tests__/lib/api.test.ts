@@ -204,7 +204,7 @@ describe('API Service Functions', () => {
 
                     ; (api.get as jest.Mock).mockResolvedValue(mockResponse)
 
-                const result = await watchApi.getGroupedWatches()
+                const result = await watchApi.getGroupedWatches({ page: 1, pageSize: 20 })
 
                 expect(api.get).toHaveBeenCalledWith('/api/watches/grouped?page=1&pageSize=20')
                 expect(result).toEqual(mockResponse)
