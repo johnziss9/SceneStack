@@ -7,6 +7,8 @@ import { toast } from 'sonner';
 import {
     Dialog,
     DialogContent,
+    DialogDescription,
+    DialogFooter,
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
@@ -25,6 +27,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import { Lock, Users } from 'lucide-react';
 
 interface EditWatchDialogProps {
     watch: Watch | null;
@@ -48,12 +51,18 @@ export default function EditWatchDialog({
     const [isRewatch, setIsRewatch] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [isPrivate, setIsPrivate] = useState(false);
+
+    // Privacy & Sharing - Simplified state management
+    type SharingMode = 'private' | 'specific' | 'all';
+    const [sharingMode, setSharingMode] = useState<SharingMode>('private');
     const [selectedGroups, setSelectedGroups] = useState<number[]>([]);
-    const [shareWithAllGroups, setShareWithAllGroups] = useState(false);
     const [userGroups, setUserGroups] = useState<GroupBasicInfo[]>([]);
     const [isLoadingGroups, setIsLoadingGroups] = useState(false);
     const [privacyError, setPrivacyError] = useState<string | null>(null);
+
+    // Group selection modal
+    const [isGroupSelectionOpen, setIsGroupSelectionOpen] = useState(false);
+    const [tempSelectedGroups, setTempSelectedGroups] = useState<number[]>([]);
 
     // Validation errors
     const [dateError, setDateError] = useState<string | null>(null);
@@ -80,8 +89,7 @@ export default function EditWatchDialog({
             setWatchedWith(watch.watchedWith || '');
             setNotes(watch.notes || '');
             setIsRewatch(watch.isRewatch);
-            setIsPrivate(watch.isPrivate || false);
-            // Note: groupIds will be set after fetching groups
+            // Note: sharingMode and groupIds will be set after fetching groups
 
             // Clear validation errors when dialog opens
             setDateError(null);
@@ -101,12 +109,12 @@ export default function EditWatchDialog({
             const groups = await groupApi.getUserGroups();
             setUserGroups(groups);
 
-            // If watch is private, don't select any groups regardless of what's in groupIds
+            // If watch is private, set mode to private
             if (watch?.isPrivate) {
-                setShareWithAllGroups(false);
+                setSharingMode('private');
                 setSelectedGroups([]);
             }
-            // Set selected groups based on watch's groupIds
+            // Set sharing mode based on watch's groupIds
             else if (watch?.groupIds && watch.groupIds.length > 0) {
                 // Check if all groups are selected (meaning "All my groups" was chosen)
                 const allGroupIds = groups.map(g => g.id).sort();
@@ -115,14 +123,14 @@ export default function EditWatchDialog({
                                 allGroupIds.every((id, index) => id === watchGroupIds[index]);
 
                 if (isAllGroups) {
-                    setShareWithAllGroups(true);
+                    setSharingMode('all');
                     setSelectedGroups([]);
                 } else {
-                    setShareWithAllGroups(false);
+                    setSharingMode('specific');
                     setSelectedGroups(watch.groupIds);
                 }
             } else {
-                setShareWithAllGroups(false);
+                setSharingMode('private');
                 setSelectedGroups([]);
             }
         } catch (err) {
@@ -172,8 +180,8 @@ export default function EditWatchDialog({
         }
 
         // Validate privacy + groups combination
-        if (!isPrivate && selectedGroups.length === 0 && !shareWithAllGroups) {
-            setPrivacyError('Please select at least one group to share with, or mark as private');
+        if (sharingMode === 'specific' && selectedGroups.length === 0) {
+            setPrivacyError('Please select at least one group to share with');
             isValid = false;
         }
 
@@ -202,10 +210,12 @@ export default function EditWatchDialog({
                 watchLocation: finalLocation || undefined,
                 watchedWith: watchedWith || undefined,
                 isRewatch,
-                isPrivate,
-                groupIds: shareWithAllGroups
+                isPrivate: sharingMode === 'private',
+                groupIds: sharingMode === 'all'
                     ? userGroups.map(g => g.id) // Send all group IDs if "all groups" is selected
-                    : (selectedGroups.length > 0 ? selectedGroups : undefined),
+                    : sharingMode === 'specific'
+                    ? selectedGroups
+                    : undefined,
             };
 
             await watchApi.updateWatch(watch.id, updateData);
@@ -218,9 +228,8 @@ export default function EditWatchDialog({
             setWatchedWith('');
             setNotes('');
             setIsRewatch(false);
-            setIsPrivate(false);
+            setSharingMode('private');
             setSelectedGroups([]);
-            setShareWithAllGroups(false);
             setDateError(null);
             setRatingError(null);
             setLocationError(null);
@@ -245,12 +254,16 @@ export default function EditWatchDialog({
     if (!watch) return null;
 
     return (
+        <>
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-md">
+            <DialogContent className="sm:max-w-[900px] max-h-[90vh] flex flex-col">
                 <DialogHeader>
                     <DialogTitle>Edit Watch: {watch.movie.title}</DialogTitle>
                 </DialogHeader>
-                <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+                <form onSubmit={handleSubmit} className="overflow-y-auto flex-1 pr-2" noValidate>
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        {/* Left Column - Form Fields */}
+                        <div className="space-y-4">
                     {/* Watch Date */}
                     <div className="space-y-2">
                         <Label htmlFor="watchedDate">Date Watched *</Label>
@@ -387,46 +400,164 @@ export default function EditWatchDialog({
                             This is a rewatch
                         </Label>
                     </div>
-
-                    {/* Privacy & Sharing Section - Orange Border Container */}
-                    <div className="border-2 border-primary rounded-lg p-4 space-y-4">
-                        {/* Privacy Checkbox */}
-                        <div className="flex items-center gap-2">
-                            <input
-                                id="isPrivate"
-                            type="checkbox"
-                            checked={isPrivate}
-                            onChange={(e) => {
-                                const checked = e.target.checked;
-                                setIsPrivate(checked);
-                                setPrivacyError(null); // Clear error when changing privacy
-                                // If marking as private, clear group selections
-                                if (checked) {
-                                    setSelectedGroups([]);
-                                    setShareWithAllGroups(false);
-                                }
-                            }}
-                            className="h-4 w-4 rounded border-input bg-background"
-                        />
-                        <Label htmlFor="isPrivate" className="cursor-pointer">
-                            Mark as private (only I can see this)
-                        </Label>
                     </div>
+                    {/* End Left Column */}
 
-                    {/* Share with Groups */}
-                    <div className="space-y-2">
-                        <Label className={isPrivate ? 'text-muted-foreground' : ''}>
-                            Share with groups
-                        </Label>
-                        
-                        {/* Case 1: User has no groups */}
+                    {/* Right Column - Privacy & Sharing */}
+                    <div className="space-y-4">
+                        <Label className="text-base">Privacy & Sharing</Label>
+
+                        {/* Three Privacy Cards - Horizontal Layout */}
+                        <div className="space-y-3">
+                            {/* Card 1: Private */}
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setSharingMode('private');
+                                    setSelectedGroups([]);
+                                    setPrivacyError(null);
+                                }}
+                                className={`group w-full relative overflow-hidden rounded-lg border-2 p-4 transition-all duration-200 hover:shadow-md ${
+                                    sharingMode === 'private'
+                                        ? 'border-primary bg-gradient-to-r from-primary/10 to-transparent'
+                                        : 'border-border bg-card hover:border-primary/50'
+                                }`}
+                            >
+                                <div className="flex items-center gap-4">
+                                    <div className={`flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center transition-colors ${
+                                        sharingMode === 'private'
+                                            ? 'bg-primary/20'
+                                            : 'bg-primary/10 group-hover:bg-primary/20'
+                                    }`}>
+                                        <Lock className={`h-5 w-5 transition-colors ${
+                                            sharingMode === 'private' ? 'text-primary' : 'text-primary/70'
+                                        }`} />
+                                    </div>
+                                    <div className="flex-1 text-left">
+                                        <h3 className={`font-semibold transition-colors ${
+                                            sharingMode === 'private' ? 'text-primary' : 'group-hover:text-primary'
+                                        }`}>
+                                            Private
+                                        </h3>
+                                        <p className="text-sm text-muted-foreground">
+                                            Only you can see this
+                                        </p>
+                                    </div>
+                                    {sharingMode === 'private' && (
+                                        <div className="flex-shrink-0 w-5 h-5 rounded-full bg-primary flex items-center justify-center">
+                                            <svg className="w-3 h-3 text-primary-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                            </svg>
+                                        </div>
+                                    )}
+                                </div>
+                            </button>
+
+                            {/* Card 2: Specific Groups */}
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    if (userGroups.length === 0 && !isLoadingGroups) return;
+                                    setSharingMode('specific');
+                                    setPrivacyError(null);
+                                    setTempSelectedGroups(selectedGroups);
+                                    setIsGroupSelectionOpen(true);
+                                }}
+                                disabled={userGroups.length === 0 && !isLoadingGroups}
+                                className={`group w-full relative overflow-hidden rounded-lg border-2 p-4 transition-all duration-200 hover:shadow-md ${
+                                    sharingMode === 'specific'
+                                        ? 'border-primary bg-gradient-to-r from-primary/10 to-transparent'
+                                        : 'border-border bg-card hover:border-primary/50'
+                                } ${userGroups.length === 0 && !isLoadingGroups ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            >
+                                <div className="flex items-center gap-4">
+                                    <div className={`flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center transition-colors ${
+                                        sharingMode === 'specific'
+                                            ? 'bg-primary/20'
+                                            : 'bg-primary/10 group-hover:bg-primary/20'
+                                    }`}>
+                                        <Users className={`h-5 w-5 transition-colors ${
+                                            sharingMode === 'specific' ? 'text-primary' : 'text-primary/70'
+                                        }`} />
+                                    </div>
+                                    <div className="flex-1 text-left">
+                                        <h3 className={`font-semibold transition-colors ${
+                                            sharingMode === 'specific' ? 'text-primary' : 'group-hover:text-primary'
+                                        }`}>
+                                            Specific Groups
+                                        </h3>
+                                        <p className={`text-sm ${
+                                            sharingMode === 'specific' && selectedGroups.length > 0
+                                                ? 'text-primary/80'
+                                                : 'text-muted-foreground'
+                                        }`}>
+                                            {sharingMode === 'specific' && selectedGroups.length > 0
+                                                ? `✓ ${selectedGroups.length} ${selectedGroups.length === 1 ? 'group' : 'groups'} selected - Click to change`
+                                                : 'Choose which groups'
+                                            }
+                                        </p>
+                                    </div>
+                                    {sharingMode === 'specific' && (
+                                        <div className="flex-shrink-0 w-5 h-5 rounded-full bg-primary flex items-center justify-center">
+                                            <svg className="w-3 h-3 text-primary-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                            </svg>
+                                        </div>
+                                    )}
+                                </div>
+                            </button>
+
+                            {/* Card 3: All My Groups */}
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setSharingMode('all');
+                                    setSelectedGroups([]);
+                                    setPrivacyError(null);
+                                }}
+                                disabled={userGroups.length === 0 && !isLoadingGroups}
+                                className={`group w-full relative overflow-hidden rounded-lg border-2 p-4 transition-all duration-200 hover:shadow-md ${
+                                    sharingMode === 'all'
+                                        ? 'border-primary bg-gradient-to-r from-primary/10 to-transparent'
+                                        : 'border-border bg-card hover:border-primary/50'
+                                } ${userGroups.length === 0 && !isLoadingGroups ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            >
+                                <div className="flex items-center gap-4">
+                                    <div className={`flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center transition-colors ${
+                                        sharingMode === 'all'
+                                            ? 'bg-primary/20'
+                                            : 'bg-primary/10 group-hover:bg-primary/20'
+                                    }`}>
+                                        <Users className={`h-5 w-5 transition-colors ${
+                                            sharingMode === 'all' ? 'text-primary' : 'text-primary/70'
+                                        }`} />
+                                    </div>
+                                    <div className="flex-1 text-left">
+                                        <h3 className={`font-semibold transition-colors ${
+                                            sharingMode === 'all' ? 'text-primary' : 'group-hover:text-primary'
+                                        }`}>
+                                            All My Groups
+                                        </h3>
+                                        <p className="text-sm text-muted-foreground">
+                                            Share with everyone
+                                        </p>
+                                    </div>
+                                    {sharingMode === 'all' && (
+                                        <div className="flex-shrink-0 w-5 h-5 rounded-full bg-primary flex items-center justify-center">
+                                            <svg className="w-3 h-3 text-primary-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                            </svg>
+                                        </div>
+                                    )}
+                                </div>
+                            </button>
+                        </div>
+
+                        {/* No Groups Message */}
                         {userGroups.length === 0 && !isLoadingGroups && (
-                            <div className="border rounded-md p-3 bg-muted/50">
+                            <div className="border rounded-lg p-4 bg-muted/50">
                                 <p className="text-sm text-muted-foreground">
-                                    {isPrivate 
-                                        ? "You're not a member of any groups yet"
-                                        : "Join a group to share your watches, or keep this watch private"
-                                    }
+                                    You're not a member of any groups yet
                                 </p>
                                 <p className="text-xs text-muted-foreground mt-2">
                                     💡 Create or join a group to share your watches
@@ -434,90 +565,23 @@ export default function EditWatchDialog({
                             </div>
                         )}
 
-                        {/* Case 2: User has groups */}
-                        {userGroups.length > 0 && (
-                            <>
-                                {/* All My Groups Checkbox */}
-                                <div className="flex items-center gap-2">
-                                    <Checkbox
-                                        id="edit-shareWithAllGroups"
-                                        checked={shareWithAllGroups}
-                                        disabled={isPrivate || selectedGroups.length > 0}
-                                        onCheckedChange={(checked) => {
-                                            setShareWithAllGroups(checked as boolean);
-                                            setPrivacyError(null);
-                                            if (checked) {
-                                                setSelectedGroups([]); // Clear specific selections
-                                            }
-                                        }}
-                                    />
-                                    <Label
-                                        htmlFor="edit-shareWithAllGroups"
-                                        className={`cursor-pointer ${isPrivate || selectedGroups.length > 0 ? 'text-muted-foreground' : ''}`}
-                                    >
-                                        All my groups
-                                    </Label>
-                                </div>
-
-                                {/* Specific Groups Selection */}
-                                <div className="space-y-2">
-                                    <Label className={isPrivate || shareWithAllGroups ? 'text-muted-foreground' : ''}>
-                                        Select specific groups:
-                                    </Label>
-                                    <div className="border rounded-md p-3 space-y-2 max-h-40 overflow-y-auto">
-                                        {isLoadingGroups ? (
-                                            <p className="text-sm text-muted-foreground">Loading groups...</p>
-                                        ) : (
-                                            userGroups.map((group) => (
-                                                <div key={group.id} className="flex items-center gap-2">
-                                                    <Checkbox
-                                                        id={`edit-group-${group.id}`}
-                                                        checked={selectedGroups.includes(group.id)}
-                                                        disabled={isPrivate || shareWithAllGroups}
-                                                        onCheckedChange={(checked) => {
-                                                            setPrivacyError(null);
-                                                            if (checked) {
-                                                                setSelectedGroups([...selectedGroups, group.id]);
-                                                                setShareWithAllGroups(false); // Disable "all groups" when specific selected
-                                                            } else {
-                                                                setSelectedGroups(selectedGroups.filter(id => id !== group.id));
-                                                            }
-                                                        }}
-                                                    />
-                                                    <Label
-                                                        htmlFor={`edit-group-${group.id}`}
-                                                        className={`cursor-pointer text-sm font-normal ${
-                                                            isPrivate || shareWithAllGroups ? 'text-muted-foreground' : ''
-                                                        }`}
-                                                    >
-                                                        {group.name}
-                                                        <span className="text-muted-foreground ml-2">
-                                                            ({group.memberCount} {group.memberCount === 1 ? 'member' : 'members'})
-                                                        </span>
-                                                    </Label>
-                                                </div>
-                                            ))
-                                        )}
-                                    </div>
-                                </div>
-                            </>
-                        )}
-
                         {/* Privacy Error Message */}
                         {privacyError && (
                             <p className="text-sm text-destructive">⚠️ {privacyError}</p>
                         )}
                     </div>
-                </div>
-                {/* End Privacy & Sharing Section */}
+                    {/* End Right Column */}
 
-                {/* Error Message */}
-                {error && (
-                        <p className="text-sm text-destructive">{error}</p>
+                    </div>
+                    {/* End Grid */}
+
+                    {/* Error Message */}
+                    {error && (
+                        <p className="text-sm text-destructive mt-4">{error}</p>
                     )}
 
-                    {/* Actions */}
-                    <div className="flex justify-end gap-2 pt-4">
+                    {/* Submit Button */}
+                    <DialogFooter className="mt-6">
                         <Button
                             type="button"
                             variant="outline"
@@ -529,9 +593,85 @@ export default function EditWatchDialog({
                         <Button type="submit" disabled={isSubmitting}>
                             {isSubmitting ? 'Saving...' : 'Save Changes'}
                         </Button>
-                    </div>
+                    </DialogFooter>
                 </form>
             </DialogContent>
         </Dialog>
+
+        {/* Group Selection Modal */}
+        <Dialog open={isGroupSelectionOpen} onOpenChange={setIsGroupSelectionOpen}>
+            <DialogContent className={`max-h-[80vh] flex flex-col ${userGroups.length > 5 ? 'sm:max-w-[700px]' : 'sm:max-w-[500px]'}`}>
+                <DialogHeader>
+                    <DialogTitle>Select Groups to Share With</DialogTitle>
+                    <DialogDescription>
+                        Choose which groups can see this watch
+                    </DialogDescription>
+                </DialogHeader>
+
+                <div className="flex-1 overflow-y-auto pr-2">
+                    <div className={`gap-2 ${userGroups.length > 5 ? 'grid grid-cols-1 md:grid-cols-2' : 'space-y-2'}`}>
+                        {isLoadingGroups ? (
+                            <p className="text-sm text-muted-foreground">Loading groups...</p>
+                        ) : userGroups.length === 0 ? (
+                            <p className="text-sm text-muted-foreground">No groups available</p>
+                        ) : (
+                            userGroups.map((group) => (
+                                <div
+                                    key={group.id}
+                                    className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors border border-transparent hover:border-border"
+                                >
+                                    <Checkbox
+                                        id={`edit-modal-group-${group.id}`}
+                                        checked={tempSelectedGroups.includes(group.id)}
+                                        onCheckedChange={(checked) => {
+                                            if (checked) {
+                                                setTempSelectedGroups([...tempSelectedGroups, group.id]);
+                                            } else {
+                                                setTempSelectedGroups(tempSelectedGroups.filter(id => id !== group.id));
+                                            }
+                                        }}
+                                    />
+                                    <Label
+                                        htmlFor={`edit-modal-group-${group.id}`}
+                                        className="cursor-pointer flex-1 font-normal"
+                                    >
+                                        <div className="flex flex-col gap-0.5">
+                                            <span className="font-medium">{group.name}</span>
+                                            <span className="text-xs text-muted-foreground">
+                                                {group.memberCount} {group.memberCount === 1 ? 'member' : 'members'}
+                                            </span>
+                                        </div>
+                                    </Label>
+                                </div>
+                            ))
+                        )}
+                    </div>
+                </div>
+
+                <DialogFooter className="mt-4">
+                    <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => {
+                            setIsGroupSelectionOpen(false);
+                            setTempSelectedGroups(selectedGroups);
+                        }}
+                    >
+                        Cancel
+                    </Button>
+                    <Button
+                        type="button"
+                        onClick={() => {
+                            setSelectedGroups(tempSelectedGroups);
+                            setPrivacyError(null);
+                            setIsGroupSelectionOpen(false);
+                        }}
+                    >
+                        Confirm ({tempSelectedGroups.length})
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+        </>
     );
 }
