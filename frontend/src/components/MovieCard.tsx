@@ -5,6 +5,7 @@ import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Calendar, Star, Bookmark, BookmarkCheck, BookmarkX, Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useWatchlist } from '@/contexts/WatchlistContext';
 import Link from 'next/link';
 import type { TmdbMovie } from '@/types';
 import { movieApi, watchlistApi } from '@/lib/api';
@@ -18,6 +19,7 @@ interface MovieCardProps {
 
 export const MovieCard = memo(function MovieCard({ movie, onAddToWatched }: MovieCardProps) {
     const { user } = useAuth();
+    const { incrementCount, decrementCount } = useWatchlist();
     const [onWatchlist, setOnWatchlist] = useState(false);
     const [localMovieId, setLocalMovieId] = useState<number | null>(null);
     const [isSaving, setIsSaving] = useState(false);
@@ -56,11 +58,13 @@ export const MovieCard = memo(function MovieCard({ movie, onAddToWatched }: Movi
                 await watchlistApi.removeFromWatchlist(localMovieId);
                 setOnWatchlist(false);
                 setLocalMovieId(null);
+                decrementCount();
                 toast.success('Removed from watchlist');
             } else {
                 const result = await watchlistApi.addToWatchlist(movie.id);
                 setOnWatchlist(true);
                 setLocalMovieId(result.movieId);
+                incrementCount();
                 toast.success('Saved to watchlist');
             }
         } catch (err) {

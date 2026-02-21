@@ -8,6 +8,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { WatchForm } from '@/components/WatchForm';
 import { watchlistApi } from '@/lib/api';
+import { useWatchlist } from '@/contexts/WatchlistContext';
 import type { WatchlistItem, TmdbMovie } from '@/types';
 import { toast } from 'sonner';
 
@@ -18,6 +19,7 @@ interface WatchlistCardProps {
 
 export function WatchlistCard({ item, onRemoved }: WatchlistCardProps) {
     const router = useRouter();
+    const { decrementCount } = useWatchlist();
     const [isRemoving, setIsRemoving] = useState(false);
     const [isTogglingPriority, setIsTogglingPriority] = useState(false);
     const [priority, setPriority] = useState(item.priority);
@@ -55,6 +57,7 @@ export function WatchlistCard({ item, onRemoved }: WatchlistCardProps) {
         setIsRemoving(true);
         try {
             await watchlistApi.removeFromWatchlist(item.movieId);
+            decrementCount();
             toast.success('Removed from watchlist');
             onRemoved(item.movieId);
         } catch {
@@ -85,6 +88,7 @@ export function WatchlistCard({ item, onRemoved }: WatchlistCardProps) {
         // Remove from watchlist automatically after logging a watch
         try {
             await watchlistApi.removeFromWatchlist(item.movieId);
+            decrementCount();
         } catch {
             // Silently ignore — the watch was logged successfully, watchlist removal is best-effort
         } finally {

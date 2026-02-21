@@ -3,8 +3,10 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { watchApi } from '@/lib';
-import { movieApi } from '@/lib/api';
+import { movieApi, watchlistApi } from '@/lib/api';
+import { useWatchlist } from '@/contexts/WatchlistContext';
 import type { Watch, Movie, MovieDetail } from '@/types';
+import { ApiError, PremiumRequiredError } from '@/lib/api-client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Clock, Star } from 'lucide-react';
 import {
@@ -20,7 +22,7 @@ import {
 import EditWatchDialog from '@/components/EditWatchDialog';
 import { WatchForm } from '@/components/WatchForm';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Plus, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Plus, AlertCircle, BookmarkPlus, BookmarkCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import { Skeleton } from '@/components/ui/skeleton';
 import { MovieInsight } from '@/components/MovieInsight';
@@ -39,6 +41,7 @@ function formatRuntime(minutes: number): string {
 export default function WatchDetailPage({ params }: WatchDetailPageProps) {
   const router = useRouter();
   const { user } = useAuth();
+  const { incrementCount, decrementCount } = useWatchlist();
   const [movieId, setMovieId] = useState<number | null>(null);
   const [watches, setWatches] = useState<Watch[]>([]);
   const [movie, setMovie] = useState<Movie | null>(null);
@@ -51,6 +54,9 @@ export default function WatchDetailPage({ params }: WatchDetailPageProps) {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isRewatchDialogOpen, setIsRewatchDialogOpen] = useState(false);
+  const [onWatchlist, setOnWatchlist] = useState(false);
+  const [isTogglingWatchlist, setIsTogglingWatchlist] = useState(false);
+  const [watchlistHover, setWatchlistHover] = useState(false);
 
   const handleEditSuccess = async () => {
     if (movieId) {
@@ -98,6 +104,32 @@ export default function WatchDetailPage({ params }: WatchDetailPageProps) {
     }
   };
 
+  const handleWatchlistToggle = async () => {
+    if (!user || !movie || !movieId) return;
+    setIsTogglingWatchlist(true);
+    try {
+      if (onWatchlist) {
+        await watchlistApi.removeFromWatchlist(movieId);
+        setOnWatchlist(false);
+        decrementCount();
+        toast.success('Removed from watchlist');
+      } else {
+        await watchlistApi.addToWatchlist(movie.tmdbId);
+        setOnWatchlist(true);
+        incrementCount();
+        toast.success('Saved to watchlist');
+      }
+    } catch (err) {
+      if (err instanceof PremiumRequiredError) {
+        toast.error('Watchlist limit reached. Upgrade to Premium for unlimited saves.');
+      } else {
+        toast.error('Something went wrong. Please try again.');
+      }
+    } finally {
+      setIsTogglingWatchlist(false);
+    }
+  };
+
   useEffect(() => {
     async function loadData() {
       try {
@@ -123,6 +155,16 @@ export default function WatchDetailPage({ params }: WatchDetailPageProps) {
           // Enriched detail is optional
         }
 
+        // Fetch watchlist status
+        if (user) {
+          try {
+            const status = await movieApi.getMyStatus(basicMovie.tmdbId);
+            setOnWatchlist(status.onWatchlist);
+          } catch {
+            // Silently ignore watchlist status errors
+          }
+        }
+
         setIsLoading(false);
       } catch (err) {
         console.error('Error loading watch details:', err);
@@ -131,7 +173,7 @@ export default function WatchDetailPage({ params }: WatchDetailPageProps) {
       }
     }
     loadData();
-  }, [params]);
+  }, [params, user]);
 
   if (isLoading) {
     return (
@@ -172,7 +214,7 @@ export default function WatchDetailPage({ params }: WatchDetailPageProps) {
           <Card>
             <CardContent className="pt-12 pb-12">
               <div className="flex flex-col items-center justify-center space-y-4">
-                <AlertCircle className="h-12 w-12 text-muted-foreground/50" />
+                <AlertCircle className="h-12 w-12 text-destructive mx-auto" />
                 <p className="text-center text-muted-foreground">{error || 'Movie not found.'}</p>
               </div>
             </CardContent>
@@ -266,10 +308,33 @@ export default function WatchDetailPage({ params }: WatchDetailPageProps) {
               ))}
             </div>
 
-            <Button onClick={() => setIsRewatchDialogOpen(true)} size="sm" className="mt-1">
-              <Plus className="mr-2 h-4 w-4" />
-              Log Another Watch
-            </Button>
+            <div className="flex flex-wrap items-center gap-2 mt-1">
+              <Button onClick={() => setIsRewatchDialogOpen(true)} size="sm">
+                <Plus className="mr-2 h-4 w-4" />
+                Log Another Watch
+              </Button>
+
+              {user && (
+                <Button
+                  variant={onWatchlist ? 'secondary' : 'outline'}
+                  size="sm"
+                  onClick={handleWatchlistToggle}
+                  disabled={isTogglingWatchlist}
+                  onMouseEnter={() => setWatchlistHover(true)}
+                  onMouseLeave={() => setWatchlistHover(false)}
+                >
+                  {onWatchlist ? (
+                    watchlistHover ? (
+                      <><BookmarkPlus className="h-4 w-4 mr-2 text-destructive" />Remove</>
+                    ) : (
+                      <><BookmarkCheck className="h-4 w-4 mr-2" />On Watchlist</>
+                    )
+                  ) : (
+                    <><BookmarkPlus className="h-4 w-4 mr-2" />Save to Watchlist</>
+                  )}
+                </Button>
+              )}
+            </div>
           </div>
         </div>
 

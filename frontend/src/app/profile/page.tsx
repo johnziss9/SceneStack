@@ -1,6 +1,7 @@
 'use client';
 
 import { useAuth } from '@/contexts/AuthContext';
+import { useWatchlist } from '@/contexts/WatchlistContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -28,6 +29,7 @@ import { Badge } from '@/components/ui/badge';
 
 export default function ProfilePage() {
     const { user, logout, loading, refreshUser } = useAuth();
+    const { count: watchlistCount } = useWatchlist();
     const router = useRouter();
 
     // Edit mode state
@@ -311,6 +313,18 @@ export default function ProfilePage() {
                                     <Label className="text-muted-foreground">Member Since</Label>
                                     <p className="text-base">{memberSince}</p>
                                 </div>
+
+                                {!(user as any)?.isPremium && (
+                                    <div className="space-y-2">
+                                        <Label className="text-muted-foreground">Watchlist Usage</Label>
+                                        <p className="text-base">
+                                            {watchlistCount} / 50 saved
+                                            {watchlistCount >= 50 && (
+                                                <span className="text-destructive ml-2">(Limit reached)</span>
+                                            )}
+                                        </p>
+                                    </div>
+                                )}
                             </>
                         )}
                     </CardContent>

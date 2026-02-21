@@ -2,12 +2,15 @@
 
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useWatchlist } from '@/contexts/WatchlistContext';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import { Film, User, Users, BarChart2, Menu, X, Eye, LogIn, UserPlus, Bookmark } from 'lucide-react';
 
 export function Navigation() {
     const { user, loading } = useAuth();
+    const { count: watchlistCount } = useWatchlist();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const closeMenu = () => setIsMenuOpen(false);
 
@@ -36,9 +39,14 @@ export function Navigation() {
                                             </Button>
                                         </Link>
                                         <Link href="/watchlist">
-                                            <Button variant="ghost" className="gap-2">
+                                            <Button variant="ghost" className="gap-2 relative">
                                                 <Bookmark className="h-4 w-4" />
                                                 Watchlist
+                                                {watchlistCount > 0 && (
+                                                    <Badge variant="default" className="ml-1 px-1.5 py-0 h-5 min-w-[1.25rem] text-[10px]">
+                                                        {watchlistCount}
+                                                    </Badge>
+                                                )}
                                             </Button>
                                         </Link>
                                         <Link href="/groups">
@@ -105,6 +113,11 @@ export function Navigation() {
                                     <Button variant="ghost" className="w-full justify-start gap-3">
                                         <Bookmark className="h-4 w-4" />
                                         Watchlist
+                                        {watchlistCount > 0 && (
+                                            <Badge variant="default" className="ml-auto px-1.5 py-0 h-5 min-w-[1.25rem] text-[10px]">
+                                                {watchlistCount}
+                                            </Badge>
+                                        )}
                                     </Button>
                                 </Link>
                                 <Link href="/groups" onClick={closeMenu}>

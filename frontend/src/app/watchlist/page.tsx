@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { Bookmark, ArrowUpDown, Loader2 } from 'lucide-react';
+import { Bookmark, ArrowUpDown, Loader2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { WatchlistCard } from '@/components/WatchlistCard';
@@ -123,8 +123,9 @@ export default function WatchlistPage() {
 
             {/* Error state */}
             {!isLoading && error && (
-                <div className="text-center py-16 text-muted-foreground">
-                    <p>{error}</p>
+                <div className="text-center py-16">
+                    <AlertCircle className="h-12 w-12 text-destructive mx-auto mb-4" />
+                    <p className="text-muted-foreground">{error}</p>
                     <Button
                         variant="outline"
                         className="mt-4"
