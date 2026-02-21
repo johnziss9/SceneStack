@@ -88,6 +88,8 @@ public class GroupsController : ControllerBase
                 Role = (int)m.Role,
                 RoleName = m.Role.ToString(),
                 JoinedAt = m.JoinedAt,
+                Username = m.User.Username,
+                Email = m.User.Email,
                 User = new UserBasicInfo
                 {
                     Id = m.User.Id,
@@ -207,6 +209,8 @@ public class GroupsController : ControllerBase
                 Role = (int)m.Role,
                 RoleName = m.Role.ToString(),
                 JoinedAt = m.JoinedAt,
+                Username = m.User.Username,
+                Email = m.User.Email,
                 User = new UserBasicInfo
                 {
                     Id = m.User.Id,

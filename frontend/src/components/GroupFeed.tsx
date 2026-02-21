@@ -100,14 +100,19 @@ export function GroupFeed({ groupId }: GroupFeedProps) {
     // Empty state
     if (feedItems.length === 0) {
         return (
-            <div className="flex flex-col items-center justify-center py-12 space-y-4">
-                <div className="text-muted-foreground text-6xl">
-                    <Eye size={64} />
+            <div className="flex flex-col items-center justify-center py-16 space-y-6">
+                <div className="relative">
+                    <div className="absolute inset-0 bg-primary/20 blur-3xl rounded-full" />
+                    <div className="relative w-24 h-24 rounded-full bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center">
+                        <Eye className="text-primary" size={48} />
+                    </div>
                 </div>
-                <p className="text-xl text-muted-foreground">No watches yet</p>
-                <p className="text-sm text-muted-foreground text-center max-w-md">
-                    Group members haven&apos;t shared any watches yet. Start watching movies and share them with the group!
-                </p>
+                <div className="text-center space-y-2">
+                    <h3 className="text-xl font-bold">No watches yet</h3>
+                    <p className="text-sm text-muted-foreground text-center max-w-md">
+                        Group members haven&apos;t shared any watches yet. Start watching movies and share them with the group!
+                    </p>
+                </div>
             </div>
         );
     }
@@ -129,85 +134,98 @@ export function GroupFeed({ groupId }: GroupFeedProps) {
                 return (
                     <Card
                         key={item.id}
-                        className="overflow-hidden hover:border-primary transition-colors"
+                        className="group overflow-hidden hover:shadow-lg hover:border-primary/50 transition-all duration-300"
                     >
-                        <CardContent className="p-4">
+                        <CardContent className="p-5">
                             <div className="flex gap-4">
                                 {/* Movie Poster */}
                                 <Link
                                     href={`/watched/${item.movieId}`}
-                                    className="flex-shrink-0"
+                                    className="flex-shrink-0 relative"
                                 >
                                     {posterUrl ? (
-                                        <img
-                                            src={posterUrl}
-                                            alt={item.movieTitle}
-                                            className="w-16 h-24 object-cover rounded hover:opacity-80 transition-opacity"
-                                        />
+                                        <div className="relative overflow-hidden rounded-lg">
+                                            <img
+                                                src={posterUrl}
+                                                alt={item.movieTitle}
+                                                className="w-20 h-[120px] object-cover group-hover:scale-105 transition-transform duration-300"
+                                            />
+                                            <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                                        </div>
                                     ) : (
-                                        <div className="w-16 h-24 bg-muted rounded flex items-center justify-center text-xs text-muted-foreground">
+                                        <div className="w-20 h-[120px] bg-muted rounded-lg flex items-center justify-center text-xs text-muted-foreground">
                                             No poster
                                         </div>
                                     )}
                                 </Link>
 
                                 {/* Watch Info */}
-                                <div className="flex-1 min-w-0">
+                                <div className="flex-1 min-w-0 space-y-2.5">
                                     {/* User and Movie */}
-                                    <div className="mb-2">
-                                        <span className="font-semibold text-primary">
-                                            {item.username}
-                                        </span>
-                                        <span className="text-muted-foreground"> watched </span>
+                                    <div>
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                            <span className="font-semibold text-primary">
+                                                {item.username}
+                                            </span>
+                                            <span className="text-muted-foreground text-sm">watched</span>
+                                            {item.isRewatch && (
+                                                <span className="text-xs bg-primary/15 text-primary px-2 py-0.5 rounded-full font-medium">
+                                                    Rewatch
+                                                </span>
+                                            )}
+                                        </div>
                                         <Link
                                             href={`/watched/${item.movieId}`}
-                                            className="font-semibold hover:text-primary transition-colors"
+                                            className="font-bold text-lg hover:text-primary transition-colors inline-block mt-0.5"
                                         >
                                             {item.movieTitle}
                                         </Link>
-                                        {item.isRewatch && (
-                                            <span className="ml-2 text-xs bg-primary/20 text-primary px-2 py-0.5 rounded">
-                                                Rewatch
-                                            </span>
-                                        )}
                                     </div>
 
-                                    {/* Date */}
-                                    <p className="text-sm text-muted-foreground mb-2">
-                                        {watchedDate}
-                                    </p>
+                                    {/* Rating and Date Row */}
+                                    <div className="flex items-center gap-4 flex-wrap">
+                                        {item.rating && (
+                                            <div className="flex items-center gap-1 px-3 py-1 rounded-lg bg-primary/10">
+                                                <svg className="w-4 h-4 text-primary fill-primary" viewBox="0 0 20 20">
+                                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                                </svg>
+                                                <span className="font-bold text-primary">{item.rating}</span>
+                                                <span className="text-xs text-muted-foreground">/10</span>
+                                            </div>
+                                        )}
+                                        <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                            </svg>
+                                            <span>{watchedDate}</span>
+                                        </div>
+                                    </div>
 
-                                    {/* Rating */}
-                                    {item.rating && (
-                                        <div className="flex items-center gap-1 mb-2">
-                                            <span className="text-lg font-bold text-primary">
-                                                {item.rating}
-                                            </span>
-                                            <span className="text-xs text-muted-foreground">/10</span>
+                                    {/* Additional Info */}
+                                    {(item.watchLocation || item.watchedWith) && (
+                                        <div className="flex flex-wrap gap-2">
+                                            {item.watchLocation && (
+                                                <div className="flex items-center gap-1.5 text-sm text-muted-foreground px-3 py-1 rounded-lg bg-muted/50">
+                                                    <MapPin size={14} />
+                                                    <span>{item.watchLocation}</span>
+                                                </div>
+                                            )}
+                                            {item.watchedWith && (
+                                                <div className="flex items-center gap-1.5 text-sm text-muted-foreground px-3 py-1 rounded-lg bg-muted/50">
+                                                    <UsersIcon size={14} />
+                                                    <span className="truncate">{item.watchedWith}</span>
+                                                </div>
+                                            )}
                                         </div>
                                     )}
 
-                                    {/* Additional Info */}
-                                    <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
-                                        {item.watchLocation && (
-                                            <div className="flex items-center gap-1">
-                                                <MapPin size={14} />
-                                                <span>{item.watchLocation}</span>
-                                            </div>
-                                        )}
-                                        {item.watchedWith && (
-                                            <div className="flex items-center gap-1">
-                                                <UsersIcon size={14} />
-                                                <span className="truncate">{item.watchedWith}</span>
-                                            </div>
-                                        )}
-                                    </div>
-
                                     {/* Notes */}
                                     {item.notes && (
-                                        <p className="text-sm text-muted-foreground mt-2 line-clamp-2">
-                                            &quot;{item.notes}&quot;
-                                        </p>
+                                        <div className="pt-1 border-t">
+                                            <p className="text-sm text-muted-foreground italic line-clamp-2">
+                                                &quot;{item.notes}&quot;
+                                            </p>
+                                        </div>
                                     )}
                                 </div>
                             </div>

@@ -16,7 +16,7 @@ import {
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Edit, Trash2, UserPlus, Shield, Crown, AlertCircle } from "lucide-react";
+import { ArrowLeft, Edit, Trash2, UserPlus, Shield, Crown, AlertCircle, Users } from "lucide-react";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/contexts/AuthContext";
@@ -261,24 +261,37 @@ export function GroupDetail({ groupId }: GroupDetailProps) {
             </div>
 
             {/* Group Info */}
-            <Card>
-                <CardHeader>
-                    <CardTitle className="text-xl sm:text-2xl">{group.name}</CardTitle>
+            <Card className="overflow-hidden border-2">
+                <div className="h-2 bg-gradient-to-r from-primary via-primary/60 to-primary/30" />
+                <CardHeader className="pb-3">
+                    <div className="flex items-start gap-4">
+                        <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center flex-shrink-0">
+                            <Users className="h-8 w-8 text-primary" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <CardTitle className="text-2xl sm:text-3xl">{group.name}</CardTitle>
+                            {group.description && (
+                                <p className="text-muted-foreground mt-2">{group.description}</p>
+                            )}
+                        </div>
+                    </div>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                    {group.description && (
-                        <p className="text-muted-foreground">{group.description}</p>
-                    )}
-                    <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 text-sm text-muted-foreground">
-                        <div>
-                            <span>Created by:</span>
-                            <span className="ml-2 font-semibold text-foreground">
-                                {group.createdBy.username}
+                <CardContent className="space-y-3">
+                    <div className="flex flex-wrap gap-3">
+                        <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-muted/50">
+                            <Crown className="h-4 w-4 text-primary" />
+                            <span className="text-sm">
+                                <span className="text-muted-foreground">Created by</span>
+                                <span className="ml-1.5 font-semibold text-foreground">
+                                    {group.createdBy.username}
+                                </span>
                             </span>
                         </div>
-                        <div>
-                            <span>Created:</span>
-                            <span className="ml-2 font-semibold text-foreground">
+                        <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-muted/50">
+                            <svg className="h-4 w-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                            <span className="text-sm font-semibold text-foreground">
                                 {new Date(group.createdAt).toLocaleDateString("en-GB", {
                                     day: "numeric",
                                     month: "short",
@@ -291,43 +304,58 @@ export function GroupDetail({ groupId }: GroupDetailProps) {
             </Card>
 
             {/* Members List */}
-            <Card>
-                <CardHeader>
+            <Card className="overflow-hidden">
+                <CardHeader className="bg-muted/30">
                     <div className="flex items-center justify-between">
-                        <CardTitle>Members ({group.members.length})</CardTitle>
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                                <Users className="h-5 w-5 text-primary" />
+                            </div>
+                            <CardTitle>Members ({group.members.length})</CardTitle>
+                        </div>
                         {canEditGroup() && (
                             <Button
                                 size="sm"
                                 onClick={() => router.push(`/groups/${group.id}/add-member`)}
+                                className="gap-2"
                             >
-                                <UserPlus className="mr-2 h-4 w-4" />
+                                <UserPlus className="h-4 w-4" />
                                 Add Member
                             </Button>
                         )}
                     </div>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="pt-6">
                     <div className="space-y-3">
                         {group.members.map((member) => (
                             <div
                                 key={member.userId}
-                                className="flex items-start sm:items-center justify-between py-3 px-4 rounded-lg border hover:bg-muted/50 gap-3"
+                                className="group relative flex items-start sm:items-center justify-between py-4 px-4 rounded-xl border hover:border-primary/50 hover:bg-primary/5 transition-all gap-3"
                             >
-                                <div className="flex-1">
-                                    <div className="flex items-center gap-3">
-                                        <span className="font-medium">{member.username}</span>
-                                        {getRoleBadge(member.role)}
+                                {/* Avatar Circle */}
+                                <div className="flex items-start gap-4 flex-1 min-w-0">
+                                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center flex-shrink-0 text-lg font-bold text-primary">
+                                        {member.username ? member.username.charAt(0).toUpperCase() : '?'}
                                     </div>
-                                    <div className="text-sm text-muted-foreground mt-1">
-                                        {member.email}
-                                    </div>
-                                    <div className="text-xs text-muted-foreground mt-1">
-                                        Joined{" "}
-                                        {new Date(member.joinedAt).toLocaleDateString("en-GB", {
-                                            day: "numeric",
-                                            month: "short",
-                                            year: "numeric",
-                                        })}
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                            <span className="font-semibold text-base">{member.username || 'Unknown'}</span>
+                                            {getRoleBadge(member.role)}
+                                        </div>
+                                        <div className="text-sm text-muted-foreground mt-1">
+                                            {member.email || 'No email'}
+                                        </div>
+                                        <div className="text-xs text-muted-foreground mt-1.5 flex items-center gap-1">
+                                            <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                            </svg>
+                                            Joined{" "}
+                                            {new Date(member.joinedAt).toLocaleDateString("en-GB", {
+                                                day: "numeric",
+                                                month: "short",
+                                                year: "numeric",
+                                            })}
+                                        </div>
                                     </div>
                                 </div>
                                 {canRemoveMember(member) && (
@@ -335,6 +363,7 @@ export function GroupDetail({ groupId }: GroupDetailProps) {
                                         variant="ghost"
                                         size="sm"
                                         onClick={() => handleRemoveMemberClick(member)}
+                                        className="hover:bg-destructive/10 hover:text-destructive shrink-0"
                                     >
                                         Remove
                                     </Button>

@@ -6,6 +6,16 @@ import { useRouter } from 'next/navigation';
 import { Star, Trash2, CheckCircle, Loader2 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { WatchForm } from '@/components/WatchForm';
 import { watchlistApi } from '@/lib/api';
 import { useWatchlist } from '@/contexts/WatchlistContext';
@@ -15,15 +25,17 @@ import { toast } from 'sonner';
 interface WatchlistCardProps {
     item: WatchlistItem;
     onRemoved: (movieId: number) => void;
+    onPriorityChanged?: (movieId: number, newPriority: number) => void;
 }
 
-export function WatchlistCard({ item, onRemoved }: WatchlistCardProps) {
+export function WatchlistCard({ item, onRemoved, onPriorityChanged }: WatchlistCardProps) {
     const router = useRouter();
     const { decrementCount } = useWatchlist();
     const [isRemoving, setIsRemoving] = useState(false);
     const [isTogglingPriority, setIsTogglingPriority] = useState(false);
     const [priority, setPriority] = useState(item.priority);
     const [isWatchFormOpen, setIsWatchFormOpen] = useState(false);
+    const [isRemoveDialogOpen, setIsRemoveDialogOpen] = useState(false);
 
     const posterUrl = item.movie.posterPath
         ? `https://image.tmdb.org/t/p/w342${item.movie.posterPath}`
@@ -53,7 +65,11 @@ export function WatchlistCard({ item, onRemoved }: WatchlistCardProps) {
         vote_count: 0,
     };
 
-    const handleRemove = async () => {
+    const handleRemoveClick = () => {
+        setIsRemoveDialogOpen(true);
+    };
+
+    const handleRemoveConfirm = async () => {
         setIsRemoving(true);
         try {
             await watchlistApi.removeFromWatchlist(item.movieId);
@@ -64,6 +80,7 @@ export function WatchlistCard({ item, onRemoved }: WatchlistCardProps) {
             toast.error('Failed to remove from watchlist');
         } finally {
             setIsRemoving(false);
+            setIsRemoveDialogOpen(false);
         }
     };
 
@@ -73,6 +90,7 @@ export function WatchlistCard({ item, onRemoved }: WatchlistCardProps) {
         try {
             await watchlistApi.updateWatchlistItem(item.movieId, { priority: newPriority });
             setPriority(newPriority);
+            onPriorityChanged?.(item.movieId, newPriority);
         } catch {
             toast.error('Failed to update priority');
         } finally {
@@ -187,7 +205,7 @@ export function WatchlistCard({ item, onRemoved }: WatchlistCardProps) {
                                     size="sm"
                                     variant="ghost"
                                     className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
-                                    onClick={handleRemove}
+                                    onClick={handleRemoveClick}
                                     disabled={isRemoving}
                                     aria-label="Remove from watchlist"
                                 >
@@ -209,6 +227,28 @@ export function WatchlistCard({ item, onRemoved }: WatchlistCardProps) {
                 onOpenChange={setIsWatchFormOpen}
                 onSuccess={handleWatchSuccess}
             />
+
+            {/* Remove Confirmation Dialog */}
+            <AlertDialog open={isRemoveDialogOpen} onOpenChange={setIsRemoveDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Remove from Watchlist</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Are you sure you want to remove <strong>{item.movie.title}</strong> from your watchlist?
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel disabled={isRemoving}>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={handleRemoveConfirm}
+                            disabled={isRemoving}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                            {isRemoving ? 'Removing...' : 'Remove'}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </>
     );
 }

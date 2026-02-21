@@ -20,7 +20,7 @@ public class CreateWatchRequest
 {
     public int TmdbId { get; set; }
     public DateTime WatchedDate { get; set; }
-    public int? Rating { get; set; }
+    public double? Rating { get; set; }
     public string? Notes { get; set; }
     public string? WatchLocation { get; set; }
     public string? WatchedWith { get; set; }
@@ -32,7 +32,7 @@ public class CreateWatchRequest
 public class UpdateWatchRequest
 {
     public DateTime WatchedDate { get; set; }
-    public int? Rating { get; set; }
+    public double? Rating { get; set; }
     public string? Notes { get; set; }
     public string? WatchLocation { get; set; }
     public string? WatchedWith { get; set; }

@@ -32,7 +32,7 @@ public class MovieUserStatus
 {
     public int? LocalMovieId { get; set; }
     public int WatchCount { get; set; }
-    public int? LatestRating { get; set; }
+    public double? LatestRating { get; set; }
     public bool OnWatchlist { get; set; }
     public int? WatchlistItemId { get; set; }
 }

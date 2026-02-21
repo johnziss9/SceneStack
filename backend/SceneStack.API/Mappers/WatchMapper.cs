@@ -18,6 +18,8 @@ public static class WatchMapper
             WatchLocation = watch.WatchLocation,
             WatchedWith = watch.WatchedWith,
             IsRewatch = watch.IsRewatch,
+            IsPrivate = watch.IsPrivate,
+            GroupIds = watch.WatchGroups?.Select(wg => wg.GroupId).ToList() ?? new List<int>(),
             CreatedAt = watch.CreatedAt,
             Movie = new MovieBasicInfo
             {

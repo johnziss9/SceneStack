@@ -101,14 +101,19 @@ export default function EditWatchDialog({
             const groups = await groupApi.getUserGroups();
             setUserGroups(groups);
 
+            // If watch is private, don't select any groups regardless of what's in groupIds
+            if (watch?.isPrivate) {
+                setShareWithAllGroups(false);
+                setSelectedGroups([]);
+            }
             // Set selected groups based on watch's groupIds
-            if (watch?.groupIds) {
+            else if (watch?.groupIds && watch.groupIds.length > 0) {
                 // Check if all groups are selected (meaning "All my groups" was chosen)
                 const allGroupIds = groups.map(g => g.id).sort();
                 const watchGroupIds = [...watch.groupIds].sort();
-                const isAllGroups = allGroupIds.length === watchGroupIds.length && 
+                const isAllGroups = allGroupIds.length === watchGroupIds.length &&
                                 allGroupIds.every((id, index) => id === watchGroupIds[index]);
-                
+
                 if (isAllGroups) {
                     setShareWithAllGroups(true);
                     setSelectedGroups([]);
@@ -144,10 +149,20 @@ export default function EditWatchDialog({
             isValid = false;
         }
 
-        // Validate rating (1-10 if provided)
-        if (rating && (parseInt(rating) < 1 || parseInt(rating) > 10)) {
-            setRatingError('Rating must be between 1 and 10');
-            isValid = false;
+        // Validate rating (1-10 if provided, only whole numbers or .5)
+        if (rating) {
+            const ratingNum = parseFloat(rating);
+            if (isNaN(ratingNum) || ratingNum < 1 || ratingNum > 10) {
+                setRatingError('Rating must be between 1 and 10');
+                isValid = false;
+            } else {
+                // Check if it's a whole number or ends in .5
+                const decimal = ratingNum % 1;
+                if (decimal !== 0 && decimal !== 0.5) {
+                    setRatingError('Rating must be a whole number or end in .5 (e.g., 7, 7.5, 8)');
+                    isValid = false;
+                }
+            }
         }
 
         // Validate custom location (required when "Other" is selected)
@@ -182,13 +197,13 @@ export default function EditWatchDialog({
 
             const updateData: UpdateWatchRequest = {
                 watchedDate: new Date(watchedDate).toISOString(),
-                rating: rating ? parseInt(rating) : undefined,
+                rating: rating ? parseFloat(rating) : undefined,
                 notes: notes || undefined,
                 watchLocation: finalLocation || undefined,
                 watchedWith: watchedWith || undefined,
                 isRewatch,
                 isPrivate,
-                groupIds: shareWithAllGroups 
+                groupIds: shareWithAllGroups
                     ? userGroups.map(g => g.id) // Send all group IDs if "all groups" is selected
                     : (selectedGroups.length > 0 ? selectedGroups : undefined),
             };
@@ -265,14 +280,26 @@ export default function EditWatchDialog({
                         <Input
                             id="rating"
                             type="number"
+                            step="0.5"
+                            min="1"
+                            max="10"
                             value={rating}
                             onChange={(e) => {
                                 setRating(e.target.value);
                                 setRatingError(null);
                             }}
                             onBlur={() => {
-                                if (rating && (parseInt(rating) < 1 || parseInt(rating) > 10)) {
-                                    setRatingError('Rating must be between 1 and 10');
+                                if (rating) {
+                                    const ratingNum = parseFloat(rating);
+                                    if (isNaN(ratingNum) || ratingNum < 1 || ratingNum > 10) {
+                                        setRatingError('Rating must be between 1 and 10');
+                                    } else {
+                                        // Check if it's a whole number or ends in .5
+                                        const decimal = ratingNum % 1;
+                                        if (decimal !== 0 && decimal !== 0.5) {
+                                            setRatingError('Rating must be a whole number or end in .5 (e.g., 7, 7.5, 8)');
+                                        }
+                                    }
                                 }
                             }}
                             placeholder="Optional"

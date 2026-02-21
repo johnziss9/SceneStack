@@ -59,6 +59,31 @@ export default function WatchlistPage() {
         setTotalCount(prev => Math.max(0, prev - 1));
     };
 
+    const handlePriorityChanged = (movieId: number, newPriority: number) => {
+        // Update the item's priority in local state
+        setItems(prev => {
+            const updated = prev.map(item =>
+                item.movieId === movieId
+                    ? { ...item, priority: newPriority }
+                    : item
+            );
+
+            // If sorting by priority, re-sort the array
+            if (sortBy === 'priority') {
+                return [...updated].sort((a, b) => {
+                    // High priority (1) comes before normal priority (0)
+                    if (a.priority !== b.priority) {
+                        return b.priority - a.priority;
+                    }
+                    // If priorities are equal, sort by addedAt (most recent first)
+                    return new Date(b.addedAt).getTime() - new Date(a.addedAt).getTime();
+                });
+            }
+
+            return updated;
+        });
+    };
+
     return (
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             {/* Header */}
@@ -159,6 +184,7 @@ export default function WatchlistPage() {
                             key={item.id}
                             item={item}
                             onRemoved={handleItemRemoved}
+                            onPriorityChanged={handlePriorityChanged}
                         />
                     ))}
 

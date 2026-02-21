@@ -7,7 +7,7 @@ export interface Watch {
     userId: number;
     movieId: number;
     watchedDate: string; // ISO date string
-    rating?: number;
+    rating?: number; // Supports decimals (.5 increments)
     notes?: string;
     watchLocation?: string;
     watchedWith?: string;

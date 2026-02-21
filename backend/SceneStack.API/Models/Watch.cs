@@ -6,7 +6,7 @@ public class Watch
     public int UserId { get; set; }
     public int MovieId { get; set; }
     public DateTime WatchedDate { get; set; }
-    public int? Rating { get; set; }  // 1-10 scale
+    public double? Rating { get; set; }  // 1-10 scale (supports .5 increments)
     public string? Notes { get; set; }
     public string? WatchLocation { get; set; }  // Cinema, Home, Other
     public string? WatchedWith { get; set; }  // Free text or user tags

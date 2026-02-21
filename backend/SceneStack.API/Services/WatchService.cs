@@ -22,6 +22,7 @@ public class WatchService : IWatchService
         return await _context.Watches
             .Include(w => w.Movie)
             .Include(w => w.User)
+            .Include(w => w.WatchGroups)
             .FirstOrDefaultAsync(w => w.Id == id);
     }
 
@@ -202,6 +203,7 @@ public class WatchService : IWatchService
         return await _context.Watches
             .Include(w => w.Movie)
             .Include(w => w.User)
+            .Include(w => w.WatchGroups)
             .Where(w => w.MovieId == movieId && w.UserId == userId)
             .OrderByDescending(w => w.WatchedDate)
             .ToListAsync();

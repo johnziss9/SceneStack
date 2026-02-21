@@ -31,7 +31,11 @@ public class GroupMemberResponse
     public string RoleName { get; set; } = string.Empty; // "Member", "Admin", "Creator"
     public DateTime JoinedAt { get; set; }
 
-    // Nested user info
+    // Flattened user info for easier frontend access
+    public string Username { get; set; } = string.Empty;
+    public string Email { get; set; } = string.Empty;
+
+    // Nested user info (kept for backwards compatibility)
     public UserBasicInfo User { get; set; } = null!;
 }
 
@@ -44,7 +48,7 @@ public class GroupFeedItemResponse
     public string MovieTitle { get; set; } = string.Empty;
     public string? PosterPath { get; set; }
     public DateTime WatchedDate { get; set; }
-    public int? Rating { get; set; }
+    public double? Rating { get; set; }
     public string? Notes { get; set; }
     public string? WatchLocation { get; set; }
     public string? WatchedWith { get; set; }
