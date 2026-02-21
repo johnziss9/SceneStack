@@ -60,23 +60,11 @@ export const WatchCard = memo(function WatchCard({ groupedWatch }: WatchCardProp
                                 {watchCount}x
                             </div>
                         )}
-
-                        {/* Privacy indicator - bottom right */}
-                        {allPrivate && (
-                            <div className="absolute bottom-2 right-2 bg-orange-500 text-white p-1.5 rounded-full">
-                                <Lock className="w-3.5 h-3.5" />
-                            </div>
-                        )}
-                        {!allPrivate && hasShared && (
-                            <div className="absolute bottom-2 right-2 bg-orange-500 text-white p-1.5 rounded-full">
-                                <Users className="w-3.5 h-3.5" />
-                            </div>
-                        )}
                     </div>
                 </CardHeader>
 
                 <CardContent className="p-3 flex flex-col flex-1">
-                    <h3 className="font-semibold text-base line-clamp-2 mb-1 hover:underline">
+                    <h3 className="font-semibold text-base line-clamp-2 mb-1 hover:underline h-12">
                         {movie.title}
                     </h3>
 
@@ -85,7 +73,7 @@ export const WatchCard = memo(function WatchCard({ groupedWatch }: WatchCardProp
                     </p>
 
                     {/* Rating - fixed height */}
-                    <div className="h-9 mb-2 flex items-center">
+                    <div className="h-9 mb-2 flex items-center justify-between">
                         {avgRating ? (
                             <div className="flex items-center gap-1">
                                 <span className="text-2xl font-bold text-primary">
@@ -93,7 +81,19 @@ export const WatchCard = memo(function WatchCard({ groupedWatch }: WatchCardProp
                                 </span>
                                 <span className="text-sm text-muted-foreground">/10</span>
                             </div>
-                        ) : null}
+                        ) : <div />}
+
+                        {/* Privacy indicator */}
+                        {allPrivate && (
+                            <div className="bg-primary text-primary-foreground p-1.5 rounded-full">
+                                <Lock className="w-3.5 h-3.5" strokeWidth={2.5} />
+                            </div>
+                        )}
+                        {!allPrivate && hasShared && (
+                            <div className="bg-primary text-primary-foreground p-1.5 rounded-full">
+                                <Users className="w-3.5 h-3.5" strokeWidth={2.5} />
+                            </div>
+                        )}
                     </div>
 
                     <div className="text-xs text-muted-foreground space-y-1 pt-1 border-t">

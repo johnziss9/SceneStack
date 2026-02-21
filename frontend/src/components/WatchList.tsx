@@ -412,9 +412,9 @@ export function WatchList() {
 
                 {/* Bulk Edit toggle */}
                 {!isBulkMode ? (
-                    <Button onClick={enterBulkMode} variant="outline">Bulk Edit</Button>
+                    <Button onClick={enterBulkMode} variant="outline">Select Multiple</Button>
                 ) : (
-                    <Button onClick={exitBulkMode} variant="outline">Exit Bulk Mode</Button>
+                    <Button onClick={exitBulkMode} variant="outline">Done</Button>
                 )}
             </div>
 

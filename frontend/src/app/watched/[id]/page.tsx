@@ -240,15 +240,17 @@ export default function WatchDetailPage({ params }: WatchDetailPageProps) {
           <img src={backdropUrl} alt="" className="w-full h-full object-cover" />
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent" />
-        <button
+        <Button
+          variant="outline"
+          size="sm"
           onClick={() => {
             const searchParams = new URLSearchParams(window.location.search);
             router.push(`/watched?${searchParams.toString()}`);
           }}
-          className="absolute top-4 left-4 flex items-center gap-1.5 text-sm text-white/80 hover:text-white transition-colors"
+          className="absolute top-4 left-4 !bg-muted !text-primary !border-primary shadow-sm hover:!bg-primary hover:!text-primary-foreground"
         >
-          <ArrowLeft className="h-4 w-4" /> Back to Watched
-        </button>
+          <ArrowLeft className="h-4 w-4 mr-2" /> Back to Watched
+        </Button>
       </div>
 
       <div className="max-w-5xl mx-auto px-4 sm:px-6">
