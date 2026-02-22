@@ -17,7 +17,7 @@ import { groupApi } from "@/lib/api";
 import type { GroupBasicInfo } from "@/types";
 import { BulkMakePrivateDialog } from "./BulkMakePrivateDialog";
 import { BulkShareWithGroupsDialog } from "./BulkShareWithGroupsDialog";
-import { Film, Filter, X } from "lucide-react";
+import { Film, Filter, X, Info } from "lucide-react";
 
 const PAGE_SIZE = 20;
 const FILTERS_STORAGE_KEY = "watchFilters";
@@ -412,11 +412,28 @@ export function WatchList() {
 
                 {/* Bulk Edit toggle */}
                 {!isBulkMode ? (
-                    <Button onClick={enterBulkMode} variant="outline">Select Multiple</Button>
+                    <Button
+                        onClick={enterBulkMode}
+                        variant="outline"
+                        title="Select multiple movies to update privacy settings"
+                    >
+                        Select Multiple
+                    </Button>
                 ) : (
                     <Button onClick={exitBulkMode} variant="outline">Done</Button>
                 )}
             </div>
+
+            {/* Bulk Mode Banner */}
+            {isBulkMode && (
+                <div className="flex items-center gap-3 p-4 bg-primary/10 border border-primary/20 rounded-lg">
+                    <Info className="h-5 w-5 text-primary flex-shrink-0" />
+                    <div className="flex-1">
+                        <p className="text-sm font-medium text-primary">Bulk Edit Mode Active</p>
+                        <p className="text-xs text-muted-foreground">Select movies to update their privacy settings</p>
+                    </div>
+                </div>
+            )}
 
             {/* Collapsible filter panel */}
             {filtersOpen && (
@@ -598,7 +615,7 @@ export function WatchList() {
             ) : (
                 <>
                     {/* Watches Grid */}
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                    <div className={`grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 ${isBulkMode ? 'p-4 rounded-lg bg-muted/30' : ''}`}>
                         {filteredWatches.map(groupedWatch => (
                             <div key={groupedWatch.movieId} className="relative">
                                 {isBulkMode && (
