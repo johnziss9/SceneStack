@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { WatchList } from '@/components/WatchList';
@@ -9,7 +9,7 @@ import { AiSearchResults } from '@/components/AiSearchResults';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { AiSearchResponse } from '@/types/ai';
 
-export default function WatchedListPage() {
+function WatchedListContent() {
   const { user } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -78,5 +78,20 @@ export default function WatchedListPage() {
         )}
       </div>
     </main>
+  );
+}
+
+export default function WatchedListPage() {
+  return (
+    <Suspense fallback={
+      <main className="min-h-screen p-4 sm:p-8">
+        <div className="max-w-7xl mx-auto">
+          <h1 className="text-2xl sm:text-4xl font-bold mb-8">My Watches</h1>
+          <div className="text-muted-foreground">Loading...</div>
+        </div>
+      </main>
+    }>
+      <WatchedListContent />
+    </Suspense>
   );
 }

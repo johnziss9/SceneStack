@@ -20,7 +20,6 @@ import { BulkShareWithGroupsDialog } from "./BulkShareWithGroupsDialog";
 import { Film, Filter, X, Info } from "lucide-react";
 
 const PAGE_SIZE = 20;
-const FILTERS_STORAGE_KEY = "watchFilters";
 
 interface FilterState {
     search: string;
@@ -95,23 +94,8 @@ export function WatchList() {
     const router = useRouter();
     const searchParams = useSearchParams();
 
-    // Initialise filters from URL, fallback to localStorage
-    const [filters, setFilters] = useState<FilterState>(() => {
-        const fromUrl = readFiltersFromUrl(searchParams);
-        const hasUrlParams = Array.from(searchParams.keys()).some(k =>
-            Object.keys(DEFAULT_FILTERS).includes(k)
-        );
-        if (hasUrlParams) return fromUrl;
-        if (typeof window !== "undefined") {
-            try {
-                const stored = localStorage.getItem(FILTERS_STORAGE_KEY);
-                if (stored) return { ...DEFAULT_FILTERS, ...JSON.parse(stored) };
-            } catch {
-                // ignore
-            }
-        }
-        return DEFAULT_FILTERS;
-    });
+    // Initialise filters from URL params only
+    const [filters, setFilters] = useState<FilterState>(() => readFiltersFromUrl(searchParams));
 
     const [filtersOpen, setFiltersOpen] = useState(false);
     const [groupedWatches, setGroupedWatches] = useState<GroupedWatch[]>([]);
@@ -147,7 +131,7 @@ export function WatchList() {
         };
     }, [filters.search]);
 
-    // Persist filters to URL + localStorage whenever they change
+    // Persist filters to URL whenever they change
     useEffect(() => {
         const params = new URLSearchParams();
         if (filters.search) params.set("search", filters.search);
@@ -168,12 +152,6 @@ export function WatchList() {
         params.forEach((val, key) => existing.set(key, val));
 
         router.replace(`/watched?${existing.toString()}`, { scroll: false });
-
-        try {
-            localStorage.setItem(FILTERS_STORAGE_KEY, JSON.stringify(filters));
-        } catch {
-            // ignore
-        }
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [filters]);
 
@@ -248,7 +226,6 @@ export function WatchList() {
         setHasMore(false);
         setCurrentPage(1);
         setFilters(DEFAULT_FILTERS);
-        try { localStorage.removeItem(FILTERS_STORAGE_KEY); } catch { /* ignore */ }
     };
 
     const loadMore = async () => {
