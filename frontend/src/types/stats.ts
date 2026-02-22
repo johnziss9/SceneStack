@@ -35,6 +35,23 @@ export interface TopRewatchedMovie {
     watchCount: number;
 }
 
+export interface TopRatedMovie {
+    movie: {
+        id: number;
+        tmdbId: number;
+        title: string;
+        year: number | null;
+        posterPath: string | null;
+    };
+    averageRating: number;
+    watchCount: number;
+}
+
+export interface GenreItem {
+    genre: string;
+    count: number;
+}
+
 export interface UserStats {
     totalMovies: number;
     totalWatches: number;
@@ -46,4 +63,6 @@ export interface UserStats {
     watchesByDecade: WatchesByDecadeItem[];
     watchesByLocation: WatchLocationItem[];
     topRewatched: TopRewatchedMovie[];
+    topRatedMovies: TopRatedMovie[];
+    favoriteGenres: GenreItem[];
 }

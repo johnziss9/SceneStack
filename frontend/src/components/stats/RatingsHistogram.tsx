@@ -1,13 +1,15 @@
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Info } from 'lucide-react';
 import {
     BarChart,
     Bar,
     XAxis,
     YAxis,
     CartesianGrid,
-    Tooltip,
+    Tooltip as RechartsTooltip,
     ResponsiveContainer,
     Cell,
 } from 'recharts';
@@ -24,14 +26,28 @@ export function RatingsHistogram({ data, averageRating }: RatingsHistogramProps)
     return (
         <Card>
             <CardHeader>
-                <CardTitle className="text-base">
-                    Ratings Distribution
-                    {averageRating !== null && (
-                        <span className="ml-2 text-sm font-normal text-muted-foreground">
-                            avg {averageRating.toFixed(1)}
-                        </span>
-                    )}
-                </CardTitle>
+                <div className="flex items-center justify-between">
+                    <CardTitle className="text-base">
+                        Ratings Distribution
+                        {averageRating !== null && (
+                            <span className="ml-2 text-sm font-normal text-muted-foreground">
+                                avg {averageRating.toFixed(1)}
+                            </span>
+                        )}
+                    </CardTitle>
+                    <TooltipProvider delayDuration={300}>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <button type="button" className="focus:outline-none">
+                                    <Info className="h-4 w-4 text-muted-foreground hover:text-foreground transition-colors" />
+                                </button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                <p>Distribution of your ratings from 1-10</p>
+                            </TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
+                </div>
             </CardHeader>
             <CardContent>
                 {!hasRatings ? (
@@ -54,7 +70,7 @@ export function RatingsHistogram({ data, averageRating }: RatingsHistogramProps)
                                 tickLine={false}
                                 axisLine={false}
                             />
-                            <Tooltip
+                            <RechartsTooltip
                                 contentStyle={{
                                     background: 'hsl(var(--card))',
                                     border: '1px solid hsl(var(--border))',

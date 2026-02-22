@@ -159,7 +159,7 @@ export const MovieCard = memo(function MovieCard({ movie, onAddToWatched }: Movi
                     </Button>
                 ) : (
                     <Link href="/login" className="w-full">
-                        <Button variant="outline" className="w-full">
+                        <Button className="w-full">
                             Sign in to log watches
                         </Button>
                     </Link>

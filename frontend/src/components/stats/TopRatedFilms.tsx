@@ -2,27 +2,27 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Info } from 'lucide-react';
+import { Info, Star } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
-import type { TopRewatchedMovie } from '@/types/stats';
+import type { TopRatedMovie } from '@/types/stats';
 
-interface TopRewatchedProps {
-    data: TopRewatchedMovie[];
+interface TopRatedFilmsProps {
+    data: TopRatedMovie[];
 }
 
 const TMDB_IMAGE_BASE = 'https://image.tmdb.org/t/p/w92';
 
-export function TopRewatched({ data }: TopRewatchedProps) {
+export function TopRatedFilms({ data }: TopRatedFilmsProps) {
     if (!data.length) {
         return (
             <Card>
                 <CardHeader>
-                    <CardTitle className="text-base">Most Rewatched</CardTitle>
+                    <CardTitle className="text-base">Top Rated Films</CardTitle>
                 </CardHeader>
                 <CardContent>
                     <p className="text-sm text-muted-foreground text-center py-8">
-                        No rewatched films yet
+                        No rated films yet
                     </p>
                 </CardContent>
             </Card>
@@ -33,7 +33,7 @@ export function TopRewatched({ data }: TopRewatchedProps) {
         <Card>
             <CardHeader>
                 <div className="flex items-center justify-between">
-                    <CardTitle className="text-base">Most Rewatched</CardTitle>
+                    <CardTitle className="text-base">Top Rated Films</CardTitle>
                     <TooltipProvider delayDuration={300}>
                         <Tooltip>
                             <TooltipTrigger asChild>
@@ -42,7 +42,7 @@ export function TopRewatched({ data }: TopRewatchedProps) {
                                 </button>
                             </TooltipTrigger>
                             <TooltipContent>
-                                <p>Films you've watched multiple times</p>
+                                <p>Your highest-rated movies</p>
                             </TooltipContent>
                         </Tooltip>
                     </TooltipProvider>
@@ -88,10 +88,11 @@ export function TopRewatched({ data }: TopRewatchedProps) {
                                     )}
                                 </div>
 
-                                {/* Watch count */}
-                                <span className="shrink-0 text-sm font-semibold text-primary bg-secondary px-2 py-0.5 rounded">
-                                    ×{item.watchCount}
-                                </span>
+                                {/* Rating */}
+                                <div className="shrink-0 flex items-center gap-1 text-sm font-semibold text-primary bg-secondary px-2 py-0.5 rounded">
+                                    <Star className="h-3 w-3 fill-primary" />
+                                    <span>{item.averageRating}</span>
+                                </div>
                             </Link>
                         </li>
                     ))}

@@ -12,28 +12,33 @@ import {
     Tooltip as RechartsTooltip,
     ResponsiveContainer,
 } from 'recharts';
-import type { WatchesByMonthItem } from '@/types/stats';
+import type { WatchLocationItem } from '@/types/stats';
 
-interface WatchesByMonthProps {
-    data: WatchesByMonthItem[];
+interface WatchesByLocationProps {
+    data: WatchLocationItem[];
 }
 
-export function WatchesByMonth({ data }: WatchesByMonthProps) {
-    const currentYear = new Date().getFullYear();
-    const hasActivity = data.some((d) => d.count > 0);
+export function WatchesByLocation({ data }: WatchesByLocationProps) {
+    if (!data.length) {
+        return (
+            <Card>
+                <CardHeader>
+                    <CardTitle className="text-base">Watches by Location</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <p className="text-sm text-muted-foreground text-center py-8">
+                        No watch history yet
+                    </p>
+                </CardContent>
+            </Card>
+        );
+    }
 
     return (
         <Card>
             <CardHeader>
                 <div className="flex items-center justify-between">
-                    <CardTitle className="text-base">
-                        {currentYear} Activity
-                        {!hasActivity && (
-                            <span className="ml-2 text-sm font-normal text-muted-foreground">
-                                no watches yet this year
-                            </span>
-                        )}
-                    </CardTitle>
+                    <CardTitle className="text-base">Watches by Location</CardTitle>
                     <TooltipProvider delayDuration={300}>
                         <Tooltip>
                             <TooltipTrigger asChild>
@@ -42,7 +47,7 @@ export function WatchesByMonth({ data }: WatchesByMonthProps) {
                                 </button>
                             </TooltipTrigger>
                             <TooltipContent>
-                                <p>Monthly breakdown of your watches this year</p>
+                                <p>Where you watch films (Cinema, Home, etc.)</p>
                             </TooltipContent>
                         </Tooltip>
                     </TooltipProvider>
@@ -53,8 +58,8 @@ export function WatchesByMonth({ data }: WatchesByMonthProps) {
                     <BarChart data={data} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.15)" />
                         <XAxis
-                            dataKey="monthName"
-                            tick={{ fontSize: 11, fill: '#ffffff' }}
+                            dataKey="location"
+                            tick={{ fontSize: 12, fill: '#ffffff' }}
                             tickLine={false}
                             axisLine={false}
                         />
@@ -71,6 +76,7 @@ export function WatchesByMonth({ data }: WatchesByMonthProps) {
                                 borderRadius: '6px',
                                 fontSize: '13px',
                             }}
+                            labelFormatter={(v) => `Location: ${v}`}
                             formatter={(v) => [v as number, 'Watches']}
                             cursor={{ fill: 'rgba(255,255,255,0.05)' }}
                         />

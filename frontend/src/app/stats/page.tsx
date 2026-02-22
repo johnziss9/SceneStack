@@ -9,7 +9,11 @@ import { StatsOverview } from '@/components/stats/StatsOverview';
 import { RatingsHistogram } from '@/components/stats/RatingsHistogram';
 import { WatchesByYear } from '@/components/stats/WatchesByYear';
 import { WatchesByMonth } from '@/components/stats/WatchesByMonth';
+import { WatchesByDecade } from '@/components/stats/WatchesByDecade';
+import { WatchesByLocation } from '@/components/stats/WatchesByLocation';
 import { TopRewatched } from '@/components/stats/TopRewatched';
+import { TopRatedFilms } from '@/components/stats/TopRatedFilms';
+import { FavoriteGenres } from '@/components/stats/FavoriteGenres';
 import type { UserStats } from '@/types/stats';
 
 function StatsSkeleton() {
@@ -142,10 +146,30 @@ export default function StatsPage() {
                             <WatchesByYear data={stats.watchesByYear} />
                         )}
 
-                        {/* Most rewatched */}
-                        {stats.topRewatched.length > 0 && (
-                            <TopRewatched data={stats.topRewatched} />
+                        {/* Watches by decade + location */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {stats.watchesByDecade && stats.watchesByDecade.length > 0 && (
+                                <WatchesByDecade data={stats.watchesByDecade} />
+                            )}
+                            {stats.watchesByLocation && stats.watchesByLocation.length > 0 && (
+                                <WatchesByLocation data={stats.watchesByLocation} />
+                            )}
+                        </div>
+
+                        {/* Favorite genres (full width) */}
+                        {stats.favoriteGenres && stats.favoriteGenres.length > 0 && (
+                            <FavoriteGenres data={stats.favoriteGenres} />
                         )}
+
+                        {/* Top rated + Most rewatched */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {stats.topRatedMovies && stats.topRatedMovies.length > 0 && (
+                                <TopRatedFilms data={stats.topRatedMovies} />
+                            )}
+                            {stats.topRewatched && stats.topRewatched.length > 0 && (
+                                <TopRewatched data={stats.topRewatched} />
+                            )}
+                        </div>
                     </>
                 )}
             </div>

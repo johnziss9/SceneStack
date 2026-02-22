@@ -150,6 +150,77 @@ public class StatsService : IStatsService
             })
             .ToList();
 
+        // --- Top 10 highest-rated movies: get MovieId + average rating from SQL ---
+        var topRatedRaw = await _context.Watches
+            .Where(w => w.UserId == userId && w.Rating.HasValue)
+            .GroupBy(w => w.MovieId)
+            .Select(g => new
+            {
+                MovieId = g.Key,
+                AverageRating = g.Average(w => (double)w.Rating!.Value),
+                WatchCount = g.Count()
+            })
+            .OrderByDescending(x => x.AverageRating)
+            .ThenByDescending(x => x.WatchCount)
+            .Take(10)
+            .ToListAsync();
+
+        var topRatedMovieIds = topRatedRaw.Select(x => x.MovieId).ToList();
+        var topRatedMoviesDict = await _context.Movies
+            .Where(m => topRatedMovieIds.Contains(m.Id))
+            .ToDictionaryAsync(m => m.Id);
+
+        var topRatedMovies = topRatedRaw
+            .Where(x => topRatedMoviesDict.ContainsKey(x.MovieId))
+            .Select(x => new TopRatedMovie
+            {
+                AverageRating = Math.Round(x.AverageRating, 1),
+                WatchCount = x.WatchCount,
+                Movie = new MovieBasicInfo
+                {
+                    Id = topRatedMoviesDict[x.MovieId].Id,
+                    TmdbId = topRatedMoviesDict[x.MovieId].TmdbId,
+                    Title = topRatedMoviesDict[x.MovieId].Title,
+                    Year = topRatedMoviesDict[x.MovieId].Year,
+                    PosterPath = topRatedMoviesDict[x.MovieId].PosterPath,
+                    Synopsis = topRatedMoviesDict[x.MovieId].Synopsis,
+                    AiSynopsis = topRatedMoviesDict[x.MovieId].AiSynopsis
+                }
+            })
+            .ToList();
+
+        // --- Favorite genres: aggregate genres from all watched movies ---
+        var movieIdsForGenres = await _context.Watches
+            .Where(w => w.UserId == userId)
+            .Select(w => w.MovieId)
+            .Distinct()
+            .ToListAsync();
+
+        var moviesWithGenres = await _context.Movies
+            .Where(m => movieIdsForGenres.Contains(m.Id))
+            .Select(m => m.Genres)
+            .ToListAsync();
+
+        var genreCounts = new Dictionary<string, int>();
+        foreach (var genresList in moviesWithGenres)
+        {
+            if (genresList == null || genresList.Count == 0) continue;
+
+            foreach (var genre in genresList)
+            {
+                if (!string.IsNullOrWhiteSpace(genre))
+                {
+                    genreCounts[genre] = genreCounts.GetValueOrDefault(genre, 0) + 1;
+                }
+            }
+        }
+
+        var favoriteGenres = genreCounts
+            .OrderByDescending(x => x.Value)
+            .Take(10)
+            .Select(x => new GenreItem { Genre = x.Key, Count = x.Value })
+            .ToList();
+
         return new UserStatsResponse
         {
             TotalMovies = totalMovies,
@@ -161,7 +232,9 @@ public class StatsService : IStatsService
             WatchesByMonth = watchesByMonth,
             WatchesByDecade = watchesByDecade,
             WatchesByLocation = watchesByLocation,
-            TopRewatched = topRewatched
+            TopRewatched = topRewatched,
+            TopRatedMovies = topRatedMovies,
+            FavoriteGenres = favoriteGenres
         };
     }
 
@@ -185,6 +258,8 @@ public class StatsService : IStatsService
             .ToList(),
         WatchesByDecade = new List<WatchesByDecadeItem>(),
         WatchesByLocation = new List<WatchLocationItem>(),
-        TopRewatched = new List<TopRewatchedMovie>()
+        TopRewatched = new List<TopRewatchedMovie>(),
+        TopRatedMovies = new List<TopRatedMovie>(),
+        FavoriteGenres = new List<GenreItem>()
     };
 }

@@ -12,6 +12,8 @@ public class UserStatsResponse
     public List<WatchesByDecadeItem> WatchesByDecade { get; set; } = new();
     public List<WatchLocationItem> WatchesByLocation { get; set; } = new();
     public List<TopRewatchedMovie> TopRewatched { get; set; } = new();
+    public List<TopRatedMovie> TopRatedMovies { get; set; } = new();
+    public List<GenreItem> FavoriteGenres { get; set; } = new();
 }
 
 public class RatingDistributionItem
@@ -49,4 +51,17 @@ public class TopRewatchedMovie
 {
     public MovieBasicInfo Movie { get; set; } = null!;
     public int WatchCount { get; set; }
+}
+
+public class TopRatedMovie
+{
+    public MovieBasicInfo Movie { get; set; } = null!;
+    public double AverageRating { get; set; }
+    public int WatchCount { get; set; }
+}
+
+public class GenreItem
+{
+    public string Genre { get; set; } = string.Empty;
+    public int Count { get; set; }
 }
