@@ -13,6 +13,7 @@ import { watchApi } from '@/lib';
 import type { TmdbMovie, CreateWatchRequest, GroupBasicInfo } from '@/types';
 import { groupApi } from '@/lib/api';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Slider } from '@/components/ui/slider';
 import { toast } from 'sonner';
 
 interface WatchFormProps {
@@ -91,19 +92,12 @@ export function WatchForm({ movie, open, onOpenChange, onSuccess }: WatchFormPro
             isValid = false;
         }
 
-        // Validate rating (1-10 if provided, only whole numbers or .5)
+        // Validate rating (1-10 if provided, slider enforces 0.5 steps)
         if (rating) {
             const ratingNum = parseFloat(rating);
             if (isNaN(ratingNum) || ratingNum < 1 || ratingNum > 10) {
                 setRatingError('Rating must be between 1 and 10');
                 isValid = false;
-            } else {
-                // Check if it's a whole number or ends in .5
-                const decimal = ratingNum % 1;
-                if (decimal !== 0 && decimal !== 0.5) {
-                    setRatingError('Rating must be a whole number or end in .5 (e.g., 7, 7.5, 8)');
-                    isValid = false;
-                }
             }
         }
 
@@ -241,36 +235,31 @@ export function WatchForm({ movie, open, onOpenChange, onSuccess }: WatchFormPro
                     </div>
 
                     {/* Rating */}
-                    <div className="space-y-2">
-                        <Label htmlFor="rating">Rating (1-10)</Label>
-                        <Input
-                            id="rating"
-                            type="number"
-                            step="0.5"
-                            min="1"
-                            max="10"
-                            value={rating}
-                            onChange={(e) => {
-                                setRating(e.target.value);
-                                setRatingError(null); // Clear error on change
+                    <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                            <Label>Rating <span className="text-muted-foreground">(Optional)</span></Label>
+                            {rating && (
+                                <div className="text-sm font-semibold text-foreground">
+                                    {rating}/10
+                                </div>
+                            )}
+                        </div>
+                        <Slider
+                            value={[rating ? parseFloat(rating) : 5]}
+                            onValueChange={(value) => {
+                                setRating(value[0].toString());
+                                setRatingError(null);
                             }}
-                            onBlur={() => {
-                                if (rating) {
-                                    const ratingNum = parseFloat(rating);
-                                    if (isNaN(ratingNum) || ratingNum < 1 || ratingNum > 10) {
-                                        setRatingError('Rating must be between 1 and 10');
-                                    } else {
-                                        // Check if it's a whole number or ends in .5
-                                        const decimal = ratingNum % 1;
-                                        if (decimal !== 0 && decimal !== 0.5) {
-                                            setRatingError('Rating must be a whole number or end in .5 (e.g., 7, 7.5, 8)');
-                                        }
-                                    }
-                                }
-                            }}
-                            placeholder="Optional"
-                            className={ratingError ? 'border-destructive' : ''}
+                            min={1}
+                            max={10}
+                            step={0.5}
+                            className="py-4"
                         />
+                        <div className="flex justify-between text-xs text-muted-foreground px-0.5">
+                            <span>1</span>
+                            <span>5</span>
+                            <span>10</span>
+                        </div>
                         {ratingError && (
                             <p className="text-sm text-destructive">{ratingError}</p>
                         )}
