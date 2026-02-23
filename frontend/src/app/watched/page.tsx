@@ -7,6 +7,7 @@ import { WatchList } from '@/components/WatchList';
 import { AiSearchBar } from '@/components/AiSearchBar';
 import { AiSearchResults } from '@/components/AiSearchResults';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Lock, Users } from 'lucide-react';
 import type { AiSearchResponse } from '@/types/ai';
 
 function WatchedListContent() {
@@ -44,7 +45,7 @@ function WatchedListContent() {
   return (
     <main className="min-h-screen p-4 sm:p-8">
       <div className="max-w-7xl mx-auto">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
           <div>
             <h1 className="text-2xl sm:text-4xl font-bold mb-2">My Watches</h1>
             <p className="text-muted-foreground">
@@ -61,6 +62,22 @@ function WatchedListContent() {
               </TabsList>
             </Tabs>
           )}
+        </div>
+
+        {/* Privacy Icon Legend */}
+        <div className="flex items-center gap-4 text-sm text-muted-foreground mb-8">
+          <div className="flex items-center gap-1.5">
+            <div className="bg-primary text-primary-foreground p-1 rounded-full">
+              <Lock className="w-3 h-3" strokeWidth={2.5} />
+            </div>
+            <span>Private</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <div className="bg-primary text-primary-foreground p-1 rounded-full">
+              <Users className="w-3 h-3" strokeWidth={2.5} />
+            </div>
+            <span>Shared with groups</span>
+          </div>
         </div>
 
         {/* Regular mode: show normal watch list */}

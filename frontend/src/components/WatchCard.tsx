@@ -3,6 +3,7 @@
 import { memo } from "react";
 import { GroupedWatch } from "@/types/watch";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Eye, Lock, Users } from "lucide-react";
 import Link from "next/link";
 
@@ -35,7 +36,8 @@ export const WatchCard = memo(function WatchCard({ groupedWatch }: WatchCardProp
     const hasShared = watches.some(w => !w.isPrivate && w.groupIds && w.groupIds.length > 0);
 
     return (
-        <Link href={`/watched/${movie.id}`} className="flex flex-col h-full">
+        <TooltipProvider>
+            <Link href={`/watched/${movie.id}`} className="flex flex-col h-full">
             <Card className="flex flex-col h-full overflow-hidden transition-all hover:ring-2 hover:ring-primary duration-200">
                 <CardHeader className="p-0">
                     <div className="aspect-[2/3] bg-muted relative">
@@ -85,14 +87,28 @@ export const WatchCard = memo(function WatchCard({ groupedWatch }: WatchCardProp
 
                         {/* Privacy indicator */}
                         {allPrivate && (
-                            <div className="bg-primary text-primary-foreground p-1.5 rounded-full">
-                                <Lock className="w-3.5 h-3.5" strokeWidth={2.5} />
-                            </div>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <div className="bg-primary text-primary-foreground p-1.5 rounded-full">
+                                        <Lock className="w-3.5 h-3.5" strokeWidth={2.5} />
+                                    </div>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    <p>This watch is private</p>
+                                </TooltipContent>
+                            </Tooltip>
                         )}
                         {!allPrivate && hasShared && (
-                            <div className="bg-primary text-primary-foreground p-1.5 rounded-full">
-                                <Users className="w-3.5 h-3.5" strokeWidth={2.5} />
-                            </div>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <div className="bg-primary text-primary-foreground p-1.5 rounded-full">
+                                        <Users className="w-3.5 h-3.5" strokeWidth={2.5} />
+                                    </div>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    <p>Shared with groups</p>
+                                </TooltipContent>
+                            </Tooltip>
                         )}
                     </div>
 
@@ -110,5 +126,6 @@ export const WatchCard = memo(function WatchCard({ groupedWatch }: WatchCardProp
                 </CardContent>
             </Card>
         </Link>
+        </TooltipProvider>
     );
 });
