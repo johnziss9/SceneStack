@@ -200,11 +200,21 @@ export default function ProfilePage() {
         <div className="min-h-screen p-4 sm:p-8">
             <div className="max-w-4xl mx-auto space-y-8">
                 {/* Header */}
-                <div>
-                    <h1 className="text-2xl sm:text-4xl font-bold">Profile</h1>
-                    <p className="text-muted-foreground mt-2">
-                        Manage your account settings
-                    </p>
+                <div className="flex items-center justify-between gap-4">
+                    <div>
+                        <h1 className="text-2xl sm:text-4xl font-bold">Profile</h1>
+                        <p className="text-muted-foreground mt-2">
+                            Manage your account settings
+                        </p>
+                    </div>
+                    <Button
+                        variant="outline"
+                        onClick={handleLogout}
+                        className="flex-shrink-0 mr-4"
+                    >
+                        <LogOut className="h-4 w-4 mr-2" />
+                        Sign Out
+                    </Button>
                 </div>
 
                 {/* Tabs */}
@@ -429,10 +439,10 @@ export default function ProfilePage() {
                             <CardTitle className="text-destructive">Danger Zone</CardTitle>
                         </div>
                         <CardDescription>
-                            Irreversible and destructive actions
+                            Permanent account deletion
                         </CardDescription>
                     </CardHeader>
-                    <CardContent className="space-y-4">
+                    <CardContent>
                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-4 border border-destructive/50 rounded-lg">
                             <div>
                                 <h3 className="font-semibold">Delete Account</h3>
@@ -447,23 +457,6 @@ export default function ProfilePage() {
                             >
                                 <Trash2 className="h-4 w-4 mr-2" />
                                 Delete Account
-                            </Button>
-                        </div>
-
-                        <div className="flex items-center justify-between p-4 border rounded-lg">
-                            <div>
-                                <h3 className="font-semibold">Sign Out</h3>
-                                <p className="text-sm text-muted-foreground">
-                                    Sign out of your account on this device
-                                </p>
-                            </div>
-                            <Button
-                                variant="outline"
-                                onClick={handleLogout}
-                                className="w-full sm:w-auto"
-                            >
-                                <LogOut className="h-4 w-4 mr-2" />
-                                Sign Out
                             </Button>
                         </div>
                     </CardContent>

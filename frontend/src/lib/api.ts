@@ -169,7 +169,7 @@ export const aiApi = {
 export const groupApi = {
     // GET: api/groups
     getUserGroups: () =>
-        api.get<GroupBasicInfo[]>('/api/groups'),
+        api.get<Group[]>('/api/groups'),
 
     // GET: api/groups/{id}
     getGroup: (id: number) =>

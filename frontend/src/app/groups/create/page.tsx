@@ -64,7 +64,7 @@ export default function CreateGroupPage() {
             // Check if it's a free tier limit error
             if (err instanceof Error && err.message?.includes("limit")) {
                 toast.error("Cannot create group", {
-                    description: "You've reached the free tier limit of 1 created group",
+                    description: "You've reached the free tier limit. Upgrade to Premium for unlimited groups.",
                 });
             } else {
                 toast.error("Failed to create group", {
@@ -148,7 +148,7 @@ export default function CreateGroupPage() {
                             {!user?.isPremium && (
                                 <div className="bg-muted p-4 rounded-lg">
                                     <p className="text-sm text-muted-foreground">
-                                        <strong>Free tier:</strong> You can create 1 group and join 2 others (3 groups total)
+                                        <strong>Free tier:</strong> You can create 1 group and join 1 other (2 groups total)
                                     </p>
                                 </div>
                             )}

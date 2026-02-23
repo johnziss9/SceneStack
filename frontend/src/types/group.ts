@@ -29,6 +29,8 @@ export interface GroupBasicInfo {
     id: number;
     name: string;
     memberCount: number;
+    createdById?: number; // Added to support group limit checks
+    members?: GroupMember[]; // Added to support role checks
 }
 
 // Matches GroupResponse from backend
@@ -45,6 +47,7 @@ export interface Group {
     createdAt: string; // ISO date string
     updatedAt: string; // ISO date string
     members: GroupMember[];
+    memberCount: number;
 }
 
 // Matches CreateGroupRequest from backend

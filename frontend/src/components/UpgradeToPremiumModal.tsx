@@ -7,7 +7,7 @@ import { Sparkles, Search, BarChart3, FolderOpen } from 'lucide-react';
 interface UpgradeToPremiumModalProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
-    feature?: 'insights' | 'search';
+    feature?: 'insights' | 'search' | 'groups';
 }
 
 export function UpgradeToPremiumModal({
@@ -19,6 +19,7 @@ export function UpgradeToPremiumModal({
     const featureMessages = {
         insights: 'AI Insights help you remember your personal journey with each film.',
         search: 'AI Search lets you find watches using natural language queries.',
+        groups: 'Create and join unlimited groups to share your movie watching experience.',
     };
 
     const handleUpgrade = () => {

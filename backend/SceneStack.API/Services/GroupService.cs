@@ -399,11 +399,11 @@ public class GroupService : IGroupService
         if (user.IsPremium)
             return true;
 
-        // Free users can join 2 additional groups (plus 1 they created = 3 total)
+        // Free users can join 1 additional group (plus 1 they created = 2 total)
         var joinedGroupsCount = await _context.GroupMembers
             .CountAsync(gm => gm.UserId == userId && gm.Role != GroupRole.Creator);
 
-        return joinedGroupsCount < 2;
+        return joinedGroupsCount < 1;
     }
 
     public async Task<GroupStatsResponse?> GetGroupStatsAsync(int groupId, int requestingUserId)

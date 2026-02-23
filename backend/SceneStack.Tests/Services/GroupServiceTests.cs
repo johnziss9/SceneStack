@@ -351,19 +351,16 @@ public class GroupServiceTests
         // Free user creates their 1 allowed group
         await service.CreateAsync(freeUser.Id, new CreateGroupRequest { Name = "My Group" });
 
-        // Create 2 more groups and add free user to them (reaches join limit of 2)
+        // Create 1 more group and add free user to it (reaches join limit of 1)
         var group1 = await service.CreateAsync(creator.Id, new CreateGroupRequest { Name = "Group 1" });
         await service.AddMemberAsync(group1.Id, creator.Id, new AddMemberRequest { UserId = freeUser.Id });
 
+        // Try to add to 2nd group (should fail - total would be 2 groups, join limit exceeded)
         var group2 = await service.CreateAsync(creator.Id, new CreateGroupRequest { Name = "Group 2" });
-        await service.AddMemberAsync(group2.Id, creator.Id, new AddMemberRequest { UserId = freeUser.Id });
-
-        // Try to add to 3rd group (should fail - total would be 3 groups)
-        var group3 = await service.CreateAsync(creator.Id, new CreateGroupRequest { Name = "Group 3" });
 
         // Act & Assert
         await Assert.ThrowsAsync<InvalidOperationException>(
-            async () => await service.AddMemberAsync(group3.Id, creator.Id, new AddMemberRequest { UserId = freeUser.Id })
+            async () => await service.AddMemberAsync(group2.Id, creator.Id, new AddMemberRequest { UserId = freeUser.Id })
         );
     }
 
@@ -644,7 +641,7 @@ public class GroupServiceTests
     }
 
     [Fact]
-    public async Task CanUserJoinGroupAsync_FreeUserHasTwoJoinedGroups_ReturnsFalse()
+    public async Task CanUserJoinGroupAsync_FreeUserHasOneJoinedGroup_ReturnsFalse()
     {
         // Arrange
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
@@ -657,12 +654,9 @@ public class GroupServiceTests
         // Free user creates their own group
         await service.CreateAsync(freeUser.Id, new CreateGroupRequest { Name = "My Group" });
 
-        // Add free user to 2 other groups (reaches limit)
+        // Add free user to 1 other group (reaches limit of 1 joined)
         var group1 = await service.CreateAsync(creator.Id, new CreateGroupRequest { Name = "Group 1" });
         await service.AddMemberAsync(group1.Id, creator.Id, new AddMemberRequest { UserId = freeUser.Id });
-
-        var group2 = await service.CreateAsync(creator.Id, new CreateGroupRequest { Name = "Group 2" });
-        await service.AddMemberAsync(group2.Id, creator.Id, new AddMemberRequest { UserId = freeUser.Id });
 
         // Act
         var result = await service.CanUserJoinGroupAsync(freeUser.Id);
