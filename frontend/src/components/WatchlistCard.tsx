@@ -20,7 +20,7 @@ import { WatchForm } from '@/components/WatchForm';
 import { watchlistApi } from '@/lib/api';
 import { useWatchlist } from '@/contexts/WatchlistContext';
 import type { WatchlistItem, TmdbMovie } from '@/types';
-import { toast } from 'sonner';
+import { toast } from '@/lib/toast';
 
 interface WatchlistCardProps {
     item: WatchlistItem;

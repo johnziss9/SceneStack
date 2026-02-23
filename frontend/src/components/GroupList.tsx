@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { GroupBasicInfo } from "@/types";
 import { groupApi } from "@/lib/api";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Users, Plus } from "lucide-react";
 import Link from "next/link";

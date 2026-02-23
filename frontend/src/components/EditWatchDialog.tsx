@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { watchApi } from '@/lib';
 import type { Watch, UpdateWatchRequest } from '@/types';
-import { toast } from 'sonner';
+import { toast } from '@/lib/toast';
 import {
     Dialog,
     DialogContent,

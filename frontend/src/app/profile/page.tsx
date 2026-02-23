@@ -25,7 +25,7 @@ import { AiUsageStats } from '@/components/AiUsageStats';
 import { PrivacySettings } from '@/components/PrivacySettings';
 import { useState } from 'react';
 import { userApi } from '@/lib/api';
-import { toast } from 'sonner';
+import { toast } from '@/lib/toast';
 import { Badge } from '@/components/ui/badge';
 
 export default function ProfilePage() {

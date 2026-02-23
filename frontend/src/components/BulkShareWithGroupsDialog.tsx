@@ -15,7 +15,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle, Loader2, Users } from "lucide-react";
 import { groupApi } from "@/lib/api";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import type { GroupBasicInfo } from "@/types";
 
 interface BulkShareWithGroupsDialogProps {

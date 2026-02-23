@@ -10,7 +10,7 @@ import { useWatchlist } from '@/contexts/WatchlistContext';
 import { WatchForm } from '@/components/WatchForm';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { toast } from 'sonner';
+import { toast } from '@/lib/toast';
 import {
     ArrowLeft,
     Star,
@@ -108,7 +108,7 @@ export function MovieDetailClient({ params }: MovieDetailPageProps) {
     const handleWatchSuccess = async () => {
         if (!tmdbId) return;
         setIsWatchFormOpen(false);
-        toast.success('Watch logged!');
+        // Toast is shown by WatchForm component
         if (user) {
             const refreshed = await movieApi.getMyStatus(tmdbId);
             setStatus(refreshed);

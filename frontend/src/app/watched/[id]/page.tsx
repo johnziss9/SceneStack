@@ -23,7 +23,7 @@ import EditWatchDialog from '@/components/EditWatchDialog';
 import { WatchForm } from '@/components/WatchForm';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Plus, AlertCircle, BookmarkPlus, BookmarkCheck } from 'lucide-react';
-import { toast } from 'sonner';
+import { toast } from '@/lib/toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { MovieInsight } from '@/components/MovieInsight';
 import { useAuth } from '@/contexts/AuthContext';

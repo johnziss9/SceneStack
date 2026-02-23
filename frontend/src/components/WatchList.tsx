@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { GroupedWatch, GetGroupedWatchesParams } from "@/types/watch";
 import { watchApi } from "@/lib";
 import { WatchCard } from "./WatchCard";
-import { toast } from "sonner";
+import { toast } from "@/lib/toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";

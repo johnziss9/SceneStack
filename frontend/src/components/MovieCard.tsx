@@ -10,7 +10,7 @@ import Link from 'next/link';
 import type { TmdbMovie } from '@/types';
 import { movieApi, watchlistApi } from '@/lib/api';
 import { ApiError, PremiumRequiredError } from '@/lib/api-client';
-import { toast } from 'sonner';
+import { toast } from '@/lib/toast';
 
 interface MovieCardProps {
     movie: TmdbMovie;

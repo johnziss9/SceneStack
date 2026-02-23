@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -14,7 +15,7 @@ import type { TmdbMovie, CreateWatchRequest, GroupBasicInfo } from '@/types';
 import { groupApi } from '@/lib/api';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Slider } from '@/components/ui/slider';
-import { toast } from 'sonner';
+import { toast } from '@/lib/toast';
 
 interface WatchFormProps {
     movie: TmdbMovie | null;
@@ -25,6 +26,7 @@ interface WatchFormProps {
 
 export function WatchForm({ movie, open, onOpenChange, onSuccess }: WatchFormProps) {
     const { user } = useAuth();
+    const router = useRouter();
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -151,8 +153,11 @@ export function WatchForm({ movie, open, onOpenChange, onSuccess }: WatchFormPro
             // Success! Reset form and close dialog
             resetForm();
             onOpenChange(false);
-            toast.success('Watch logged successfully!', {
-                description: `Added ${movie.title} to your watched list`,
+            toast.success(`${movie.title} added to watched list`, {
+                action: {
+                    label: 'View All',
+                    onClick: () => router.push('/watched'),
+                },
             });
             onSuccess();
         } catch (err) {
