@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -18,7 +19,7 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { LogOut, User as UserIcon, Edit, Save, X, Lock, Trash2, Shield } from 'lucide-react';
+import { LogOut, User as UserIcon, Edit, Save, X, Lock, Trash2, Shield, Settings as SettingsIcon } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { AiUsageStats } from '@/components/AiUsageStats';
 import { PrivacySettings } from '@/components/PrivacySettings';
@@ -197,7 +198,7 @@ export default function ProfilePage() {
 
     return (
         <div className="min-h-screen p-4 sm:p-8">
-            <div className="max-w-2xl mx-auto space-y-8">
+            <div className="max-w-4xl mx-auto space-y-8">
                 {/* Header */}
                 <div>
                     <h1 className="text-2xl sm:text-4xl font-bold">Profile</h1>
@@ -206,8 +207,30 @@ export default function ProfilePage() {
                     </p>
                 </div>
 
-                {/* User Info Card */}
-                <Card>
+                {/* Tabs */}
+                <Tabs defaultValue="profile" className="w-full">
+                    <TabsList className="grid w-full grid-cols-4 mb-8">
+                        <TabsTrigger value="profile">
+                            <UserIcon className="h-4 w-4 mr-2" />
+                            Profile
+                        </TabsTrigger>
+                        <TabsTrigger value="security">
+                            <Lock className="h-4 w-4 mr-2" />
+                            Security
+                        </TabsTrigger>
+                        <TabsTrigger value="privacy">
+                            <Shield className="h-4 w-4 mr-2" />
+                            Privacy
+                        </TabsTrigger>
+                        <TabsTrigger value="settings">
+                            <SettingsIcon className="h-4 w-4 mr-2" />
+                            Settings
+                        </TabsTrigger>
+                    </TabsList>
+
+                    {/* Profile Tab */}
+                    <TabsContent value="profile" className="space-y-6">
+                        <Card>
                     <CardHeader>
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
@@ -328,10 +351,12 @@ export default function ProfilePage() {
                             </>
                         )}
                     </CardContent>
-                </Card>
+                        </Card>
+                    </TabsContent>
 
-                {/* Change Password Card */}
-                <Card>
+                    {/* Security Tab */}
+                    <TabsContent value="security" className="space-y-6">
+                        <Card>
                     <CardHeader>
                         <div className="flex items-center gap-2">
                             <Lock className="h-5 w-5 text-primary" />
@@ -383,16 +408,21 @@ export default function ProfilePage() {
                             {isChangingPassword ? 'Updating...' : 'Update Password'}
                         </Button>
                     </CardContent>
-                </Card>
+                        </Card>
+                    </TabsContent>
 
-                {/* Privacy Settings */}
-                <PrivacySettings />
+                    {/* Privacy Tab */}
+                    <TabsContent value="privacy" className="space-y-6">
+                        <PrivacySettings />
+                    </TabsContent>
 
-                {/* AI Usage Stats (premium only) */}
-                {(user as any)?.isPremium && <AiUsageStats />}
+                    {/* Settings Tab */}
+                    <TabsContent value="settings" className="space-y-6">
+                        {/* AI Usage Stats (premium only) */}
+                        {(user as any)?.isPremium && <AiUsageStats />}
 
-                {/* Danger Zone Card */}
-                <Card className="border-destructive">
+                        {/* Danger Zone Card */}
+                        <Card className="border-destructive">
                     <CardHeader>
                         <div className="flex items-center gap-2">
                             <Shield className="h-5 w-5 text-destructive" />
@@ -437,17 +467,9 @@ export default function ProfilePage() {
                             </Button>
                         </div>
                     </CardContent>
-                </Card>
-
-                {/* Back to Home */}
-                <div className="text-center">
-                    <Button
-                        variant="ghost"
-                        onClick={() => router.push('/')}
-                    >
-                        Back to Home
-                    </Button>
-                </div>
+                        </Card>
+                    </TabsContent>
+                </Tabs>
             </div>
 
             {/* Delete Account Dialog */}
