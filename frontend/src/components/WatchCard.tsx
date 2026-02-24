@@ -1,10 +1,13 @@
 "use client";
 
-import { memo } from "react";
+import { memo, useState } from "react";
 import { GroupedWatch } from "@/types/watch";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Eye, Lock, Users } from "lucide-react";
+import { Eye, Lock, Users, Sparkles } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { UpgradeToPremiumModal } from "./UpgradeToPremiumModal";
+import { useAuth } from "@/contexts/AuthContext";
 import Link from "next/link";
 
 interface WatchCardProps {
@@ -12,6 +15,8 @@ interface WatchCardProps {
 }
 
 export const WatchCard = memo(function WatchCard({ groupedWatch }: WatchCardProps) {
+    const { user } = useAuth();
+    const [showUpgradeModal, setShowUpgradeModal] = useState(false);
     const { movie, watchCount, averageRating, watches } = groupedWatch;
 
     // Format rating to show whole numbers without decimals, or .5 ratings
@@ -123,9 +128,49 @@ export const WatchCard = memo(function WatchCard({ groupedWatch }: WatchCardProp
                             <p className="truncate">With: {lastWatch.watchedWith}</p>
                         )}
                     </div>
+
+                    {/* AI Insight Teaser */}
+                    {!user?.isPremium && (
+                        <div className="pt-2 mt-2 border-t">
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <div
+                                        onClick={(e) => {
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                            setShowUpgradeModal(true);
+                                        }}
+                                        className="cursor-pointer"
+                                    >
+                                        <Badge
+                                            variant="secondary"
+                                            className="w-full justify-center gap-1.5 bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                                        >
+                                            <Sparkles className="w-3 h-3" />
+                                            AI Insight
+                                            <Lock className="w-3 h-3" />
+                                        </Badge>
+                                    </div>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    <p>Get AI-powered personalized insights</p>
+                                    <p className="text-xs text-muted-foreground">Premium feature</p>
+                                </TooltipContent>
+                            </Tooltip>
+                        </div>
+                    )}
                 </CardContent>
             </Card>
         </Link>
+
+        {/* Upgrade Modal (for free users) */}
+        {!user?.isPremium && (
+            <UpgradeToPremiumModal
+                open={showUpgradeModal}
+                onOpenChange={setShowUpgradeModal}
+                feature="insights"
+            />
+        )}
         </TooltipProvider>
     );
 });

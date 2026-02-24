@@ -19,7 +19,7 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { LogOut, User as UserIcon, Edit, Save, X, Lock, Trash2, Shield, Settings as SettingsIcon } from 'lucide-react';
+import { LogOut, User as UserIcon, Edit, Save, X, Lock, Trash2, Shield, Settings as SettingsIcon, Sparkles, Crown, Zap, Users as UsersIcon, Search } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { AiUsageStats } from '@/components/AiUsageStats';
 import { PrivacySettings } from '@/components/PrivacySettings';
@@ -27,6 +27,7 @@ import { useState } from 'react';
 import { userApi } from '@/lib/api';
 import { toast } from '@/lib/toast';
 import { Badge } from '@/components/ui/badge';
+import { UpgradeToPremiumModal } from '@/components/UpgradeToPremiumModal';
 
 export default function ProfilePage() {
     const { user, logout, loading, refreshUser } = useAuth();
@@ -50,6 +51,9 @@ export default function ProfilePage() {
     const [showDeleteDialog, setShowDeleteDialog] = useState(false);
     const [deletePassword, setDeletePassword] = useState('');
     const [isDeleting, setIsDeleting] = useState(false);
+
+    // Upgrade modal state
+    const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
     const handleEditClick = () => {
         setEditUsername(user?.username || '');
@@ -362,6 +366,139 @@ export default function ProfilePage() {
                         )}
                     </CardContent>
                         </Card>
+
+                        {/* Subscription Card */}
+                        <Card>
+                            <CardHeader>
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        {(user as any)?.isPremium ? (
+                                            <Crown className="h-5 w-5 text-primary" />
+                                        ) : (
+                                            <Sparkles className="h-5 w-5 text-primary" />
+                                        )}
+                                        <CardTitle>Subscription</CardTitle>
+                                    </div>
+                                    {(user as any)?.isPremium && (
+                                        <Badge variant="default" className="bg-gradient-to-r from-purple-500 to-pink-500">
+                                            Premium
+                                        </Badge>
+                                    )}
+                                </div>
+                                <CardDescription>
+                                    {(user as any)?.isPremium
+                                        ? 'Manage your premium subscription'
+                                        : 'Upgrade to unlock premium features'}
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                {(user as any)?.isPremium ? (
+                                    <>
+                                        {/* Premium User View */}
+                                        <div className="space-y-2">
+                                            <Label className="text-muted-foreground">Current Plan</Label>
+                                            <p className="text-lg font-semibold text-primary">Premium</p>
+                                        </div>
+
+                                        <div className="space-y-3 pt-2">
+                                            <Label className="text-muted-foreground">Your Benefits</Label>
+                                            <div className="grid gap-2">
+                                                <div className="flex items-center gap-2 text-sm">
+                                                    <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                                                    <span>Unlimited AI-powered search</span>
+                                                </div>
+                                                <div className="flex items-center gap-2 text-sm">
+                                                    <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                                                    <span>Personalized AI insights for every watch</span>
+                                                </div>
+                                                <div className="flex items-center gap-2 text-sm">
+                                                    <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                                                    <span>Create and join unlimited groups</span>
+                                                </div>
+                                                <div className="flex items-center gap-2 text-sm">
+                                                    <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                                                    <span>Unlimited watchlist</span>
+                                                </div>
+                                                <div className="flex items-center gap-2 text-sm">
+                                                    <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                                                    <span>Priority support</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <>
+                                        {/* Free User View */}
+                                        <div className="space-y-2">
+                                            <Label className="text-muted-foreground">Current Plan</Label>
+                                            <p className="text-lg font-semibold">Free</p>
+                                        </div>
+
+                                        <div className="p-4 border-2 border-primary/20 rounded-lg bg-gradient-to-br from-primary/5 via-background to-background space-y-4">
+                                            <div className="flex items-center gap-2">
+                                                <Sparkles className="h-5 w-5 text-primary" />
+                                                <h3 className="font-semibold">Upgrade to Premium</h3>
+                                            </div>
+
+                                            <div className="space-y-3">
+                                                <div className="flex items-start gap-3 text-sm">
+                                                    <Search className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
+                                                    <div>
+                                                        <p className="font-medium">AI-Powered Search</p>
+                                                        <p className="text-muted-foreground text-xs">
+                                                            Find movies using natural language queries
+                                                        </p>
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex items-start gap-3 text-sm">
+                                                    <Zap className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
+                                                    <div>
+                                                        <p className="font-medium">Personalized AI Insights</p>
+                                                        <p className="text-muted-foreground text-xs">
+                                                            Get AI-generated insights for every watch
+                                                        </p>
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex items-start gap-3 text-sm">
+                                                    <UsersIcon className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
+                                                    <div>
+                                                        <p className="font-medium">Unlimited Groups</p>
+                                                        <p className="text-muted-foreground text-xs">
+                                                            Create and join unlimited groups
+                                                        </p>
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex items-start gap-3 text-sm">
+                                                    <Crown className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
+                                                    <div>
+                                                        <p className="font-medium">Unlimited Watchlist</p>
+                                                        <p className="text-muted-foreground text-xs">
+                                                            Save as many movies as you want
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div className="pt-2 space-y-3">
+                                                <Button
+                                                    onClick={() => setShowUpgradeModal(true)}
+                                                    className="w-full"
+                                                >
+                                                    <Sparkles className="h-4 w-4 mr-2" />
+                                                    Upgrade to Premium
+                                                </Button>
+                                                <p className="text-center text-sm text-muted-foreground">
+                                                    Starting at <span className="font-semibold text-primary">£5/month</span>
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </>
+                                )}
+                            </CardContent>
+                        </Card>
                     </TabsContent>
 
                     {/* Security Tab */}
@@ -511,6 +648,13 @@ export default function ProfilePage() {
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
+
+            {/* Upgrade Modal */}
+            <UpgradeToPremiumModal
+                open={showUpgradeModal}
+                onOpenChange={setShowUpgradeModal}
+                feature="search"
+            />
         </div>
     );
 }

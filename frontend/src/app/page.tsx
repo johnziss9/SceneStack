@@ -6,11 +6,12 @@ import { useRouter } from 'next/navigation';
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Film, TrendingUp, Eye, Users, ArrowRight, Sparkles, Crown } from 'lucide-react';
+import { Film, TrendingUp, Eye, Users, ArrowRight, Sparkles, Crown, Zap } from 'lucide-react';
 import { MovieSearchBar } from "@/components/MovieSearchBar";
 import { MovieCard } from "@/components/MovieCard";
 import { WatchCard } from "@/components/WatchCard";
 import { WatchForm } from "@/components/WatchForm";
+import { UpgradeToPremiumModal } from "@/components/UpgradeToPremiumModal";
 import { useAuth } from "@/contexts/AuthContext";
 import { watchApi } from "@/lib";
 import type { TmdbMovie, GroupedWatch } from '@/types';
@@ -22,6 +23,7 @@ export default function Home() {
   const [selectedMovie, setSelectedMovie] = useState<TmdbMovie | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
   // Logged-in user data
   const [recentWatches, setRecentWatches] = useState<GroupedWatch[]>([]);
@@ -88,6 +90,52 @@ export default function Home() {
             </h1>
             <p className="text-muted-foreground">Ready to log another movie?</p>
           </div>
+        )}
+
+        {/* Premium Features Banner for Free Users */}
+        {user && !user.isPremium && (
+          <Card className="border-2 border-primary/20 bg-gradient-to-br from-primary/5 via-background to-background">
+            <CardContent className="p-3 sm:p-4">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                <div className="flex-shrink-0">
+                  <div className="p-1.5 sm:p-2 rounded-full bg-primary/10">
+                    <Sparkles className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
+                  </div>
+                </div>
+                <div className="flex-1 space-y-1.5">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="font-semibold text-sm sm:text-base">Unlock Premium Features</h3>
+                    <span className="px-2 py-0.5 bg-primary/10 text-primary rounded-full text-xs font-medium">
+                      Starting at £5/month
+                    </span>
+                  </div>
+                  <p className="text-xs sm:text-sm text-muted-foreground">
+                    Get AI-powered search, personalized insights, unlimited groups, and more.
+                  </p>
+                  <div className="flex flex-wrap gap-2 sm:gap-3 pt-0.5">
+                    <div className="flex items-center gap-1 text-xs">
+                      <Zap className="h-3 w-3 text-primary" />
+                      <span className="text-muted-foreground">AI Features</span>
+                    </div>
+                    <div className="flex items-center gap-1 text-xs">
+                      <Users className="h-3 w-3 text-primary" />
+                      <span className="text-muted-foreground">Unlimited Groups</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="w-full sm:w-auto">
+                  <Button
+                    onClick={() => setShowUpgradeModal(true)}
+                    size="sm"
+                    className="w-full sm:w-auto"
+                  >
+                    <Sparkles className="h-4 w-4 mr-2" />
+                    Upgrade
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         )}
 
         {/* Hero Section for Logged-Out Users */}
@@ -461,6 +509,13 @@ export default function Home() {
           open={isFormOpen}
           onOpenChange={setIsFormOpen}
           onSuccess={handleWatchSuccess}
+        />
+
+        {/* Upgrade Modal */}
+        <UpgradeToPremiumModal
+          open={showUpgradeModal}
+          onOpenChange={setShowUpgradeModal}
+          feature="search"
         />
       </div>
     </main>
