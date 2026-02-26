@@ -21,12 +21,12 @@ public class WatchlistController : ControllerBase
         _logger = logger;
     }
 
-    // GET /api/watchlist?page=1&pageSize=20&sortBy=recent
+    // GET /api/watchlist?page=1&pageSize=20&sortBy=priority-asc
     [HttpGet]
     public async Task<ActionResult<PaginatedWatchlistResponse>> GetWatchlist(
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20,
-        [FromQuery] string sortBy = "recent")
+        [FromQuery] string sortBy = "priority-asc")
     {
         var userId = User.GetUserId();
         var result = await _watchlistService.GetWatchlistAsync(userId, page, pageSize, sortBy);
@@ -138,5 +138,20 @@ public class WatchlistController : ControllerBase
             Priority = item.Priority,
             AddedAt = item.AddedAt
         });
+    }
+
+    // PATCH /api/watchlist/{movieId}/priority
+    [HttpPatch("{movieId:int}/priority")]
+    public async Task<ActionResult<WatchlistItemResponse>> UpdatePriority(
+        int movieId,
+        [FromBody] UpdatePriorityRequest request)
+    {
+        var userId = User.GetUserId();
+        var result = await _watchlistService.ReorderWatchlistItemAsync(userId, movieId, request.NewPriority);
+
+        if (result == null)
+            return NotFound(new { message = "Watchlist item not found." });
+
+        return Ok(result);
     }
 }

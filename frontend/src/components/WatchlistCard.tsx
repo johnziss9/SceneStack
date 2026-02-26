@@ -3,7 +3,9 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Star, Trash2, CheckCircle, Loader2 } from 'lucide-react';
+import { Trash2, CheckCircle, Loader2, GripVertical } from 'lucide-react';
+import { useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
@@ -24,18 +26,35 @@ import { toast } from '@/lib/toast';
 
 interface WatchlistCardProps {
     item: WatchlistItem;
-    onRemoved: (movieId: number) => void;
-    onPriorityChanged?: (movieId: number, newPriority: number) => void;
+    onRemoved: (movieId: number) => Promise<void>;
+    isDragDisabled?: boolean;
 }
 
-export function WatchlistCard({ item, onRemoved, onPriorityChanged }: WatchlistCardProps) {
+export function WatchlistCard({ item, onRemoved, isDragDisabled = false }: WatchlistCardProps) {
     const router = useRouter();
     const { decrementCount } = useWatchlist();
     const [isRemoving, setIsRemoving] = useState(false);
-    const [isTogglingPriority, setIsTogglingPriority] = useState(false);
-    const [priority, setPriority] = useState(item.priority);
     const [isWatchFormOpen, setIsWatchFormOpen] = useState(false);
     const [isRemoveDialogOpen, setIsRemoveDialogOpen] = useState(false);
+
+    const {
+        attributes,
+        listeners,
+        setNodeRef,
+        transform,
+        transition,
+        isDragging,
+    } = useSortable({
+        id: item.id,
+        disabled: isDragDisabled,
+    });
+
+    const style = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.3 : 1,
+        cursor: isDragging ? 'grabbing' : undefined,
+    };
 
     const posterUrl = item.movie.posterPath
         ? `https://image.tmdb.org/t/p/w342${item.movie.posterPath}`
@@ -75,26 +94,12 @@ export function WatchlistCard({ item, onRemoved, onPriorityChanged }: WatchlistC
             await watchlistApi.removeFromWatchlist(item.movieId);
             decrementCount();
             toast.success('Removed from watchlist');
-            onRemoved(item.movieId);
+            await onRemoved(item.movieId);
         } catch {
             toast.error('Failed to remove from watchlist');
         } finally {
             setIsRemoving(false);
             setIsRemoveDialogOpen(false);
-        }
-    };
-
-    const handlePriorityToggle = async () => {
-        const newPriority = priority === 1 ? 0 : 1;
-        setIsTogglingPriority(true);
-        try {
-            await watchlistApi.updateWatchlistItem(item.movieId, { priority: newPriority });
-            setPriority(newPriority);
-            onPriorityChanged?.(item.movieId, newPriority);
-        } catch {
-            toast.error('Failed to update priority');
-        } finally {
-            setIsTogglingPriority(false);
         }
     };
 
@@ -110,7 +115,7 @@ export function WatchlistCard({ item, onRemoved, onPriorityChanged }: WatchlistC
         } catch {
             // Silently ignore — the watch was logged successfully, watchlist removal is best-effort
         } finally {
-            onRemoved(item.movieId);
+            await onRemoved(item.movieId);
             toast.success(`${item.movie.title} marked as watched!`, {
                 action: {
                     label: 'View history',
@@ -123,8 +128,25 @@ export function WatchlistCard({ item, onRemoved, onPriorityChanged }: WatchlistC
 
     return (
         <>
-            <Card className="overflow-hidden hover:ring-2 hover:ring-primary transition-all">
+            <Card
+                ref={setNodeRef}
+                style={style}
+                className="overflow-hidden hover:ring-2 hover:ring-primary transition-all"
+            >
                 <div className="flex gap-3">
+                    {/* Drag Handle or Spacer */}
+                    {!isDragDisabled ? (
+                        <div
+                            className="flex items-center px-2 cursor-grab active:cursor-grabbing touch-none"
+                            {...attributes}
+                            {...listeners}
+                        >
+                            <GripVertical className="h-5 w-5 text-muted-foreground" />
+                        </div>
+                    ) : (
+                        <div className="pl-3" />
+                    )}
+
                     {/* Poster */}
                     <Link href={`/movies/${item.movie.tmdbId}`} className="flex-shrink-0">
                         <div className="w-20 aspect-[2/3] bg-muted relative">
@@ -158,24 +180,10 @@ export function WatchlistCard({ item, onRemoved, onPriorityChanged }: WatchlistC
                                 )}
                             </div>
 
-                            {/* Priority toggle */}
-                            <button
-                                onClick={handlePriorityToggle}
-                                disabled={isTogglingPriority}
-                                title={priority === 1 ? 'Remove high priority' : 'Mark as high priority'}
-                                className={`flex-shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium transition-colors ${
-                                    priority === 1
-                                        ? 'bg-primary/15 text-primary hover:bg-primary/25'
-                                        : 'bg-muted text-muted-foreground hover:bg-muted/80'
-                                }`}
-                            >
-                                {isTogglingPriority ? (
-                                    <Loader2 className="h-3 w-3 animate-spin" />
-                                ) : (
-                                    <Star className={`h-3 w-3 ${priority === 1 ? 'fill-primary' : ''}`} />
-                                )}
-                                {priority === 1 ? 'High Priority' : 'Normal'}
-                            </button>
+                            {/* Priority Number Badge */}
+                            <div className="flex-shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-primary/15 text-primary">
+                                #{item.priority}
+                            </div>
                         </div>
 
                         {/* Notes */}

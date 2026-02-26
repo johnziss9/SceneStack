@@ -24,15 +24,22 @@ public class WatchlistService : IWatchlistService
         _logger = logger;
     }
 
-    public async Task<PaginatedWatchlistResponse> GetWatchlistAsync(int userId, int page = 1, int pageSize = 20, string sortBy = "recent")
+    public async Task<PaginatedWatchlistResponse> GetWatchlistAsync(int userId, int page = 1, int pageSize = 20, string sortBy = "priority-asc")
     {
         var baseQuery = _context.WatchlistItems
             .Include(wi => wi.Movie)
             .Where(wi => wi.UserId == userId);
 
-        var query = sortBy == "priority"
-            ? baseQuery.OrderByDescending(wi => wi.Priority).ThenByDescending(wi => wi.AddedAt)
-            : baseQuery.OrderByDescending(wi => wi.AddedAt);
+        // priority-asc: 1, 2, 3... (highest priority first)
+        // priority-desc: N...3, 2, 1 (lowest priority first)
+        // recent: by AddedAt desc (ignore priority)
+        var query = sortBy switch
+        {
+            "priority-asc" => baseQuery.OrderBy(wi => wi.Priority),
+            "priority-desc" => baseQuery.OrderByDescending(wi => wi.Priority),
+            "recent" => baseQuery.OrderByDescending(wi => wi.AddedAt),
+            _ => baseQuery.OrderBy(wi => wi.Priority) // Default to priority-asc
+        };
 
         var totalCount = await query.CountAsync();
         var totalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
@@ -53,11 +60,18 @@ public class WatchlistService : IWatchlistService
         };
     }
 
-    public async Task<WatchlistItem> AddToWatchlistAsync(int userId, int tmdbId, string? notes, WatchlistItemPriority priority)
+    public async Task<WatchlistItem> AddToWatchlistAsync(int userId, int tmdbId, string? notes, int priority)
     {
         var movie = await _movieService.GetOrCreateFromTmdbAsync(tmdbId);
         if (movie == null)
             throw new InvalidOperationException($"Failed to retrieve movie with TMDb ID {tmdbId}");
+
+        // Calculate the next priority (add to bottom of list)
+        var maxPriority = await _context.WatchlistItems
+            .Where(wi => wi.UserId == userId)
+            .MaxAsync(wi => (int?)wi.Priority) ?? 0;
+
+        var nextPriority = maxPriority + 1;
 
         // Check for a previously soft-deleted entry and restore it rather than inserting a duplicate
         var existing = await _context.WatchlistItems
@@ -73,7 +87,7 @@ public class WatchlistService : IWatchlistService
             existing.IsDeleted = false;
             existing.DeletedAt = null;
             existing.Notes = notes;
-            existing.Priority = priority;
+            existing.Priority = nextPriority;
             existing.AddedAt = DateTime.UtcNow;
             await _context.SaveChangesAsync();
             return existing;
@@ -84,7 +98,7 @@ public class WatchlistService : IWatchlistService
             UserId = userId,
             MovieId = movie.Id,
             Notes = notes,
-            Priority = priority,
+            Priority = nextPriority,
             AddedAt = DateTime.UtcNow,
             CreatedAt = DateTime.UtcNow
         };
@@ -105,8 +119,24 @@ public class WatchlistService : IWatchlistService
         if (item == null)
             return false;
 
+        // Soft delete the item
         item.IsDeleted = true;
         item.DeletedAt = DateTime.UtcNow;
+
+        // IMPORTANT: Save the deletion FIRST so the database query excludes it
+        await _context.SaveChangesAsync();
+
+        // Renumber all remaining items to have sequential priorities
+        var remainingItems = await _context.WatchlistItems
+            .Where(wi => wi.UserId == userId && !wi.IsDeleted)
+            .OrderBy(wi => wi.Priority)
+            .ToListAsync();
+
+        for (int i = 0; i < remainingItems.Count; i++)
+        {
+            remainingItems[i].Priority = i + 1;
+        }
+
         await _context.SaveChangesAsync();
         return true;
     }
@@ -126,10 +156,58 @@ public class WatchlistService : IWatchlistService
         if (item == null)
             return null;
 
-        item.Notes = request.Notes;
-        item.Priority = request.Priority;
+        if (request.Notes != null)
+            item.Notes = request.Notes;
+
+        if (request.Priority.HasValue)
+            item.Priority = request.Priority.Value;
+
         await _context.SaveChangesAsync();
         return item;
+    }
+
+    public async Task<WatchlistItemResponse?> ReorderWatchlistItemAsync(int userId, int movieId, int newPriority)
+    {
+        var item = await _context.WatchlistItems
+            .Include(wi => wi.Movie)
+            .FirstOrDefaultAsync(wi => wi.UserId == userId && wi.MovieId == movieId);
+
+        if (item == null)
+            return null;
+
+        var oldPriority = item.Priority;
+
+        if (oldPriority == newPriority)
+            return ToResponse(item); // No change needed
+
+        // Get all user's watchlist items ordered by current priority
+        var allItems = await _context.WatchlistItems
+            .Include(wi => wi.Movie)
+            .Where(wi => wi.UserId == userId)
+            .OrderBy(wi => wi.Priority)
+            .ToListAsync();
+
+        // Remove item from old position
+        allItems.Remove(item);
+
+        // Ensure newPriority is within valid range
+        if (newPriority < 1)
+            newPriority = 1;
+        if (newPriority > allItems.Count + 1)
+            newPriority = allItems.Count + 1;
+
+        // Insert at new position (1-based index)
+        allItems.Insert(newPriority - 1, item);
+
+        // Renumber all items sequentially
+        for (int i = 0; i < allItems.Count; i++)
+        {
+            allItems[i].Priority = i + 1;
+        }
+
+        await _context.SaveChangesAsync();
+
+        return ToResponse(item);
     }
 
     public async Task<int> GetWatchlistCountAsync(int userId)

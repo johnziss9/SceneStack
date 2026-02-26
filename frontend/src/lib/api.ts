@@ -72,12 +72,12 @@ export const movieApi = {
 
 // Watchlist endpoints
 export const watchlistApi = {
-    // GET: api/watchlist?page=&pageSize=
-    getWatchlist: (page: number = 1, pageSize: number = 20, sortBy: 'recent' | 'priority' = 'recent') =>
+    // GET: api/watchlist?page=&pageSize=&sortBy=
+    getWatchlist: (page: number = 1, pageSize: number = 20, sortBy: 'priority-asc' | 'priority-desc' | 'recent' = 'priority-asc') =>
         api.get<PaginatedWatchlistResponse>(`/api/watchlist?page=${page}&pageSize=${pageSize}&sortBy=${sortBy}`),
 
     // POST: api/watchlist
-    addToWatchlist: (tmdbId: number, notes?: string, priority: number = 0) =>
+    addToWatchlist: (tmdbId: number, notes?: string, priority: number = 1) =>
         api.post<WatchlistItem>('/api/watchlist', { tmdbId, notes, priority }),
 
     // DELETE: api/watchlist/{movieId}
@@ -87,6 +87,10 @@ export const watchlistApi = {
     // PUT: api/watchlist/{movieId}
     updateWatchlistItem: (movieId: number, request: UpdateWatchlistItemRequest) =>
         api.put<WatchlistItem>(`/api/watchlist/${movieId}`, request),
+
+    // PATCH: api/watchlist/{movieId}/priority
+    updatePriority: (movieId: number, newPriority: number) =>
+        api.patch<WatchlistItem>(`/api/watchlist/${movieId}/priority`, { newPriority }),
 
     // GET: api/watchlist/count
     getWatchlistCount: () =>

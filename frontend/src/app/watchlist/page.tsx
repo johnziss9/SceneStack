@@ -1,14 +1,32 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { Bookmark, ArrowUpDown, Loader2, AlertCircle } from 'lucide-react';
+import { Bookmark, Loader2, AlertCircle, Info } from 'lucide-react';
+import {
+    DndContext,
+    closestCenter,
+    KeyboardSensor,
+    PointerSensor,
+    useSensor,
+    useSensors,
+    DragEndEvent,
+    DragStartEvent,
+    DragOverlay,
+} from '@dnd-kit/core';
+import {
+    arrayMove,
+    SortableContext,
+    sortableKeyboardCoordinates,
+    verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { WatchlistCard } from '@/components/WatchlistCard';
 import { watchlistApi } from '@/lib/api';
+import { toast } from '@/lib/toast';
 import type { WatchlistItem } from '@/types';
 
-type SortBy = 'recent' | 'priority';
+type SortBy = 'priority-asc' | 'recent';
 
 const PAGE_SIZE = 20;
 
@@ -19,8 +37,16 @@ export default function WatchlistPage() {
     const [page, setPage] = useState(1);
     const [hasMore, setHasMore] = useState(false);
     const [totalCount, setTotalCount] = useState(0);
-    const [sortBy, setSortBy] = useState<SortBy>('recent');
+    const [sortBy, setSortBy] = useState<SortBy>('priority-asc');
     const [error, setError] = useState<string | null>(null);
+    const [activeId, setActiveId] = useState<number | null>(null);
+
+    const sensors = useSensors(
+        useSensor(PointerSensor),
+        useSensor(KeyboardSensor, {
+            coordinateGetter: sortableKeyboardCoordinates,
+        })
+    );
 
     const loadWatchlist = useCallback(async (newPage: number, newSort: SortBy, append: boolean) => {
         try {
@@ -54,34 +80,58 @@ export default function WatchlistPage() {
         setPage(1);
     };
 
-    const handleItemRemoved = (movieId: number) => {
-        setItems(prev => prev.filter(i => i.movieId !== movieId));
-        setTotalCount(prev => Math.max(0, prev - 1));
+    const handleItemRemoved = async (movieId: number) => {
+        // Refresh from server to get updated priorities and pagination
+        // Don't do optimistic update as it interferes with priority renumbering
+        try {
+            const data = await watchlistApi.getWatchlist(1, PAGE_SIZE, sortBy);
+            setItems(data.items);
+            setHasMore(data.hasMore);
+            setTotalCount(data.totalCount);
+            setPage(1);
+        } catch (error) {
+            setError('Failed to refresh watchlist. Please reload the page.');
+        }
     };
 
-    const handlePriorityChanged = (movieId: number, newPriority: number) => {
-        // Update the item's priority in local state
-        setItems(prev => {
-            const updated = prev.map(item =>
-                item.movieId === movieId
-                    ? { ...item, priority: newPriority }
-                    : item
-            );
+    const handleDragStart = (event: DragStartEvent) => {
+        setActiveId(event.active.id as number);
+    };
 
-            // If sorting by priority, re-sort the array
-            if (sortBy === 'priority') {
-                return [...updated].sort((a, b) => {
-                    // High priority (1) comes before normal priority (0)
-                    if (a.priority !== b.priority) {
-                        return b.priority - a.priority;
-                    }
-                    // If priorities are equal, sort by addedAt (most recent first)
-                    return new Date(b.addedAt).getTime() - new Date(a.addedAt).getTime();
-                });
-            }
+    const handleDragCancel = () => {
+        setActiveId(null);
+    };
 
-            return updated;
-        });
+    const handleDragEnd = async (event: DragEndEvent) => {
+        const { active, over } = event;
+
+        setActiveId(null);
+
+        if (!over || active.id === over.id) return;
+
+        const oldIndex = items.findIndex(item => item.id === active.id);
+        const newIndex = items.findIndex(item => item.id === over.id);
+
+        if (oldIndex === -1 || newIndex === -1) return;
+
+        // Optimistic UI update
+        const reorderedItems = arrayMove(items, oldIndex, newIndex);
+        setItems(reorderedItems);
+
+        // Calculate new priority (1-based index)
+        const newPriority = newIndex + 1;
+        const movieId = items[oldIndex].movieId;
+
+        try {
+            await watchlistApi.updatePriority(movieId, newPriority);
+            // Backend handles renumbering all items
+            // Refresh to get updated priorities from server
+            await loadWatchlist(1, sortBy, false);
+        } catch (error) {
+            // Revert on error
+            setItems(items);
+            toast.error('Failed to reorder. Please try again.');
+        }
     };
 
     return (
@@ -104,23 +154,22 @@ export default function WatchlistPage() {
 
                 {/* Sort toggle */}
                 {!isLoading && totalCount > 0 && (
-                    <div className="flex items-center gap-1 border rounded-lg p-1">
+                    <div className="flex flex-wrap items-center gap-1 border rounded-lg p-1">
+                        <Button
+                            size="sm"
+                            variant={sortBy === 'priority-asc' ? 'default' : 'ghost'}
+                            className="h-7 text-xs px-3"
+                            onClick={() => handleSortChange('priority-asc')}
+                        >
+                            Priority
+                        </Button>
                         <Button
                             size="sm"
                             variant={sortBy === 'recent' ? 'default' : 'ghost'}
                             className="h-7 text-xs px-3"
                             onClick={() => handleSortChange('recent')}
                         >
-                            Recently Added
-                        </Button>
-                        <Button
-                            size="sm"
-                            variant={sortBy === 'priority' ? 'default' : 'ghost'}
-                            className="h-7 text-xs px-3 gap-1"
-                            onClick={() => handleSortChange('priority')}
-                        >
-                            <ArrowUpDown className="h-3 w-3" />
-                            High Priority First
+                            Date Added
                         </Button>
                     </div>
                 )}
@@ -181,15 +230,42 @@ export default function WatchlistPage() {
 
             {/* Watchlist items */}
             {!isLoading && !error && items.length > 0 && (
-                <div className="space-y-3">
-                    {items.map(item => (
-                        <WatchlistCard
-                            key={item.id}
-                            item={item}
-                            onRemoved={handleItemRemoved}
-                            onPriorityChanged={handlePriorityChanged}
-                        />
-                    ))}
+                <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragStart={handleDragStart}
+                    onDragEnd={handleDragEnd}
+                    onDragCancel={handleDragCancel}
+                >
+                    <SortableContext
+                        items={items.map(i => i.id)}
+                        strategy={verticalListSortingStrategy}
+                        disabled={sortBy === 'recent'}
+                    >
+                        <div className="space-y-3">
+                            {sortBy === 'priority-asc' && (
+                                <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/50 p-3 rounded-lg">
+                                    <Info className="h-4 w-4 flex-shrink-0" />
+                                    <span>Drag and drop movies to reorder your watchlist</span>
+                                </div>
+                            )}
+                            {sortBy === 'recent' && (
+                                <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/50 p-3 rounded-lg">
+                                    <Info className="h-4 w-4 flex-shrink-0" />
+                                    <span>Drag and drop is disabled in "Date Added" mode.</span>
+                                </div>
+                            )}
+                            {items.map(item => (
+                                <WatchlistCard
+                                    key={item.id}
+                                    item={item}
+                                    onRemoved={handleItemRemoved}
+                                    isDragDisabled={sortBy === 'recent'}
+                                />
+                            ))}
+
+                        </div>
+                    </SortableContext>
 
                     {/* Load more */}
                     {hasMore && (
@@ -210,7 +286,18 @@ export default function WatchlistPage() {
                             </Button>
                         </div>
                     )}
-                </div>
+
+                    {/* Drag Overlay */}
+                    <DragOverlay>
+                        {activeId ? (
+                            <WatchlistCard
+                                item={items.find(item => item.id === activeId)!}
+                                onRemoved={async () => {}}
+                                isDragDisabled={false}
+                            />
+                        ) : null}
+                    </DragOverlay>
+                </DndContext>
             )}
         </div>
     );

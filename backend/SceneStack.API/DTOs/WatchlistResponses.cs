@@ -1,5 +1,3 @@
-using SceneStack.API.Models;
-
 namespace SceneStack.API.DTOs;
 
 public class WatchlistItemResponse
@@ -8,7 +6,7 @@ public class WatchlistItemResponse
     public int MovieId { get; set; }
     public MovieBasicInfo Movie { get; set; } = null!;
     public string? Notes { get; set; }
-    public WatchlistItemPriority Priority { get; set; }
+    public int Priority { get; set; }
     public DateTime AddedAt { get; set; }
 }
 
