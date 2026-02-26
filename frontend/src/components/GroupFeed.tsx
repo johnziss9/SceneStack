@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/lib/toast";
 import { Skeleton } from "@/components/ui/skeleton";
+import { LoadingTips } from "@/components/LoadingTips";
 import { Eye, MapPin, Users as UsersIcon, ChevronDown } from "lucide-react";
 import Link from "next/link";
 
@@ -69,15 +70,16 @@ export function GroupFeed({ groupId }: GroupFeedProps) {
     if (isLoading) {
         return (
             <div className="space-y-4">
+                <LoadingTips />
                 {[...Array(5)].map((_, i) => (
                     <Card key={i} className="overflow-hidden">
                         <CardContent className="p-4">
                             <div className="flex gap-4">
-                                <Skeleton className="w-16 h-24 rounded flex-shrink-0" />
+                                <Skeleton variant="poster" className="w-16 h-24 rounded flex-shrink-0" />
                                 <div className="flex-1 space-y-2">
-                                    <Skeleton className="h-5 w-1/3" />
-                                    <Skeleton className="h-4 w-1/2" />
-                                    <Skeleton className="h-4 w-2/3" />
+                                    <Skeleton variant="branded" className="h-5 w-1/3" />
+                                    <Skeleton variant="branded" className="h-4 w-1/2" />
+                                    <Skeleton variant="branded" className="h-4 w-2/3" />
                                 </div>
                             </div>
                         </CardContent>

@@ -192,3 +192,48 @@
   background: oklch(0.30 0.025 240) !important;
   color: oklch(0.98 0 0) !important;
 }
+
+/* Custom animations for loading states */
+@keyframes shimmer {
+  0% {
+    background-position: -100% center;
+  }
+  100% {
+    background-position: 100% center;
+  }
+}
+
+@keyframes filmReel {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes sceneSlide {
+  0% {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}
+
+.animate-shimmer {
+  animation: shimmer 2s ease-in-out infinite;
+}
+
+.animate-filmReel {
+  animation: filmReel 3s linear infinite;
+}
+
+.animate-sceneSlide {
+  animation: sceneSlide 2s ease-in-out infinite;
+}

@@ -17,12 +17,16 @@ import { AlertCircle, Loader2, Users } from "lucide-react";
 import { groupApi } from "@/lib/api";
 import { toast } from "@/lib/toast";
 import type { GroupBasicInfo } from "@/types";
+import { ModernLoader } from "@/components/ModernLoader";
+import { ProgressIndicator } from "@/components/ProgressIndicator";
 
 interface BulkShareWithGroupsDialogProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     selectedCount: number;
     onConfirm: (groupIds: number[], operation: 'add' | 'replace') => Promise<void>;
+    isProcessing?: boolean;
+    processedCount?: number;
 }
 
 export function BulkShareWithGroupsDialog({
@@ -30,6 +34,8 @@ export function BulkShareWithGroupsDialog({
     onOpenChange,
     selectedCount,
     onConfirm,
+    isProcessing = false,
+    processedCount = 0,
 }: BulkShareWithGroupsDialogProps) {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isLoadingGroups, setIsLoadingGroups] = useState(false);
@@ -107,10 +113,14 @@ export function BulkShareWithGroupsDialog({
                     </DialogHeader>
 
                     <div className="space-y-4 py-4">
-                        {isLoadingGroups ? (
-                            <div className="flex items-center justify-center py-8">
-                                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                            </div>
+                        {isProcessing ? (
+                            <ProgressIndicator
+                                total={selectedCount}
+                                current={processedCount}
+                                operation="Updating movie sharing"
+                            />
+                        ) : isLoadingGroups ? (
+                            <ModernLoader size="md" text="Loading your groups..." variant="dots" />
                         ) : userGroups.length === 0 ? (
                             <Alert>
                                 <AlertCircle className="h-4 w-4" />
@@ -228,13 +238,13 @@ export function BulkShareWithGroupsDialog({
                         <Button
                             variant="outline"
                             onClick={() => onOpenChange(false)}
-                            disabled={isSubmitting}
+                            disabled={isSubmitting || isProcessing}
                         >
                             Cancel
                         </Button>
                         <Button
                             onClick={handleConfirm}
-                            disabled={isSubmitting || isLoadingGroups || userGroups.length === 0}
+                            disabled={isSubmitting || isProcessing || isLoadingGroups || userGroups.length === 0}
                         >
                             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                             Update Sharing

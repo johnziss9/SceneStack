@@ -5,11 +5,13 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Skeleton } from '@/components/ui/skeleton';
+import { LoadingTips } from '@/components/LoadingTips';
 import Link from 'next/link';
 import { toast } from '@/lib/toast';
 
 export default function LoginPage() {
-    const { login } = useAuth();
+    const { login, loading: authLoading } = useAuth();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -62,6 +64,45 @@ export default function LoginPage() {
             setIsLoading(false);
         }
     };
+
+    if (authLoading) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-background px-4">
+                <div className="w-full max-w-md space-y-8">
+                    <LoadingTips />
+
+                    {/* Header skeleton */}
+                    <div className="text-center space-y-2">
+                        <Skeleton variant="branded" className="h-10 w-48 mx-auto" />
+                        <Skeleton variant="branded" className="h-5 w-40 mx-auto" />
+                    </div>
+
+                    {/* Form skeleton */}
+                    <div className="mt-8 space-y-6">
+                        <div className="space-y-4">
+                            {/* Email field skeleton */}
+                            <div className="space-y-2">
+                                <Skeleton variant="branded" className="h-4 w-12" />
+                                <Skeleton variant="branded" className="h-10 w-full" />
+                            </div>
+
+                            {/* Password field skeleton */}
+                            <div className="space-y-2">
+                                <Skeleton variant="branded" className="h-4 w-20" />
+                                <Skeleton variant="branded" className="h-10 w-full" />
+                            </div>
+                        </div>
+
+                        {/* Submit button skeleton */}
+                        <Skeleton variant="branded" className="h-10 w-full" />
+
+                        {/* Register link skeleton */}
+                        <Skeleton variant="branded" className="h-4 w-56 mx-auto" />
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-background px-4">

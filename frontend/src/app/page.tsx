@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Skeleton } from "@/components/ui/skeleton";
+import { LoadingTips } from "@/components/LoadingTips";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Film, TrendingUp, Eye, Users, ArrowRight, Sparkles, Crown, Zap, Loader2, Search } from 'lucide-react';
@@ -17,7 +18,7 @@ import { watchApi, movieApi } from "@/lib";
 import type { TmdbMovie, GroupedWatch } from '@/types';
 
 export default function Home() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const [searchResults, setSearchResults] = useState<TmdbMovie[]>([]);
   const [totalSearchResults, setTotalSearchResults] = useState<number>(0);
@@ -113,6 +114,66 @@ export default function Home() {
       setIsLoadingMore(false);
     }
   };
+
+  // Show loading skeleton while authentication state is being determined
+  if (authLoading) {
+    return (
+      <main className="min-h-screen p-4 sm:p-8">
+        <div className="max-w-7xl mx-auto space-y-8">
+          <LoadingTips />
+
+          {/* Header skeleton */}
+          <div className="space-y-2">
+            <Skeleton variant="branded" className="h-10 w-64" />
+            <Skeleton variant="branded" className="h-5 w-48" />
+          </div>
+
+          {/* Main card skeleton */}
+          <Card>
+            <CardHeader>
+              <Skeleton variant="branded" className="h-6 w-32" />
+              <Skeleton variant="branded" className="h-4 w-64" />
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Skeleton variant="branded" className="h-10 w-full" />
+              <div className="flex flex-wrap gap-2">
+                {[1, 2, 3, 4].map(i => (
+                  <Skeleton key={i} variant="branded" className="h-8 w-24 rounded-full" />
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Stats/Feature cards skeleton */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {[1, 2, 3].map(i => (
+              <Card key={i}>
+                <CardHeader>
+                  <Skeleton variant="branded" className="w-12 h-12 rounded-full mb-4" />
+                  <Skeleton variant="branded" className="h-6 w-32 mb-2" />
+                  <Skeleton variant="branded" className="h-4 w-full" />
+                </CardHeader>
+              </Card>
+            ))}
+          </div>
+
+          {/* Content grid skeleton */}
+          <div>
+            <Skeleton variant="branded" className="h-8 w-48 mb-4" />
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+              {[1, 2, 3, 4, 5].map(i => (
+                <div key={i} className="space-y-3">
+                  <Skeleton variant="poster" className="w-full rounded-lg" />
+                  <Skeleton variant="branded" className="h-4 w-3/4" />
+                  <Skeleton variant="branded" className="h-4 w-1/2" />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen p-4 sm:p-8">
@@ -313,14 +374,15 @@ export default function Home() {
 
             {/* Search Results for Logged-In Users */}
             {isSearching && (
-              <div>
+              <div className="space-y-6">
+                <LoadingTips />
                 <h2 className="text-2xl font-semibold mb-4">Searching...</h2>
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                   {[...Array(10)].map((_, i) => (
                     <div key={i} className="space-y-3">
-                      <Skeleton className="h-[450px] w-full rounded-lg" />
-                      <Skeleton className="h-4 w-3/4" />
-                      <Skeleton className="h-4 w-1/2" />
+                      <Skeleton variant="poster" className="w-full rounded-lg" />
+                      <Skeleton variant="branded" className="h-4 w-3/4" />
+                      <Skeleton variant="branded" className="h-4 w-1/2" />
                     </div>
                   ))}
                 </div>
@@ -395,7 +457,7 @@ export default function Home() {
                 <CardContent>
                   <div className="text-2xl font-bold">
                     {isLoadingRecent ? (
-                      <Skeleton className="h-8 w-16" />
+                      <Skeleton variant="branded" className="h-8 w-16" />
                     ) : (
                       totalWatchCount
                     )}
@@ -461,14 +523,15 @@ export default function Home() {
 
         {/* Loading Recent Watches */}
         {user && searchResults.length === 0 && isLoadingRecent && recentWatches.length === 0 && (
-          <div>
+          <div className="space-y-6">
+            <LoadingTips />
             <h2 className="text-2xl font-semibold mb-4">Recently Watched</h2>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
               {[...Array(5)].map((_, i) => (
                 <div key={i} className="space-y-3">
-                  <Skeleton className="h-[450px] w-full rounded-lg" />
-                  <Skeleton className="h-4 w-3/4" />
-                  <Skeleton className="h-4 w-1/2" />
+                  <Skeleton variant="poster" className="w-full rounded-lg" />
+                  <Skeleton variant="branded" className="h-4 w-3/4" />
+                  <Skeleton variant="branded" className="h-4 w-1/2" />
                 </div>
               ))}
             </div>
@@ -523,14 +586,15 @@ export default function Home() {
 
         {/* Search Results Grid for Logged-Out Users */}
         {!user && isSearching && (
-          <div>
+          <div className="space-y-6">
+            <LoadingTips />
             <h2 className="text-2xl font-semibold mb-4">Searching...</h2>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
               {[...Array(10)].map((_, i) => (
                 <div key={i} className="space-y-3">
-                  <Skeleton className="h-[450px] w-full rounded-lg" />
-                  <Skeleton className="h-4 w-3/4" />
-                  <Skeleton className="h-4 w-1/2" />
+                  <Skeleton variant="poster" className="w-full rounded-lg" />
+                  <Skeleton variant="branded" className="h-4 w-3/4" />
+                  <Skeleton variant="branded" className="h-4 w-1/2" />
                 </div>
               ))}
             </div>

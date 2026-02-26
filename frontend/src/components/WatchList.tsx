@@ -8,6 +8,7 @@ import { WatchCard } from "./WatchCard";
 import { toast } from "@/lib/toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { LoadingTips } from "@/components/LoadingTips";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
@@ -113,6 +114,7 @@ export function WatchList() {
     const [isBulkMode, setIsBulkMode] = useState(false);
     const [selectedMovieIds, setSelectedMovieIds] = useState<Set<number>>(new Set());
     const [isProcessing, setIsProcessing] = useState(false);
+    const [processedCount, setProcessedCount] = useState(0);
     const [showMakePrivateDialog, setShowMakePrivateDialog] = useState(false);
     const [showShareDialog, setShowShareDialog] = useState(false);
 
@@ -253,10 +255,32 @@ export function WatchList() {
     const handleBulkMakePrivate = async () => {
         try {
             setIsProcessing(true);
+            setProcessedCount(0);
+
             const watchIds = filteredWatches
                 .filter(gw => selectedMovieIds.has(gw.movieId))
                 .flatMap(gw => gw.watches.map(w => w.id));
+
+            const totalCount = selectedMovieIds.size;
+
+            // Simulate progress for better UX
+            const progressInterval = setInterval(() => {
+                setProcessedCount(prev => {
+                    if (prev < totalCount - 1) {
+                        return prev + 1;
+                    }
+                    return prev;
+                });
+            }, 100);
+
             const result = await watchApi.bulkUpdate({ watchIds, isPrivate: true, groupIds: [], groupOperation: "replace" });
+
+            clearInterval(progressInterval);
+            setProcessedCount(totalCount);
+
+            // Brief pause to show 100% before closing
+            await new Promise(resolve => setTimeout(resolve, 300));
+
             if (result.success) {
                 toast.success(`Made ${result.updated} ${result.updated === 1 ? "movie" : "movies"} private`);
                 await fetchWatches(filtersForFetch, 1, false);
@@ -268,16 +292,39 @@ export function WatchList() {
             toast.error("Failed to update movies");
         } finally {
             setIsProcessing(false);
+            setProcessedCount(0);
         }
     };
 
     const handleBulkShareWithGroups = async (groupIds: number[], operation: "add" | "replace") => {
         try {
             setIsProcessing(true);
+            setProcessedCount(0);
+
             const watchIds = filteredWatches
                 .filter(gw => selectedMovieIds.has(gw.movieId))
                 .flatMap(gw => gw.watches.map(w => w.id));
+
+            const totalCount = selectedMovieIds.size;
+
+            // Simulate progress for better UX
+            const progressInterval = setInterval(() => {
+                setProcessedCount(prev => {
+                    if (prev < totalCount - 1) {
+                        return prev + 1;
+                    }
+                    return prev;
+                });
+            }, 100);
+
             const result = await watchApi.bulkUpdate({ watchIds, isPrivate: false, groupIds, groupOperation: operation });
+
+            clearInterval(progressInterval);
+            setProcessedCount(totalCount);
+
+            // Brief pause to show 100% before closing
+            await new Promise(resolve => setTimeout(resolve, 300));
+
             if (result.success) {
                 toast.success(`Updated sharing for ${result.updated} ${result.updated === 1 ? "movie" : "movies"}`);
                 await fetchWatches(filtersForFetch, 1, false);
@@ -289,6 +336,7 @@ export function WatchList() {
             toast.error("Failed to update movies");
         } finally {
             setIsProcessing(false);
+            setProcessedCount(0);
         }
     };
 
@@ -307,14 +355,17 @@ export function WatchList() {
     // Full-page skeleton only on very first load
     if (isInitialLoad) {
         return (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                {[...Array(10)].map((_, i) => (
-                    <div key={i} className="space-y-3">
-                        <Skeleton className="h-[450px] w-full rounded-lg" />
-                        <Skeleton className="h-4 w-3/4" />
-                        <Skeleton className="h-4 w-1/2" />
-                    </div>
-                ))}
+            <div className="space-y-6">
+                <LoadingTips />
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                    {[...Array(10)].map((_, i) => (
+                        <div key={i} className="space-y-3">
+                            <Skeleton variant="poster" className="w-full rounded-lg" />
+                            <Skeleton variant="branded" className="h-4 w-3/4" />
+                            <Skeleton variant="branded" className="h-4 w-1/2" />
+                        </div>
+                    ))}
+                </div>
             </div>
         );
     }
@@ -649,12 +700,16 @@ export function WatchList() {
                 onOpenChange={setShowMakePrivateDialog}
                 selectedCount={selectedMovieIds.size}
                 onConfirm={handleBulkMakePrivate}
+                isProcessing={isProcessing}
+                processedCount={processedCount}
             />
             <BulkShareWithGroupsDialog
                 open={showShareDialog}
                 onOpenChange={setShowShareDialog}
                 selectedCount={selectedMovieIds.size}
                 onConfirm={handleBulkShareWithGroups}
+                isProcessing={isProcessing}
+                processedCount={processedCount}
             />
         </div>
     );

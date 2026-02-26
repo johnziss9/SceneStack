@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
+import { LoadingTips } from "@/components/LoadingTips";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
     AlertDialog,
@@ -163,27 +164,120 @@ export default function ProfilePage() {
     if (loading) {
         return (
             <div className="min-h-screen p-4 sm:p-8">
-                <div className="max-w-2xl mx-auto space-y-8">
-                    <div className="space-y-2">
-                        <Skeleton className="h-10 w-32" />
-                        <Skeleton className="h-4 w-56" />
+                <div className="max-w-4xl mx-auto space-y-8">
+                    <LoadingTips />
+
+                    {/* Header skeleton */}
+                    <div className="flex items-center justify-between gap-4">
+                        <div className="space-y-2">
+                            <Skeleton variant="branded" className="h-10 w-32" />
+                            <Skeleton variant="branded" className="h-5 w-56" />
+                        </div>
+                        <Skeleton variant="branded" className="h-10 w-28" />
                     </div>
-                    <Card>
-                        <CardHeader>
-                            <Skeleton className="h-6 w-48" />
-                            <Skeleton className="h-4 w-32" />
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="space-y-2">
-                                <Skeleton className="h-4 w-20" />
-                                <Skeleton className="h-6 w-40" />
-                            </div>
-                            <div className="space-y-2">
-                                <Skeleton className="h-4 w-20" />
-                                <Skeleton className="h-6 w-56" />
-                            </div>
-                        </CardContent>
-                    </Card>
+
+                    {/* Tabs skeleton */}
+                    <div className="space-y-8">
+                        <div className="grid grid-cols-4 gap-2">
+                            {[1, 2, 3, 4].map((i) => (
+                                <Skeleton key={i} variant="branded" className="h-10 w-full rounded-md" />
+                            ))}
+                        </div>
+
+                        {/* Profile content skeleton */}
+                        <div className="space-y-6">
+                            {/* Account Information Card */}
+                            <Card>
+                                <CardHeader>
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <Skeleton variant="branded" className="h-5 w-5 rounded" />
+                                            <Skeleton variant="branded" className="h-6 w-48" />
+                                        </div>
+                                        <Skeleton variant="branded" className="h-9 w-32" />
+                                    </div>
+                                    <Skeleton variant="branded" className="h-4 w-40 mt-2" />
+                                </CardHeader>
+                                <CardContent className="space-y-4">
+                                    {/* Username field */}
+                                    <div className="space-y-2">
+                                        <Skeleton variant="branded" className="h-4 w-20" />
+                                        <div className="flex items-center gap-2">
+                                            <Skeleton variant="branded" className="h-7 w-40" />
+                                            <Skeleton variant="branded" className="h-6 w-20 rounded-full" />
+                                        </div>
+                                    </div>
+
+                                    {/* Email field */}
+                                    <div className="space-y-2">
+                                        <Skeleton variant="branded" className="h-4 w-16" />
+                                        <Skeleton variant="branded" className="h-7 w-56" />
+                                    </div>
+
+                                    {/* Bio field */}
+                                    <div className="space-y-2">
+                                        <Skeleton variant="branded" className="h-4 w-12" />
+                                        <Skeleton variant="branded" className="h-16 w-full" />
+                                    </div>
+
+                                    {/* Member since field */}
+                                    <div className="space-y-2">
+                                        <Skeleton variant="branded" className="h-4 w-28" />
+                                        <Skeleton variant="branded" className="h-6 w-32" />
+                                    </div>
+
+                                    {/* Watchlist usage field */}
+                                    <div className="space-y-2">
+                                        <Skeleton variant="branded" className="h-4 w-32" />
+                                        <Skeleton variant="branded" className="h-6 w-24" />
+                                    </div>
+                                </CardContent>
+                            </Card>
+
+                            {/* Subscription Card */}
+                            <Card>
+                                <CardHeader>
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <Skeleton variant="branded" className="h-5 w-5 rounded" />
+                                            <Skeleton variant="branded" className="h-6 w-32" />
+                                        </div>
+                                    </div>
+                                    <Skeleton variant="branded" className="h-4 w-48 mt-2" />
+                                </CardHeader>
+                                <CardContent className="space-y-4">
+                                    <div className="space-y-2">
+                                        <Skeleton variant="branded" className="h-4 w-24" />
+                                        <Skeleton variant="branded" className="h-7 w-20" />
+                                    </div>
+
+                                    <div className="p-4 border-2 rounded-lg space-y-4">
+                                        <div className="flex items-center gap-2">
+                                            <Skeleton variant="branded" className="h-5 w-5 rounded" />
+                                            <Skeleton variant="branded" className="h-6 w-40" />
+                                        </div>
+
+                                        <div className="space-y-3">
+                                            {[1, 2, 3, 4].map((i) => (
+                                                <div key={i} className="flex items-start gap-3">
+                                                    <Skeleton variant="branded" className="h-4 w-4 rounded flex-shrink-0 mt-0.5" />
+                                                    <div className="flex-1 space-y-1">
+                                                        <Skeleton variant="branded" className="h-4 w-3/4" />
+                                                        <Skeleton variant="branded" className="h-3 w-full" />
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+
+                                        <div className="pt-2 space-y-3">
+                                            <Skeleton variant="branded" className="h-10 w-full" />
+                                            <Skeleton variant="branded" className="h-4 w-40 mx-auto" />
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        </div>
+                    </div>
                 </div>
             </div>
         );

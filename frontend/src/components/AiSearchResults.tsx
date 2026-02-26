@@ -7,6 +7,7 @@ import { Calendar, MapPin, Users } from 'lucide-react';
 import Link from 'next/link';
 import type { AiSearchResponse } from '@/types';
 import React from 'react';
+import { LoadingTips } from '@/components/LoadingTips';
 
 interface AiSearchResultsProps {
     results: AiSearchResponse | null;
@@ -21,18 +22,21 @@ export const AiSearchResults = memo(function AiSearchResults({
     // Loading state
     if (isLoading) {
         return (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                {[...Array(10)].map((_, i) => (
-                    <Card key={i} className="flex flex-col h-full overflow-hidden">
-                        <CardHeader className="p-0">
-                            <Skeleton className="aspect-[2/3] w-full" />
-                        </CardHeader>
-                        <CardContent className="p-3 space-y-2">
-                            <Skeleton className="h-4 w-full" />
-                            <Skeleton className="h-4 w-2/3" />
-                        </CardContent>
-                    </Card>
-                ))}
+            <div className="space-y-6">
+                <LoadingTips />
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                    {[...Array(10)].map((_, i) => (
+                        <Card key={i} className="flex flex-col h-full overflow-hidden">
+                            <CardHeader className="p-0">
+                                <Skeleton variant="poster" className="w-full" />
+                            </CardHeader>
+                            <CardContent className="p-3 space-y-2">
+                                <Skeleton variant="branded" className="h-4 w-full" />
+                                <Skeleton variant="branded" className="h-4 w-2/3" />
+                            </CardContent>
+                        </Card>
+                    ))}
+                </div>
             </div>
         );
     }

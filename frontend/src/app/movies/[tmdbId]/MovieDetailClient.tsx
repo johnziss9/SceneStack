@@ -10,6 +10,7 @@ import { useWatchlist } from '@/contexts/WatchlistContext';
 import { WatchForm } from '@/components/WatchForm';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { LoadingTips } from "@/components/LoadingTips";
 import { toast } from '@/lib/toast';
 import {
     ArrowLeft,
@@ -139,20 +140,23 @@ export function MovieDetailClient({ params }: MovieDetailPageProps) {
     if (isLoading) {
         return (
             <div className="min-h-screen">
-                <Skeleton className="w-full h-64 sm:h-80 rounded-none" />
+                <div className="p-4 sm:p-6">
+                    <LoadingTips />
+                </div>
+                <Skeleton variant="branded" className="w-full h-64 sm:h-80 rounded-none" />
                 <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 space-y-6">
-                    <Skeleton className="h-8 w-3/4" />
-                    <Skeleton className="h-4 w-1/2" />
+                    <Skeleton variant="branded" className="h-8 w-3/4" />
+                    <Skeleton variant="branded" className="h-4 w-1/2" />
                     <div className="flex gap-2">
                         {[1, 2, 3].map(i => <Skeleton key={i} className="h-6 w-20 rounded-full" />)}
                     </div>
-                    <Skeleton className="h-24 w-full" />
+                    <Skeleton variant="branded" className="h-24 w-full" />
                     <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 pt-4">
                         {Array.from({ length: 5 }).map((_, i) => (
                             <div key={i} className="space-y-2">
-                                <Skeleton className="aspect-square rounded-full w-16 h-16 mx-auto" />
-                                <Skeleton className="h-3 w-full" />
-                                <Skeleton className="h-3 w-3/4 mx-auto" />
+                                <Skeleton variant="branded" className="aspect-square rounded-full w-16 h-16 mx-auto" />
+                                <Skeleton variant="branded" className="h-3 w-full" />
+                                <Skeleton variant="branded" className="h-3 w-3/4 mx-auto" />
                             </div>
                         ))}
                     </div>

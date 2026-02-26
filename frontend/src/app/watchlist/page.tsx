@@ -25,6 +25,7 @@ import { WatchlistCard } from '@/components/WatchlistCard';
 import { watchlistApi } from '@/lib/api';
 import { toast } from '@/lib/toast';
 import type { WatchlistItem } from '@/types';
+import { LoadingTips } from '@/components/LoadingTips';
 
 type SortBy = 'priority-asc' | 'recent';
 
@@ -177,21 +178,24 @@ export default function WatchlistPage() {
 
             {/* Loading skeletons */}
             {isLoading && (
-                <div className="space-y-3">
-                    {Array.from({ length: 5 }).map((_, i) => (
-                        <div key={i} className="flex gap-3 rounded-lg border p-3">
-                            <Skeleton className="w-20 h-[120px] rounded flex-shrink-0" />
-                            <div className="flex-1 space-y-2 py-1">
-                                <Skeleton className="h-4 w-3/4" />
-                                <Skeleton className="h-3 w-1/4" />
-                                <Skeleton className="h-3 w-1/2 mt-4" />
-                                <div className="flex justify-end gap-2 pt-2">
-                                    <Skeleton className="h-8 w-32" />
-                                    <Skeleton className="h-8 w-8" />
+                <div className="space-y-6">
+                    <LoadingTips />
+                    <div className="space-y-3">
+                        {Array.from({ length: 5 }).map((_, i) => (
+                            <div key={i} className="flex gap-3 rounded-lg border p-3">
+                                <Skeleton variant="poster" className="w-20 h-[120px] rounded flex-shrink-0" />
+                                <div className="flex-1 space-y-2 py-1">
+                                    <Skeleton variant="branded" className="h-4 w-3/4" />
+                                    <Skeleton variant="branded" className="h-3 w-1/4" />
+                                    <Skeleton variant="branded" className="h-3 w-1/2 mt-4" />
+                                    <div className="flex justify-end gap-2 pt-2">
+                                        <Skeleton variant="branded" className="h-8 w-32" />
+                                        <Skeleton variant="branded" className="h-8 w-8" />
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    ))}
+                        ))}
+                    </div>
                 </div>
             )}
 

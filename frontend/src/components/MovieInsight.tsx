@@ -5,6 +5,7 @@ import { toast } from '@/lib/toast';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { LoadingTips } from "@/components/LoadingTips";
 import { Sparkles, RefreshCw, AlertCircle, Loader2 } from 'lucide-react';
 import { aiApi } from '@/lib/api';
 import { PremiumRequiredError, RateLimitError } from '@/lib/api-client';
@@ -152,9 +153,10 @@ export function MovieInsight({ movieId, watchCount, isPremium }: MovieInsightPro
                 {/* Premium User: Loading State */}
                 {isPremium && isLoading && !insight && (
                     <div className="space-y-3">
-                        <Skeleton className="h-4 w-full" />
-                        <Skeleton className="h-4 w-full" />
-                        <Skeleton className="h-4 w-3/4" />
+                        <LoadingTips />
+                        <Skeleton variant="branded" className="h-4 w-full" />
+                        <Skeleton variant="branded" className="h-4 w-full" />
+                        <Skeleton variant="branded" className="h-4 w-3/4" />
                     </div>
                 )}
 

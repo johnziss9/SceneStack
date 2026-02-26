@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/lib/toast";
 import { Skeleton } from "@/components/ui/skeleton";
+import { LoadingTips } from "@/components/LoadingTips";
 import { Film, Users, Eye, TrendingUp, Calendar, Star } from "lucide-react";
 import Link from "next/link";
 
@@ -44,6 +45,7 @@ export function GroupRecommendations({ groupId }: GroupRecommendationsProps) {
     if (isLoading) {
         return (
             <div className="space-y-6">
+                <LoadingTips />
                 {/* Stats Skeleton */}
                 <Card>
                     <CardHeader>
@@ -53,8 +55,8 @@ export function GroupRecommendations({ groupId }: GroupRecommendationsProps) {
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                             {[...Array(4)].map((_, i) => (
                                 <div key={i} className="space-y-2">
-                                    <Skeleton className="h-4 w-20" />
-                                    <Skeleton className="h-8 w-16" />
+                                    <Skeleton variant="branded" className="h-4 w-20" />
+                                    <Skeleton variant="branded" className="h-8 w-16" />
                                 </div>
                             ))}
                         </div>
@@ -70,8 +72,8 @@ export function GroupRecommendations({ groupId }: GroupRecommendationsProps) {
                         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
                             {[...Array(5)].map((_, i) => (
                                 <div key={i} className="space-y-3">
-                                    <Skeleton className="aspect-[2/3] w-full rounded" />
-                                    <Skeleton className="h-4 w-3/4" />
+                                    <Skeleton variant="poster" className="w-full rounded" />
+                                    <Skeleton variant="branded" className="h-4 w-3/4" />
                                 </div>
                             ))}
                         </div>

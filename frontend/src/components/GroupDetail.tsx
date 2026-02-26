@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, Edit, Trash2, UserPlus, Shield, Crown, AlertCircle, Users } from "lucide-react";
 import { toast } from "@/lib/toast";
 import { Skeleton } from "@/components/ui/skeleton";
+import { LoadingTips } from "@/components/LoadingTips";
 import { useAuth } from "@/contexts/AuthContext";
 
 interface GroupDetailProps {
@@ -160,37 +161,38 @@ export function GroupDetail({ groupId }: GroupDetailProps) {
     if (isLoading) {
         return (
             <div className="space-y-6">
+                <LoadingTips />
                 {/* Header Skeleton */}
                 <div className="flex items-center justify-between">
-                    <Skeleton className="h-10 w-40" />
+                    <Skeleton variant="branded" className="h-10 w-40" />
                     <div className="flex gap-2">
-                        <Skeleton className="h-10 w-32" />
-                        <Skeleton className="h-10 w-24" />
+                        <Skeleton variant="branded" className="h-10 w-32" />
+                        <Skeleton variant="branded" className="h-10 w-24" />
                     </div>
                 </div>
 
                 {/* Group Info Card Skeleton */}
                 <Card>
                     <CardHeader>
-                        <Skeleton className="h-8 w-1/3" />
+                        <Skeleton variant="branded" className="h-8 w-1/3" />
                     </CardHeader>
                     <CardContent className="space-y-4">
-                        <Skeleton className="h-4 w-full" />
-                        <Skeleton className="h-4 w-2/3" />
+                        <Skeleton variant="branded" className="h-4 w-full" />
+                        <Skeleton variant="branded" className="h-4 w-2/3" />
                     </CardContent>
                 </Card>
 
                 {/* Members Card Skeleton */}
                 <Card>
                     <CardHeader>
-                        <Skeleton className="h-6 w-32" />
+                        <Skeleton variant="branded" className="h-6 w-32" />
                     </CardHeader>
                     <CardContent>
                         <div className="space-y-4">
                             {[...Array(3)].map((_, i) => (
                                 <div key={i} className="flex items-center justify-between">
-                                    <Skeleton className="h-6 w-1/3" />
-                                    <Skeleton className="h-6 w-20" />
+                                    <Skeleton variant="branded" className="h-6 w-1/3" />
+                                    <Skeleton variant="branded" className="h-6 w-20" />
                                 </div>
                             ))}
                         </div>

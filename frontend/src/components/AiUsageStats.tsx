@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { LoadingTips } from '@/components/LoadingTips';
 import { aiApi } from '@/lib/api';
 import type { AiUsageStats as AiUsageStatsType } from '@/types/ai';
 
@@ -27,18 +28,21 @@ export function AiUsageStats() {
 
     if (isLoading) {
         return (
-            <Card>
-                <CardHeader>
-                    <Skeleton className="h-6 w-48" />
-                    <Skeleton className="h-4 w-32 mt-2" />
-                </CardHeader>
-                <CardContent>
-                    <div className="space-y-4">
-                        <Skeleton className="h-16 w-full" />
-                        <Skeleton className="h-16 w-full" />
-                    </div>
-                </CardContent>
-            </Card>
+            <div className="space-y-6">
+                <LoadingTips />
+                <Card>
+                    <CardHeader>
+                        <Skeleton variant="branded" className="h-6 w-48" />
+                        <Skeleton variant="branded" className="h-4 w-32 mt-2" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="space-y-4">
+                            <Skeleton variant="branded" className="h-16 w-full" />
+                            <Skeleton variant="branded" className="h-16 w-full" />
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
         );
     }
 

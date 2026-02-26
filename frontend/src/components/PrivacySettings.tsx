@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "@/lib/toast";
 import { Skeleton } from "@/components/ui/skeleton";
+import { LoadingTips } from "@/components/LoadingTips";
 import { Shield, Loader2, Eye, Star, FileText } from "lucide-react";
 
 export function PrivacySettings() {
@@ -85,28 +86,31 @@ export function PrivacySettings() {
     // Loading state
     if (isLoading) {
         return (
-            <Card>
-                <CardHeader>
-                    <div className="flex items-center gap-2">
-                        <Shield className="h-5 w-5 text-primary" />
-                        <CardTitle>Privacy Settings</CardTitle>
-                    </div>
-                    <CardDescription>
-                        Control what you share with your groups
-                    </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                    {[...Array(3)].map((_, i) => (
-                        <div key={i} className="flex items-center justify-between">
-                            <div className="space-y-2 flex-1">
-                                <Skeleton className="h-5 w-1/3" />
-                                <Skeleton className="h-4 w-2/3" />
-                            </div>
-                            <Skeleton className="h-6 w-11 rounded-full" />
+            <div className="space-y-6">
+                <LoadingTips />
+                <Card>
+                    <CardHeader>
+                        <div className="flex items-center gap-2">
+                            <Shield className="h-5 w-5 text-primary" />
+                            <CardTitle>Privacy Settings</CardTitle>
                         </div>
-                    ))}
-                </CardContent>
-            </Card>
+                        <CardDescription>
+                            Control what you share with your groups
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                        {[...Array(3)].map((_, i) => (
+                            <div key={i} className="flex items-center justify-between">
+                                <div className="space-y-2 flex-1">
+                                    <Skeleton variant="branded" className="h-5 w-1/3" />
+                                    <Skeleton variant="branded" className="h-4 w-2/3" />
+                                </div>
+                                <Skeleton variant="branded" className="h-6 w-11 rounded-full" />
+                            </div>
+                        ))}
+                    </CardContent>
+                </Card>
+            </div>
         );
     }
 

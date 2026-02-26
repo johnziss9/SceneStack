@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { groupApi } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { LoadingTips } from "@/components/LoadingTips";
 import { Film, Star, Trophy, Users } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -18,27 +19,28 @@ const TMDB_IMAGE_BASE = "https://image.tmdb.org/t/p/w92";
 function GroupStatsSkeleton() {
     return (
         <div className="space-y-6">
+            <LoadingTips />
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {[...Array(4)].map((_, i) => (
                     <Card key={i}>
                         <CardContent className="pt-6">
-                            <Skeleton className="h-4 w-24 mb-2" />
-                            <Skeleton className="h-8 w-16" />
+                            <Skeleton variant="branded" className="h-4 w-24 mb-2" />
+                            <Skeleton variant="branded" className="h-8 w-16" />
                         </CardContent>
                     </Card>
                 ))}
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Card>
-                    <CardHeader><Skeleton className="h-5 w-32" /></CardHeader>
+                    <CardHeader><Skeleton variant="branded" className="h-5 w-32" /></CardHeader>
                     <CardContent className="space-y-3">
-                        {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
+                        {[...Array(3)].map((_, i) => <Skeleton variant="branded" key={i} className="h-10 w-full" />)}
                     </CardContent>
                 </Card>
                 <Card>
-                    <CardHeader><Skeleton className="h-5 w-32" /></CardHeader>
+                    <CardHeader><Skeleton variant="branded" className="h-5 w-32" /></CardHeader>
                     <CardContent className="space-y-3">
-                        {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-14 w-full" />)}
+                        {[...Array(3)].map((_, i) => <Skeleton variant="branded" key={i} className="h-14 w-full" />)}
                     </CardContent>
                 </Card>
             </div>

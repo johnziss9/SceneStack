@@ -25,6 +25,7 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft, Plus, AlertCircle, BookmarkPlus, BookmarkCheck } from 'lucide-react';
 import { toast } from '@/lib/toast';
 import { Skeleton } from '@/components/ui/skeleton';
+import { LoadingTips } from "@/components/LoadingTips";
 import { MovieInsight } from '@/components/MovieInsight';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -178,17 +179,20 @@ export default function WatchDetailPage({ params }: WatchDetailPageProps) {
   if (isLoading) {
     return (
       <main className="min-h-screen">
-        <Skeleton className="w-full h-56 sm:h-72 rounded-none" />
+        <div className="p-4 sm:p-6">
+          <LoadingTips />
+        </div>
+        <Skeleton variant="branded" className="w-full h-56 sm:h-72 rounded-none" />
         <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 space-y-6">
-          <Skeleton className="h-8 w-2/3" />
-          <Skeleton className="h-4 w-1/3" />
+          <Skeleton variant="branded" className="h-8 w-2/3" />
+          <Skeleton variant="branded" className="h-4 w-1/3" />
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2 space-y-4">
               {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-16 w-full" />)}
             </div>
             <div className="space-y-4">
-              <Skeleton className="h-32 w-full" />
-              <Skeleton className="h-48 w-full" />
+              <Skeleton variant="branded" className="h-32 w-full" />
+              <Skeleton variant="branded" className="h-48 w-full" />
             </div>
           </div>
         </div>

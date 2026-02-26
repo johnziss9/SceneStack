@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { statsApi } from '@/lib/api';
 import { Skeleton } from '@/components/ui/skeleton';
+import { LoadingTips } from "@/components/LoadingTips";
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { StatsOverview } from '@/components/stats/StatsOverview';
 import { RatingsHistogram } from '@/components/stats/RatingsHistogram';
@@ -19,14 +20,15 @@ import type { UserStats } from '@/types/stats';
 function StatsSkeleton() {
     return (
         <div className="space-y-6">
+            <LoadingTips />
             {/* Overview cards */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 {[...Array(4)].map((_, i) => (
                     <Card key={i}>
                         <CardContent className="pt-6">
-                            <Skeleton className="h-4 w-24 mb-2" />
-                            <Skeleton className="h-8 w-16 mb-1" />
-                            <Skeleton className="h-3 w-20" />
+                            <Skeleton variant="branded" className="h-4 w-24 mb-2" />
+                            <Skeleton variant="branded" className="h-8 w-16 mb-1" />
+                            <Skeleton variant="branded" className="h-3 w-20" />
                         </CardContent>
                     </Card>
                 ))}
@@ -36,20 +38,20 @@ function StatsSkeleton() {
                 {[...Array(2)].map((_, i) => (
                     <Card key={i}>
                         <CardHeader>
-                            <Skeleton className="h-5 w-40" />
+                            <Skeleton variant="branded" className="h-5 w-40" />
                         </CardHeader>
                         <CardContent>
-                            <Skeleton className="h-48 w-full" />
+                            <Skeleton variant="branded" className="h-48 w-full" />
                         </CardContent>
                     </Card>
                 ))}
             </div>
             <Card>
                 <CardHeader>
-                    <Skeleton className="h-5 w-40" />
+                    <Skeleton variant="branded" className="h-5 w-40" />
                 </CardHeader>
                 <CardContent>
-                    <Skeleton className="h-48 w-full" />
+                    <Skeleton variant="branded" className="h-48 w-full" />
                 </CardContent>
             </Card>
         </div>
@@ -85,8 +87,8 @@ export default function StatsPage() {
             <div className="min-h-screen p-8">
                 <div className="max-w-5xl mx-auto space-y-6">
                     <div>
-                        <Skeleton className="h-9 w-40 mb-2" />
-                        <Skeleton className="h-4 w-56" />
+                        <Skeleton variant="branded" className="h-9 w-40 mb-2" />
+                        <Skeleton variant="branded" className="h-4 w-56" />
                     </div>
                     <StatsSkeleton />
                 </div>

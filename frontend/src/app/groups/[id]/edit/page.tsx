@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { toast } from "@/lib/toast";
 import { Skeleton } from "@/components/ui/skeleton";
+import { LoadingTips } from "@/components/LoadingTips";
 
 interface EditGroupPageProps {
     params: Promise<{ id: string }>;
@@ -105,20 +106,21 @@ export default function EditGroupPage({ params }: EditGroupPageProps) {
         return (
             <main className="min-h-screen p-8">
                 <div className="max-w-2xl mx-auto">
-                    <Skeleton className="h-10 w-40 mb-6" />
+                    <LoadingTips />
+                    <Skeleton variant="branded" className="h-10 w-40 mb-6" />
                     <Card>
                         <CardHeader>
-                            <Skeleton className="h-8 w-48" />
-                            <Skeleton className="h-4 w-64" />
+                            <Skeleton variant="branded" className="h-8 w-48" />
+                            <Skeleton variant="branded" className="h-4 w-64" />
                         </CardHeader>
                         <CardContent className="space-y-6">
                             <div className="space-y-2">
-                                <Skeleton className="h-4 w-24" />
-                                <Skeleton className="h-10 w-full" />
+                                <Skeleton variant="branded" className="h-4 w-24" />
+                                <Skeleton variant="branded" className="h-10 w-full" />
                             </div>
                             <div className="space-y-2">
-                                <Skeleton className="h-4 w-32" />
-                                <Skeleton className="h-24 w-full" />
+                                <Skeleton variant="branded" className="h-4 w-32" />
+                                <Skeleton variant="branded" className="h-24 w-full" />
                             </div>
                         </CardContent>
                     </Card>

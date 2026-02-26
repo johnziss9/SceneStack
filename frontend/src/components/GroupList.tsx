@@ -10,6 +10,7 @@ import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import { UpgradeToPremiumModal } from "@/components/UpgradeToPremiumModal";
+import { LoadingTips } from "@/components/LoadingTips";
 
 export function GroupList() {
     const { user } = useAuth();
@@ -62,13 +63,36 @@ export function GroupList() {
     // Loading state
     if (isLoading) {
         return (
-            <div className="space-y-4">
-                {[...Array(3)].map((_, i) => (
-                    <div key={i} className="border rounded-lg p-6 space-y-3">
-                        <Skeleton className="h-6 w-1/3" />
-                        <Skeleton className="h-4 w-1/4" />
-                    </div>
-                ))}
+            <div className="space-y-6">
+                <LoadingTips />
+
+                {/* Usage Indicator and Create Group Button skeleton */}
+                <div className="flex items-center justify-between gap-4">
+                    <Skeleton variant="branded" className="h-9 w-48 rounded-lg" />
+                    <Skeleton variant="branded" className="h-9 w-36 rounded-lg ml-auto" />
+                </div>
+
+                {/* Groups Grid skeleton */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {[...Array(3)].map((_, i) => (
+                        <div key={i} className="rounded-xl border bg-card p-6 space-y-4">
+                            {/* Header with Icon */}
+                            <div className="flex items-start justify-between gap-3">
+                                <Skeleton variant="branded" className="h-6 w-32" />
+                                <Skeleton variant="branded" className="h-10 w-10 rounded-full flex-shrink-0" />
+                            </div>
+
+                            {/* Member Count and Role Badge */}
+                            <div className="flex items-center gap-2">
+                                <Skeleton variant="branded" className="h-7 w-24 rounded-full" />
+                                <Skeleton variant="branded" className="h-6 w-16 rounded-full" />
+                            </div>
+
+                            {/* Hover indicator */}
+                            <Skeleton variant="branded" className="h-4 w-20" />
+                        </div>
+                    ))}
+                </div>
             </div>
         );
     }
