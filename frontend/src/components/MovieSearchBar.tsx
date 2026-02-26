@@ -5,10 +5,10 @@ import { Search, X, Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { movieApi } from '@/lib';
-import type { TmdbMovie } from '@/types';
+import type { TmdbMovie, TmdbSearchResponse } from '@/types';
 
 interface MovieSearchBarProps {
-    onResultsChange: (results: TmdbMovie[]) => void;
+    onResultsChange: (results: TmdbMovie[], totalResults?: number, totalPages?: number, query?: string) => void;
     onLoadingChange?: (isLoading: boolean) => void;
 }
 
@@ -21,7 +21,7 @@ export const MovieSearchBar = memo(function MovieSearchBar({ onResultsChange, on
     useEffect(() => {
         // Don't search if query is empty
         if (!query.trim()) {
-            onResultsChange([]);
+            onResultsChange([], 0, 0, '');
             onLoadingChange?.(false);
             return;
         }
@@ -35,12 +35,12 @@ export const MovieSearchBar = memo(function MovieSearchBar({ onResultsChange, on
         const timeoutId = setTimeout(async () => {
             try {
                 const response = await movieApi.searchMovies(query);
-                onResultsChange(response.results);
+                onResultsChange(response.results, response.total_results, response.total_pages, query);
                 setError(null);
             } catch (err) {
                 console.error('Search error:', err);
                 setError('Failed to search movies. Please try again.');
-                onResultsChange([]);
+                onResultsChange([], 0, 0, '');
             } finally {
                 setIsLoading(false);
                 onLoadingChange?.(false);
@@ -54,7 +54,7 @@ export const MovieSearchBar = memo(function MovieSearchBar({ onResultsChange, on
     const handleClear = () => {
         setQuery('');
         setError(null);
-        onResultsChange([]);
+        onResultsChange([], 0, 0, '');
     };
 
     return (

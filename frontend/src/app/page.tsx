@@ -6,20 +6,25 @@ import { useRouter } from 'next/navigation';
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Film, TrendingUp, Eye, Users, ArrowRight, Sparkles, Crown, Zap } from 'lucide-react';
+import { Film, TrendingUp, Eye, Users, ArrowRight, Sparkles, Crown, Zap, Loader2 } from 'lucide-react';
 import { MovieSearchBar } from "@/components/MovieSearchBar";
 import { MovieCard } from "@/components/MovieCard";
 import { WatchCard } from "@/components/WatchCard";
 import { WatchForm } from "@/components/WatchForm";
 import { UpgradeToPremiumModal } from "@/components/UpgradeToPremiumModal";
 import { useAuth } from "@/contexts/AuthContext";
-import { watchApi } from "@/lib";
+import { watchApi, movieApi } from "@/lib";
 import type { TmdbMovie, GroupedWatch } from '@/types';
 
 export default function Home() {
   const { user } = useAuth();
   const router = useRouter();
   const [searchResults, setSearchResults] = useState<TmdbMovie[]>([]);
+  const [totalSearchResults, setTotalSearchResults] = useState<number>(0);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [totalPages, setTotalPages] = useState<number>(0);
+  const [currentQuery, setCurrentQuery] = useState<string>('');
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [selectedMovie, setSelectedMovie] = useState<TmdbMovie | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
@@ -71,13 +76,43 @@ export default function Home() {
     }
   };
 
-  const handleSearchChange = useCallback((results: TmdbMovie[]) => {
+  const handleSearchChange = useCallback((results: TmdbMovie[], totalResults: number = 0, totalPages: number = 0, query: string = '') => {
     setSearchResults(results);
+    setTotalSearchResults(totalResults);
+    setTotalPages(totalPages);
+    setCurrentPage(1);
+    setCurrentQuery(query);
   }, []);
 
   const handleLoadingChange = useCallback((loading: boolean) => {
     setIsSearching(loading);
   }, []);
+
+  const handleLoadMore = async () => {
+    if (!currentQuery || isLoadingMore || currentPage >= totalPages) return;
+
+    setIsLoadingMore(true);
+    try {
+      const nextPage = currentPage + 1;
+      const response = await movieApi.searchMovies(currentQuery, nextPage);
+
+      // Filter out any duplicates
+      const existingIds = new Set(searchResults.map(m => m.id));
+      const uniqueResults = response.results.filter(movie => !existingIds.has(movie.id));
+
+      // Append unique results
+      if (uniqueResults.length > 0) {
+        setSearchResults(prev => [...prev, ...uniqueResults]);
+      }
+
+      // Always increment page so we don't keep fetching the same page
+      setCurrentPage(nextPage);
+    } catch (err) {
+      console.error('Load more error:', err);
+    } finally {
+      setIsLoadingMore(false);
+    }
+  };
 
   return (
     <main className="min-h-screen p-4 sm:p-8">
@@ -293,10 +328,17 @@ export default function Home() {
             )}
 
             {!isSearching && searchResults.length > 0 && (
-              <div>
-                <h2 className="text-2xl font-semibold mb-4">
-                  Search Results ({searchResults.length})
-                </h2>
+              <div className="space-y-6">
+                <div>
+                  <h2 className="text-2xl font-semibold">Search Results</h2>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {totalSearchResults > searchResults.length ? (
+                      <>Showing {searchResults.length} of {totalSearchResults.toLocaleString()} results</>
+                    ) : (
+                      <>{searchResults.length} {searchResults.length === 1 ? 'result' : 'results'} found</>
+                    )}
+                  </p>
+                </div>
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                   {searchResults.map((movie) => (
                     <MovieCard
@@ -306,6 +348,25 @@ export default function Home() {
                     />
                   ))}
                 </div>
+                {currentPage < totalPages && (
+                  <div className="flex justify-center py-8">
+                    <Button
+                      onClick={handleLoadMore}
+                      disabled={isLoadingMore}
+                      size="lg"
+                      variant="outline"
+                    >
+                      {isLoadingMore ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Loading...
+                        </>
+                      ) : (
+                        'Load More Results'
+                      )}
+                    </Button>
+                  </div>
+                )}
               </div>
             )}
           </>
@@ -467,10 +528,17 @@ export default function Home() {
 
         {!user && !isSearching && searchResults.length > 0 && (
           <>
-            <div>
-              <h2 className="text-2xl font-semibold mb-4">
-                Search Results ({searchResults.length})
-              </h2>
+            <div className="space-y-6">
+              <div>
+                <h2 className="text-2xl font-semibold">Search Results</h2>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {totalSearchResults > searchResults.length ? (
+                    <>Showing {searchResults.length} of {totalSearchResults.toLocaleString()} results</>
+                  ) : (
+                    <>{searchResults.length} {searchResults.length === 1 ? 'result' : 'results'} found</>
+                  )}
+                </p>
+              </div>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                 {searchResults.map((movie) => (
                   <MovieCard
@@ -480,6 +548,25 @@ export default function Home() {
                   />
                 ))}
               </div>
+              {currentPage < totalPages && (
+                <div className="flex justify-center py-8">
+                  <Button
+                    onClick={handleLoadMore}
+                    disabled={isLoadingMore}
+                    size="lg"
+                    variant="outline"
+                  >
+                    {isLoadingMore ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Loading...
+                      </>
+                    ) : (
+                      'Load More Results'
+                    )}
+                  </Button>
+                </div>
+              )}
             </div>
 
             {/* CTA after search results */}

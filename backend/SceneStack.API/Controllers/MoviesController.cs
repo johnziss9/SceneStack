@@ -30,15 +30,15 @@ public class MoviesController : ControllerBase
         return Ok(movies);
     }
 
-    // GET: api/movies/search?query=fight%20club
+    // GET: api/movies/search?query=fight%20club&page=1
     [HttpGet("search")]
     [AllowAnonymous]
-    public async Task<ActionResult<TmdbMovieSearchResult>> SearchMovies([FromQuery] string query)
+    public async Task<ActionResult<TmdbMovieSearchResult>> SearchMovies([FromQuery] string query, [FromQuery] int page = 1)
     {
         if (string.IsNullOrWhiteSpace(query))
             return BadRequest("Search query is required");
 
-        var result = await _tmdbService.SearchMoviesAsync(query);
+        var result = await _tmdbService.SearchMoviesAsync(query, page);
 
         if (result == null)
             return StatusCode(500, "Error searching movies");

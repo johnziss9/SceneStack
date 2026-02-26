@@ -66,7 +66,7 @@ public class MoviesControllerTests
         tmdbService.SearchMoviesAsync("Fight Club", 1).Returns(searchResult);
 
         // Act
-        var result = await controller.SearchMovies("Fight Club");
+        var result = await controller.SearchMovies("Fight Club", 1);
 
         // Assert
         var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject;
@@ -99,10 +99,10 @@ public class MoviesControllerTests
         var controller = new MoviesController(movieService, tmdbService);
         
         tmdbService.SearchMoviesAsync(Arg.Any<string>(), Arg.Any<int>()).Returns((TmdbMovieSearchResult?)null);
-        
+
         // Act
-        var result = await controller.SearchMovies("NonexistentMovie");
-        
+        var result = await controller.SearchMovies("NonexistentMovie", 1);
+
         // Assert
         var objectResult = result.Result.Should().BeOfType<ObjectResult>().Subject;
         objectResult.StatusCode.Should().Be(500);
