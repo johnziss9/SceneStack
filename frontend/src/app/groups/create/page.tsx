@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { groupApi } from "@/lib/api";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,6 +20,9 @@ export default function CreateGroupPage() {
     const [description, setDescription] = useState("");
     const [nameError, setNameError] = useState<string | null>(null);
 
+    // Ref for auto-scrolling to error
+    const nameRef = useRef<HTMLDivElement>(null);
+
     const validateForm = (): boolean => {
         let isValid = true;
 
@@ -33,6 +36,16 @@ export default function CreateGroupPage() {
         } else if (name.trim().length < 3) {
             setNameError("Group name must be at least 3 characters");
             isValid = false;
+        }
+
+        // Scroll to error if validation failed
+        if (!isValid && nameRef.current) {
+            setTimeout(() => {
+                nameRef.current?.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'center',
+                });
+            }, 100);
         }
 
         return isValid;
@@ -100,7 +113,7 @@ export default function CreateGroupPage() {
                     <CardContent>
                         <form onSubmit={handleSubmit} className="space-y-6">
                             {/* Group Name */}
-                            <div className="space-y-2">
+                            <div ref={nameRef} className="space-y-2">
                                 <Label htmlFor="name">
                                     Group Name <span className="text-destructive">*</span>
                                 </Label>

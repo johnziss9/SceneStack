@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -29,6 +29,13 @@ export function WatchForm({ movie, open, onOpenChange, onSuccess }: WatchFormPro
     const router = useRouter();
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
+
+    // Refs for auto-scrolling to errors
+    const formRef = useRef<HTMLFormElement>(null);
+    const dateRef = useRef<HTMLDivElement>(null);
+    const ratingRef = useRef<HTMLDivElement>(null);
+    const locationRef = useRef<HTMLDivElement>(null);
+    const privacyRef = useRef<HTMLDivElement>(null);
 
     // Validation errors
     const [dateError, setDateError] = useState<string | null>(null);
@@ -81,6 +88,7 @@ export function WatchForm({ movie, open, onOpenChange, onSuccess }: WatchFormPro
     // Validation function
     const validateForm = (): boolean => {
         let isValid = true;
+        let firstErrorRef: React.RefObject<HTMLDivElement> | null = null;
 
         // Reset errors
         setDateError(null);
@@ -92,6 +100,7 @@ export function WatchForm({ movie, open, onOpenChange, onSuccess }: WatchFormPro
         if (!watchedDate) {
             setDateError('Watch date is required');
             isValid = false;
+            if (!firstErrorRef) firstErrorRef = dateRef;
         } else {
             // Validate if date is in the future
             const selected = new Date(watchedDate);
@@ -101,6 +110,7 @@ export function WatchForm({ movie, open, onOpenChange, onSuccess }: WatchFormPro
             if (selected > today) {
                 setDateError('Watch date cannot be in the future');
                 isValid = false;
+                if (!firstErrorRef) firstErrorRef = dateRef;
             }
         }
 
@@ -110,6 +120,7 @@ export function WatchForm({ movie, open, onOpenChange, onSuccess }: WatchFormPro
             if (isNaN(ratingNum) || ratingNum < 1 || ratingNum > 10) {
                 setRatingError('Rating must be between 1 and 10');
                 isValid = false;
+                if (!firstErrorRef) firstErrorRef = ratingRef;
             }
         }
 
@@ -117,12 +128,24 @@ export function WatchForm({ movie, open, onOpenChange, onSuccess }: WatchFormPro
         if (watchLocation === "Other" && !customLocation.trim()) {
             setLocationError('Please specify the location');
             isValid = false;
+            if (!firstErrorRef) firstErrorRef = locationRef;
         }
 
         // Validate privacy + groups combination
         if (sharingMode === 'specific' && selectedGroups.length === 0) {
             setPrivacyError('Please select at least one group to share with');
             isValid = false;
+            if (!firstErrorRef) firstErrorRef = privacyRef;
+        }
+
+        // Scroll to first error if validation failed
+        if (!isValid && firstErrorRef?.current) {
+            setTimeout(() => {
+                firstErrorRef.current?.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'center',
+                });
+            }, 100);
         }
 
         return isValid;
@@ -222,12 +245,12 @@ export function WatchForm({ movie, open, onOpenChange, onSuccess }: WatchFormPro
                     </DialogDescription>
                 </DialogHeader>
 
-                <form onSubmit={handleSubmit} className="overflow-y-auto flex-1 pr-2" noValidate>
+                <form ref={formRef} onSubmit={handleSubmit} className="overflow-y-auto flex-1 pr-2" noValidate>
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                         {/* Left Column - Form Fields */}
                         <div className="space-y-4">
                     {/* Watch Date */}
-                    <div className="space-y-2">
+                    <div ref={dateRef} className="space-y-2">
                         <Label htmlFor="watchedDate">Watch Date *</Label>
                         <Input
                             id="watchedDate"
@@ -272,7 +295,7 @@ export function WatchForm({ movie, open, onOpenChange, onSuccess }: WatchFormPro
                     </div>
 
                     {/* Rating */}
-                    <div className="space-y-3">
+                    <div ref={ratingRef} className="space-y-3">
                         <div className="flex items-center justify-between">
                             <Label>Rating <span className="text-muted-foreground">(Optional)</span></Label>
                             {rating && (
@@ -303,7 +326,7 @@ export function WatchForm({ movie, open, onOpenChange, onSuccess }: WatchFormPro
                     </div>
 
                     {/* Location */}
-                    <div className="space-y-2">
+                    <div ref={locationRef} className="space-y-2">
                         <Label htmlFor="location">Location</Label>
                         <Select value={watchLocation} onValueChange={setWatchLocation}>
                             <SelectTrigger id="location">
@@ -382,7 +405,7 @@ export function WatchForm({ movie, open, onOpenChange, onSuccess }: WatchFormPro
                     {/* End Left Column */}
 
                     {/* Right Column - Privacy & Sharing */}
-                    <div className="space-y-4">
+                    <div ref={privacyRef} className="space-y-4">
                         <Label className="text-base">Privacy & Sharing</Label>
 
                         {/* Three Privacy Cards - Horizontal Layout */}
@@ -546,7 +569,7 @@ export function WatchForm({ movie, open, onOpenChange, onSuccess }: WatchFormPro
 
                         {/* Privacy Error Message */}
                         {privacyError && (
-                            <p className="text-sm text-destructive">⚠️ {privacyError}</p>
+                            <p className="text-sm text-destructive">{privacyError}</p>
                         )}
                     </div>
                     {/* End Right Column */}

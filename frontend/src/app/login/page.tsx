@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,20 +16,27 @@ export default function LoginPage() {
     const [password, setPassword] = useState('');
     const [isLoading, setIsLoading] = useState(false);
 
+    // Refs for auto-scrolling to errors
+    const emailRef = useRef<HTMLDivElement>(null);
+    const passwordRef = useRef<HTMLDivElement>(null);
+
     // Form validation
     const [emailError, setEmailError] = useState('');
     const [passwordError, setPasswordError] = useState('');
 
     const validateForm = (): boolean => {
         let isValid = true;
+        let firstErrorRef: React.RefObject<HTMLDivElement> | null = null;
 
         // Email validation
         if (!email) {
             setEmailError('Email is required');
             isValid = false;
+            if (!firstErrorRef) firstErrorRef = emailRef;
         } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
             setEmailError('Please enter a valid email');
             isValid = false;
+            if (!firstErrorRef) firstErrorRef = emailRef;
         } else {
             setEmailError('');
         }
@@ -38,8 +45,19 @@ export default function LoginPage() {
         if (!password) {
             setPasswordError('Password is required');
             isValid = false;
+            if (!firstErrorRef) firstErrorRef = passwordRef;
         } else {
             setPasswordError('');
+        }
+
+        // Scroll to first error if validation failed
+        if (!isValid && firstErrorRef?.current) {
+            setTimeout(() => {
+                firstErrorRef.current?.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'center',
+                });
+            }, 100);
         }
 
         return isValid;
@@ -119,7 +137,7 @@ export default function LoginPage() {
                 <form onSubmit={handleSubmit} className="mt-8 space-y-6" noValidate>
                     <div className="space-y-4">
                         {/* Email Field */}
-                        <div>
+                        <div ref={emailRef}>
                             <Label htmlFor="email">Email</Label>
                             <Input
                                 id="email"
@@ -134,7 +152,7 @@ export default function LoginPage() {
                                         setEmailError('Please enter a valid email');
                                     }
                                 }}
-                                placeholder="you@example.com"
+                                placeholder="Enter your email address"
                                 disabled={isLoading}
                                 className={emailError ? 'border-destructive' : ''}
                             />
@@ -144,7 +162,7 @@ export default function LoginPage() {
                         </div>
 
                         {/* Password Field */}
-                        <div>
+                        <div ref={passwordRef}>
                             <Label htmlFor="password">Password</Label>
                             <Input
                                 id="password"
@@ -154,7 +172,7 @@ export default function LoginPage() {
                                     setPassword(e.target.value);
                                     if (passwordError) setPasswordError('');
                                 }}
-                                placeholder="••••••••"
+                                placeholder="Enter your password"
                                 disabled={isLoading}
                                 className={passwordError ? 'border-destructive' : ''}
                             />

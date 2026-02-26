@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { groupApi } from "@/lib/api";
 import { Group } from "@/types";
@@ -27,6 +27,9 @@ export default function EditGroupPage({ params }: EditGroupPageProps) {
     const [name, setName] = useState("");
     const [description, setDescription] = useState("");
     const [nameError, setNameError] = useState<string | null>(null);
+
+    // Ref for auto-scrolling to error
+    const nameRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         async function loadParams() {
@@ -63,17 +66,27 @@ export default function EditGroupPage({ params }: EditGroupPageProps) {
     const validateForm = (): boolean => {
         setNameError(null);
 
+        let hasError = false;
+
         if (!name.trim()) {
             setNameError("Group name is required");
-            return false;
-        }
-
-        if (name.length < 3) {
+            hasError = true;
+        } else if (name.length < 3) {
             setNameError("Group name must be at least 3 characters");
-            return false;
+            hasError = true;
         }
 
-        return true;
+        // Scroll to error if validation failed
+        if (hasError && nameRef.current) {
+            setTimeout(() => {
+                nameRef.current?.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'center',
+                });
+            }, 100);
+        }
+
+        return !hasError;
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -155,7 +168,7 @@ export default function EditGroupPage({ params }: EditGroupPageProps) {
                     <CardContent>
                         <form onSubmit={handleSubmit} className="space-y-6">
                             {/* Group Name */}
-                            <div className="space-y-2">
+                            <div ref={nameRef} className="space-y-2">
                                 <Label htmlFor="name">
                                     Group Name <span className="text-destructive">*</span>
                                 </Label>

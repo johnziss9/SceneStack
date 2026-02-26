@@ -24,7 +24,7 @@ import { LogOut, User as UserIcon, Edit, Save, X, Lock, Trash2, Shield, Settings
 import { useRouter } from 'next/navigation';
 import { AiUsageStats } from '@/components/AiUsageStats';
 import { PrivacySettings } from '@/components/PrivacySettings';
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { userApi } from '@/lib/api';
 import { toast } from '@/lib/toast';
 import { Badge } from '@/components/ui/badge';
@@ -42,16 +42,35 @@ export default function ProfilePage() {
     const [editBio, setEditBio] = useState('');
     const [isSaving, setIsSaving] = useState(false);
 
+    // Profile edit validation errors
+    const [editUsernameError, setEditUsernameError] = useState('');
+    const [editEmailError, setEditEmailError] = useState('');
+
+    // Refs for auto-scrolling to errors (profile edit)
+    const editUsernameRef = useRef<HTMLDivElement>(null);
+    const editEmailRef = useRef<HTMLDivElement>(null);
+
     // Change password state
     const [currentPassword, setCurrentPassword] = useState('');
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [isChangingPassword, setIsChangingPassword] = useState(false);
 
+    // Password validation errors
+    const [currentPasswordError, setCurrentPasswordError] = useState('');
+    const [newPasswordError, setNewPasswordError] = useState('');
+    const [confirmPasswordError, setConfirmPasswordError] = useState('');
+
+    // Refs for auto-scrolling to errors (password change)
+    const currentPasswordRef = useRef<HTMLDivElement>(null);
+    const newPasswordRef = useRef<HTMLDivElement>(null);
+    const confirmPasswordRef = useRef<HTMLDivElement>(null);
+
     // Delete account state
     const [showDeleteDialog, setShowDeleteDialog] = useState(false);
     const [deletePassword, setDeletePassword] = useState('');
     const [isDeleting, setIsDeleting] = useState(false);
+    const [deletePasswordError, setDeletePasswordError] = useState('');
 
     // Upgrade modal state
     const [showUpgradeModal, setShowUpgradeModal] = useState(false);
@@ -71,12 +90,39 @@ export default function ProfilePage() {
     };
 
     const handleSaveProfile = async () => {
+        let isValid = true;
+        let firstErrorRef: React.RefObject<HTMLDivElement> | null = null;
+
+        // Reset errors
+        setEditUsernameError('');
+        setEditEmailError('');
+
+        // Validate username
         if (!editUsername.trim()) {
-            toast.error('Username cannot be empty');
-            return;
+            setEditUsernameError('Username cannot be empty');
+            isValid = false;
+            if (!firstErrorRef) firstErrorRef = editUsernameRef;
         }
+
+        // Validate email
         if (!editEmail.trim()) {
-            toast.error('Email cannot be empty');
+            setEditEmailError('Email cannot be empty');
+            isValid = false;
+            if (!firstErrorRef) firstErrorRef = editEmailRef;
+        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(editEmail)) {
+            setEditEmailError('Please enter a valid email');
+            isValid = false;
+            if (!firstErrorRef) firstErrorRef = editEmailRef;
+        }
+
+        // Scroll to first error if validation failed
+        if (!isValid && firstErrorRef?.current) {
+            setTimeout(() => {
+                firstErrorRef.current?.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'center',
+                });
+            }, 100);
             return;
         }
 
@@ -103,18 +149,51 @@ export default function ProfilePage() {
     };
 
     const handleChangePassword = async () => {
-        if (!currentPassword || !newPassword || !confirmPassword) {
-            toast.error('All fields are required');
-            return;
+        let isValid = true;
+        let firstErrorRef: React.RefObject<HTMLDivElement> | null = null;
+
+        // Reset errors
+        setCurrentPasswordError('');
+        setNewPasswordError('');
+        setConfirmPasswordError('');
+
+        // Validate current password
+        if (!currentPassword) {
+            setCurrentPasswordError('Current password is required');
+            isValid = false;
+            if (!firstErrorRef) firstErrorRef = currentPasswordRef;
         }
 
-        if (newPassword !== confirmPassword) {
-            toast.error('New passwords do not match');
-            return;
+        // Validate new password
+        if (!newPassword) {
+            setNewPasswordError('New password is required');
+            isValid = false;
+            if (!firstErrorRef) firstErrorRef = newPasswordRef;
+        } else if (newPassword.length < 6) {
+            setNewPasswordError('Password must be at least 6 characters');
+            isValid = false;
+            if (!firstErrorRef) firstErrorRef = newPasswordRef;
         }
 
-        if (newPassword.length < 6) {
-            toast.error('Password must be at least 6 characters');
+        // Validate confirm password
+        if (!confirmPassword) {
+            setConfirmPasswordError('Please confirm your new password');
+            isValid = false;
+            if (!firstErrorRef) firstErrorRef = confirmPasswordRef;
+        } else if (newPassword !== confirmPassword) {
+            setConfirmPasswordError('Passwords do not match');
+            isValid = false;
+            if (!firstErrorRef) firstErrorRef = confirmPasswordRef;
+        }
+
+        // Scroll to first error if validation failed
+        if (!isValid && firstErrorRef?.current) {
+            setTimeout(() => {
+                firstErrorRef.current?.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'center',
+                });
+            }, 100);
             return;
         }
 
@@ -138,8 +217,11 @@ export default function ProfilePage() {
     };
 
     const handleDeleteAccount = async () => {
+        // Reset error
+        setDeletePasswordError('');
+
         if (!deletePassword) {
-            toast.error('Password is required');
+            setDeletePasswordError('Password is required to delete your account');
             return;
         }
 
@@ -154,6 +236,7 @@ export default function ProfilePage() {
             setIsDeleting(false);
             setShowDeleteDialog(false);
             setDeletePassword('');
+            setDeletePasswordError('');
         }
     };
 
@@ -360,25 +443,39 @@ export default function ProfilePage() {
                         {isEditMode ? (
                             <>
                                 {/* Edit Mode */}
-                                <div className="space-y-2">
+                                <div ref={editUsernameRef} className="space-y-2">
                                     <Label htmlFor="username">Username</Label>
                                     <Input
                                         id="username"
                                         value={editUsername}
-                                        onChange={(e) => setEditUsername(e.target.value)}
+                                        onChange={(e) => {
+                                            setEditUsername(e.target.value);
+                                            setEditUsernameError('');
+                                        }}
                                         placeholder="Enter username"
+                                        className={editUsernameError ? 'border-destructive' : ''}
                                     />
+                                    {editUsernameError && (
+                                        <p className="text-sm text-destructive">{editUsernameError}</p>
+                                    )}
                                 </div>
 
-                                <div className="space-y-2">
+                                <div ref={editEmailRef} className="space-y-2">
                                     <Label htmlFor="email">Email</Label>
                                     <Input
                                         id="email"
                                         type="email"
                                         value={editEmail}
-                                        onChange={(e) => setEditEmail(e.target.value)}
+                                        onChange={(e) => {
+                                            setEditEmail(e.target.value);
+                                            setEditEmailError('');
+                                        }}
                                         placeholder="Enter email"
+                                        className={editEmailError ? 'border-destructive' : ''}
                                     />
+                                    {editEmailError && (
+                                        <p className="text-sm text-destructive">{editEmailError}</p>
+                                    )}
                                 </div>
 
                                 <div className="space-y-2">
@@ -608,37 +705,58 @@ export default function ProfilePage() {
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                        <div className="space-y-2">
+                        <div ref={currentPasswordRef} className="space-y-2">
                             <Label htmlFor="currentPassword">Current Password</Label>
                             <Input
                                 id="currentPassword"
                                 type="password"
                                 value={currentPassword}
-                                onChange={(e) => setCurrentPassword(e.target.value)}
+                                onChange={(e) => {
+                                    setCurrentPassword(e.target.value);
+                                    setCurrentPasswordError('');
+                                }}
                                 placeholder="Enter current password"
+                                className={currentPasswordError ? 'border-destructive' : ''}
                             />
+                            {currentPasswordError && (
+                                <p className="text-sm text-destructive">{currentPasswordError}</p>
+                            )}
                         </div>
 
-                        <div className="space-y-2">
+                        <div ref={newPasswordRef} className="space-y-2">
                             <Label htmlFor="newPassword">New Password</Label>
                             <Input
                                 id="newPassword"
                                 type="password"
                                 value={newPassword}
-                                onChange={(e) => setNewPassword(e.target.value)}
+                                onChange={(e) => {
+                                    setNewPassword(e.target.value);
+                                    setNewPasswordError('');
+                                }}
                                 placeholder="Enter new password"
+                                className={newPasswordError ? 'border-destructive' : ''}
                             />
+                            {newPasswordError && (
+                                <p className="text-sm text-destructive">{newPasswordError}</p>
+                            )}
                         </div>
 
-                        <div className="space-y-2">
+                        <div ref={confirmPasswordRef} className="space-y-2">
                             <Label htmlFor="confirmPassword">Confirm New Password</Label>
                             <Input
                                 id="confirmPassword"
                                 type="password"
                                 value={confirmPassword}
-                                onChange={(e) => setConfirmPassword(e.target.value)}
+                                onChange={(e) => {
+                                    setConfirmPassword(e.target.value);
+                                    setConfirmPasswordError('');
+                                }}
                                 placeholder="Confirm new password"
+                                className={confirmPasswordError ? 'border-destructive' : ''}
                             />
+                            {confirmPasswordError && (
+                                <p className="text-sm text-destructive">{confirmPasswordError}</p>
+                            )}
                         </div>
 
                         <Button
@@ -724,9 +842,16 @@ export default function ProfilePage() {
                             id="deletePassword"
                             type="password"
                             value={deletePassword}
-                            onChange={(e) => setDeletePassword(e.target.value)}
+                            onChange={(e) => {
+                                setDeletePassword(e.target.value);
+                                setDeletePasswordError('');
+                            }}
                             placeholder="Enter your password"
+                            className={deletePasswordError ? 'border-destructive' : ''}
                         />
+                        {deletePasswordError && (
+                            <p className="text-sm text-destructive">{deletePasswordError}</p>
+                        )}
                     </div>
                     <AlertDialogFooter>
                         <AlertDialogCancel onClick={() => setDeletePassword('')}>

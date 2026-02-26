@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,6 +18,12 @@ export default function RegisterPage() {
     const [confirmPassword, setConfirmPassword] = useState('');
     const [isLoading, setIsLoading] = useState(false);
 
+    // Refs for auto-scrolling to errors
+    const usernameRef = useRef<HTMLDivElement>(null);
+    const emailRef = useRef<HTMLDivElement>(null);
+    const passwordRef = useRef<HTMLDivElement>(null);
+    const confirmPasswordRef = useRef<HTMLDivElement>(null);
+
     // Form validation errors
     const [usernameError, setUsernameError] = useState('');
     const [emailError, setEmailError] = useState('');
@@ -26,14 +32,17 @@ export default function RegisterPage() {
 
     const validateForm = (): boolean => {
         let isValid = true;
+        let firstErrorRef: React.RefObject<HTMLDivElement> | null = null;
 
         // Username validation
         if (!username) {
             setUsernameError('Username is required');
             isValid = false;
+            if (!firstErrorRef) firstErrorRef = usernameRef;
         } else if (username.length < 3) {
             setUsernameError('Username must be at least 3 characters');
             isValid = false;
+            if (!firstErrorRef) firstErrorRef = usernameRef;
         } else {
             setUsernameError('');
         }
@@ -42,9 +51,11 @@ export default function RegisterPage() {
         if (!email) {
             setEmailError('Email is required');
             isValid = false;
+            if (!firstErrorRef) firstErrorRef = emailRef;
         } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
             setEmailError('Please enter a valid email');
             isValid = false;
+            if (!firstErrorRef) firstErrorRef = emailRef;
         } else {
             setEmailError('');
         }
@@ -53,18 +64,23 @@ export default function RegisterPage() {
         if (!password) {
             setPasswordError('Password is required');
             isValid = false;
+            if (!firstErrorRef) firstErrorRef = passwordRef;
         } else if (password.length < 8) {
             setPasswordError('Password must be at least 8 characters');
             isValid = false;
+            if (!firstErrorRef) firstErrorRef = passwordRef;
         } else if (!/[A-Z]/.test(password)) {
             setPasswordError('Password must contain at least one uppercase letter');
             isValid = false;
+            if (!firstErrorRef) firstErrorRef = passwordRef;
         } else if (!/[a-z]/.test(password)) {
             setPasswordError('Password must contain at least one lowercase letter');
             isValid = false;
+            if (!firstErrorRef) firstErrorRef = passwordRef;
         } else if (!/[0-9]/.test(password)) {
             setPasswordError('Password must contain at least one digit');
             isValid = false;
+            if (!firstErrorRef) firstErrorRef = passwordRef;
         } else {
             setPasswordError('');
         }
@@ -73,11 +89,23 @@ export default function RegisterPage() {
         if (!confirmPassword) {
             setConfirmPasswordError('Please confirm your password');
             isValid = false;
+            if (!firstErrorRef) firstErrorRef = confirmPasswordRef;
         } else if (password !== confirmPassword) {
             setConfirmPasswordError('Passwords do not match');
             isValid = false;
+            if (!firstErrorRef) firstErrorRef = confirmPasswordRef;
         } else {
             setConfirmPasswordError('');
+        }
+
+        // Scroll to first error if validation failed
+        if (!isValid && firstErrorRef?.current) {
+            setTimeout(() => {
+                firstErrorRef.current?.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'center',
+                });
+            }, 100);
         }
 
         return isValid;
@@ -170,7 +198,7 @@ export default function RegisterPage() {
                 <form onSubmit={handleSubmit} className="mt-8 space-y-6" noValidate>
                     <div className="space-y-4">
                         {/* Username Field */}
-                        <div>
+                        <div ref={usernameRef}>
                             <Label htmlFor="username">Username</Label>
                             <Input
                                 id="username"
@@ -185,7 +213,7 @@ export default function RegisterPage() {
                                         setUsernameError('Username must be at least 3 characters');
                                     }
                                 }}
-                                placeholder="johndoe"
+                                placeholder="Choose a username"
                                 disabled={isLoading}
                                 className={usernameError ? 'border-destructive' : ''}
                             />
@@ -195,7 +223,7 @@ export default function RegisterPage() {
                         </div>
 
                         {/* Email Field */}
-                        <div>
+                        <div ref={emailRef}>
                             <Label htmlFor="email">Email</Label>
                             <Input
                                 id="email"
@@ -210,7 +238,7 @@ export default function RegisterPage() {
                                         setEmailError('Please enter a valid email');
                                     }
                                 }}
-                                placeholder="you@example.com"
+                                placeholder="Enter your email address"
                                 disabled={isLoading}
                                 className={emailError ? 'border-destructive' : ''}
                             />
@@ -220,7 +248,7 @@ export default function RegisterPage() {
                         </div>
 
                         {/* Password Field */}
-                        <div>
+                        <div ref={passwordRef}>
                             <Label htmlFor="password">Password</Label>
                             <Input
                                 id="password"
@@ -234,7 +262,7 @@ export default function RegisterPage() {
                                         setConfirmPasswordError('');
                                     }
                                 }}
-                                placeholder="••••••••"
+                                placeholder="Create a strong password"
                                 disabled={isLoading}
                                 className={passwordError ? 'border-destructive' : ''}
                             />
@@ -247,7 +275,7 @@ export default function RegisterPage() {
                         </div>
 
                         {/* Confirm Password Field */}
-                        <div>
+                        <div ref={confirmPasswordRef}>
                             <Label htmlFor="confirmPassword">Confirm Password</Label>
                             <Input
                                 id="confirmPassword"
@@ -262,7 +290,7 @@ export default function RegisterPage() {
                                         setConfirmPasswordError('Passwords do not match');
                                     }
                                 }}
-                                placeholder="••••••••"
+                                placeholder="Re-enter your password"
                                 disabled={isLoading}
                                 className={confirmPasswordError ? 'border-destructive' : ''}
                             />
