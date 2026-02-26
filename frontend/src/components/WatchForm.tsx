@@ -92,6 +92,16 @@ export function WatchForm({ movie, open, onOpenChange, onSuccess }: WatchFormPro
         if (!watchedDate) {
             setDateError('Watch date is required');
             isValid = false;
+        } else {
+            // Validate if date is in the future
+            const selected = new Date(watchedDate);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            if (selected > today) {
+                setDateError('Watch date cannot be in the future');
+                isValid = false;
+            }
         }
 
         // Validate rating (1-10 if provided, slider enforces 0.5 steps)
@@ -223,13 +233,35 @@ export function WatchForm({ movie, open, onOpenChange, onSuccess }: WatchFormPro
                             id="watchedDate"
                             type="date"
                             value={watchedDate}
+                            max={new Date().toISOString().split('T')[0]}
                             onChange={(e) => {
-                                setWatchedDate(e.target.value);
+                                const selectedDate = e.target.value;
+                                setWatchedDate(selectedDate);
                                 setDateError(null); // Clear error on change
+
+                                // Validate if date is in the future
+                                if (selectedDate) {
+                                    const selected = new Date(selectedDate);
+                                    const today = new Date();
+                                    today.setHours(0, 0, 0, 0);
+
+                                    if (selected > today) {
+                                        setDateError('Watch date cannot be in the future');
+                                    }
+                                }
                             }}
                             onBlur={() => {
                                 if (!watchedDate) {
                                     setDateError('Watch date is required');
+                                } else {
+                                    // Validate if date is in the future
+                                    const selected = new Date(watchedDate);
+                                    const today = new Date();
+                                    today.setHours(0, 0, 0, 0);
+
+                                    if (selected > today) {
+                                        setDateError('Watch date cannot be in the future');
+                                    }
                                 }
                             }}
                             className={dateError ? 'border-destructive' : ''}
