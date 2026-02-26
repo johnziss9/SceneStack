@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Film, TrendingUp, Eye, Users, ArrowRight, Sparkles, Crown, Zap, Loader2 } from 'lucide-react';
+import { Film, TrendingUp, Eye, Users, ArrowRight, Sparkles, Crown, Zap, Loader2, Search } from 'lucide-react';
 import { MovieSearchBar } from "@/components/MovieSearchBar";
 import { MovieCard } from "@/components/MovieCard";
 import { WatchCard } from "@/components/WatchCard";
@@ -369,6 +369,17 @@ export default function Home() {
                 )}
               </div>
             )}
+
+            {/* No Results Found for Logged-In Users */}
+            {!isSearching && searchResults.length === 0 && currentQuery && (
+              <div className="flex flex-col items-center justify-center py-12 space-y-4">
+                <Search className="h-16 w-16 text-muted-foreground" />
+                <p className="text-xl text-muted-foreground">No movies found</p>
+                <p className="text-sm text-muted-foreground text-center max-w-md">
+                  We couldn't find any movies matching "{currentQuery}". Try a different search term.
+                </p>
+              </div>
+            )}
           </>
         )}
 
@@ -587,6 +598,17 @@ export default function Home() {
               </CardContent>
             </Card>
           </>
+        )}
+
+        {/* No Results Found for Logged-Out Users */}
+        {!user && !isSearching && searchResults.length === 0 && currentQuery && (
+          <div className="flex flex-col items-center justify-center py-12 space-y-4">
+            <Search className="h-16 w-16 text-muted-foreground" />
+            <p className="text-xl text-muted-foreground">No movies found</p>
+            <p className="text-sm text-muted-foreground text-center max-w-md">
+              We couldn't find any movies matching "{currentQuery}". Try a different search term.
+            </p>
+          </div>
         )}
 
 

@@ -167,12 +167,15 @@ export default function WatchlistPage() {
 
             {/* Empty state */}
             {!isLoading && !error && items.length === 0 && (
-                <div className="text-center py-20">
-                    <Bookmark className="h-12 w-12 text-muted-foreground/40 mx-auto mb-4" />
-                    <h2 className="text-lg font-semibold text-muted-foreground">Nothing saved yet</h2>
-                    <p className="text-sm text-muted-foreground mt-1">
-                        Find a movie and save it to your watchlist to watch later.
+                <div className="flex flex-col items-center justify-center py-12 space-y-4">
+                    <Bookmark className="h-16 w-16 text-muted-foreground" />
+                    <p className="text-xl text-muted-foreground">No movies in your watchlist yet</p>
+                    <p className="text-sm text-muted-foreground">
+                        Browse movies and add them to your watchlist to keep track of what you want to watch
                     </p>
+                    <a href="/" className="px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90">
+                        Search Movies
+                    </a>
                 </div>
             )}
 
