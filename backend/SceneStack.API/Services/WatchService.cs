@@ -233,6 +233,13 @@ public class WatchService : IWatchService
                         SharedAt = DateTime.UtcNow
                     };
                     _context.WatchGroups.Add(watchGroup);
+
+                    // Update group's updatedAt timestamp for "Last Updated" sorting
+                    var group = await _context.Groups.FindAsync(groupId);
+                    if (group != null)
+                    {
+                        group.UpdatedAt = DateTime.UtcNow;
+                    }
                 }
                 else
                 {
@@ -287,6 +294,13 @@ public class WatchService : IWatchService
                         SharedAt = DateTime.UtcNow
                     };
                     _context.WatchGroups.Add(watchGroup);
+
+                    // Update group's updatedAt timestamp for "Last Updated" sorting
+                    var group = await _context.Groups.FindAsync(groupId);
+                    if (group != null)
+                    {
+                        group.UpdatedAt = DateTime.UtcNow;
+                    }
                 }
             }
         }
@@ -475,6 +489,13 @@ public class WatchService : IWatchService
                                 SharedAt = DateTime.UtcNow
                             };
                             _context.WatchGroups.Add(watchGroup);
+
+                            // Update group's updatedAt timestamp for "Last Updated" sorting
+                            var group = await _context.Groups.FindAsync(groupId);
+                            if (group != null)
+                            {
+                                group.UpdatedAt = DateTime.UtcNow;
+                            }
                         }
                     }
                     else if (isPrivate)

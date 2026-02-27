@@ -55,6 +55,9 @@ export default function EditWatchDialog({
     const [locationSuggestions, setLocationSuggestions] = useState<string[]>([]);
     const [showLocationSuggestions, setShowLocationSuggestions] = useState(false);
     const [filteredLocationSuggestions, setFilteredLocationSuggestions] = useState<string[]>([]);
+    const [watchedWithSuggestions, setWatchedWithSuggestions] = useState<string[]>([]);
+    const [showWatchedWithSuggestions, setShowWatchedWithSuggestions] = useState(false);
+    const [filteredWatchedWithSuggestions, setFilteredWatchedWithSuggestions] = useState<string[]>([]);
 
     // Privacy & Sharing - Simplified state management
     type SharingMode = 'private' | 'specific' | 'all';
@@ -111,6 +114,7 @@ export default function EditWatchDialog({
             if (user) {
                 fetchUserGroups();
                 fetchLocationSuggestions();
+                fetchWatchedWithSuggestions();
             }
         }
     }, [watch, open, user]);
@@ -189,6 +193,22 @@ export default function EditWatchDialog({
         }
     };
 
+    const fetchWatchedWithSuggestions = async () => {
+        try {
+            const watches = await watchApi.getWatches();
+            const watchedWithValues = watches
+                .map(w => w.watchedWith)
+                .filter(val => val && val.trim().length > 0) as string[];
+
+            // Get unique values
+            const uniqueWatchedWith = [...new Set(watchedWithValues)];
+            setWatchedWithSuggestions(uniqueWatchedWith);
+        } catch (err) {
+            // If fetch fails, just use empty suggestions
+            setWatchedWithSuggestions([]);
+        }
+    };
+
     // Filter location suggestions based on input
     useEffect(() => {
         if (customLocation.trim()) {
@@ -200,6 +220,18 @@ export default function EditWatchDialog({
             setFilteredLocationSuggestions(locationSuggestions);
         }
     }, [customLocation, locationSuggestions]);
+
+    // Filter watched with suggestions based on input
+    useEffect(() => {
+        if (watchedWith.trim()) {
+            const filtered = watchedWithSuggestions.filter(val =>
+                val.toLowerCase().includes(watchedWith.toLowerCase())
+            );
+            setFilteredWatchedWithSuggestions(filtered);
+        } else {
+            setFilteredWatchedWithSuggestions(watchedWithSuggestions);
+        }
+    }, [watchedWith, watchedWithSuggestions]);
 
     // Validation function
     const validateForm = (): boolean => {
@@ -487,13 +519,40 @@ export default function EditWatchDialog({
                     {/* Watched With */}
                     <div>
                         <Label htmlFor="watchedWith">Watched With</Label>
-                        <Input
-                            id="watchedWith"
-                            type="text"
-                            value={watchedWith}
-                            onChange={(e) => setWatchedWith(e.target.value)}
-                            placeholder="Optional"
-                        />
+                        <div className="relative">
+                            <Input
+                                id="watchedWith"
+                                type="text"
+                                value={watchedWith}
+                                onChange={(e) => {
+                                    setWatchedWith(e.target.value);
+                                    setShowWatchedWithSuggestions(true);
+                                }}
+                                onFocus={() => setShowWatchedWithSuggestions(true)}
+                                onBlur={() => {
+                                    // Delay to allow clicking on suggestions
+                                    setTimeout(() => setShowWatchedWithSuggestions(false), 200);
+                                }}
+                                placeholder="e.g., Sarah, Mike (optional)"
+                            />
+                            {showWatchedWithSuggestions && filteredWatchedWithSuggestions.length > 0 && (
+                                <div className="absolute z-50 w-full mt-1 bg-popover border rounded-md shadow-md max-h-60 overflow-y-auto">
+                                    {filteredWatchedWithSuggestions.map((suggestion, index) => (
+                                        <button
+                                            key={index}
+                                            type="button"
+                                            className="w-full text-left px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground transition-colors"
+                                            onClick={() => {
+                                                setWatchedWith(suggestion);
+                                                setShowWatchedWithSuggestions(false);
+                                            }}
+                                        >
+                                            {suggestion}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
                     </div>
 
                     {/* Notes */}

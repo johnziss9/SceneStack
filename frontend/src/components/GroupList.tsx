@@ -1,16 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Group } from "@/types";
 import { groupApi } from "@/lib/api";
 import { toast } from "@/lib/toast";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
 import { Users, Plus, AlertCircle, Crown, UserPlus } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import { UpgradeToPremiumModal } from "@/components/UpgradeToPremiumModal";
 import { LoadingTips } from "@/components/LoadingTips";
+
+type SortBy = 'name' | 'updated';
 
 export function GroupList() {
     const { user } = useAuth();
@@ -19,6 +22,7 @@ export function GroupList() {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+    const [sortBy, setSortBy] = useState<SortBy>('updated');
 
     // Fetch groups on mount
     useEffect(() => {
@@ -41,6 +45,17 @@ export function GroupList() {
             setIsLoading(false);
         }
     };
+
+    // Sort groups based on selected option
+    const sortedGroups = useMemo(() => {
+        const sorted = [...groups];
+        if (sortBy === 'name') {
+            return sorted.sort((a, b) => a.name.localeCompare(b.name));
+        } else {
+            // Sort by updatedAt (most recent first)
+            return sorted.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+        }
+    }, [groups, sortBy]);
 
     // Calculate group limits for free users
     const totalGroups = groups.length;
@@ -228,9 +243,33 @@ export function GroupList() {
                 </div>
             )}
 
+            {/* Sort Toggle */}
+            {groups.length > 1 && (
+                <div className="flex justify-end">
+                    <div className="flex items-center gap-1 border rounded-lg p-1">
+                        <Button
+                            size="sm"
+                            variant={sortBy === 'updated' ? 'default' : 'ghost'}
+                            className="h-7 text-xs px-3"
+                            onClick={() => setSortBy('updated')}
+                        >
+                            Last Updated
+                        </Button>
+                        <Button
+                            size="sm"
+                            variant={sortBy === 'name' ? 'default' : 'ghost'}
+                            className="h-7 text-xs px-3"
+                            onClick={() => setSortBy('name')}
+                        >
+                            Name
+                        </Button>
+                    </div>
+                </div>
+            )}
+
             {/* Groups Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {groups.map((group) => (
+                {sortedGroups.map((group) => (
                     <Link
                         key={group.id}
                         href={`/groups/${group.id}`}
@@ -254,10 +293,10 @@ export function GroupList() {
 
                             {/* Member Count and Role Badge */}
                             <div className="flex items-center gap-2 text-sm text-muted-foreground flex-wrap">
-                                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-muted/50">
+                                <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-muted/50">
                                     <Users size={14} />
                                     <span className="font-medium">
-                                        {group.memberCount} {group.memberCount === 1 ? 'member' : 'members'}
+                                        {group.memberCount}
                                     </span>
                                 </div>
                                 <span className={`text-xs px-2 py-1 rounded-full font-medium inline-flex items-center gap-1 ${
