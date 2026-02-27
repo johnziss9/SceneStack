@@ -91,6 +91,56 @@ function countActiveFilters(filters: FilterState): number {
     return count;
 }
 
+function getFilterSummary(filters: FilterState, userGroups: GroupBasicInfo[]): string[] {
+    const summary: string[] = [];
+
+    if (filters.search) {
+        summary.push(`Search: "${filters.search}"`);
+    }
+
+    if (filters.ratingMin || filters.ratingMax) {
+        const min = filters.ratingMin || "1";
+        const max = filters.ratingMax || "10";
+        if (min === max) {
+            summary.push(`Rating: ${min}`);
+        } else {
+            summary.push(`Rating: ${min}-${max}`);
+        }
+    }
+
+    if (filters.watchedFrom || filters.watchedTo) {
+        const formatDate = (dateStr: string) => new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        if (filters.watchedFrom && filters.watchedTo) {
+            summary.push(`Date: ${formatDate(filters.watchedFrom)} - ${formatDate(filters.watchedTo)}`);
+        } else if (filters.watchedFrom) {
+            summary.push(`From: ${formatDate(filters.watchedFrom)}`);
+        } else if (filters.watchedTo) {
+            summary.push(`Until: ${formatDate(filters.watchedTo)}`);
+        }
+    }
+
+    if (filters.rewatchOnly) {
+        summary.push("Rewatches only");
+    }
+
+    if (filters.unratedOnly) {
+        summary.push("Unrated only");
+    }
+
+    if (filters.privacyFilter !== "all") {
+        summary.push(filters.privacyFilter === "private" ? "Private only" : "Shared only");
+    }
+
+    if (filters.groupId) {
+        const group = userGroups.find(g => g.id === parseInt(filters.groupId));
+        if (group) {
+            summary.push(`Group: ${group.name}`);
+        }
+    }
+
+    return summary;
+}
+
 export function WatchList() {
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -565,6 +615,21 @@ export function WatchList() {
             {/* Collapsible filter panel */}
             {filtersOpen && (
                 <div className="rounded-lg border bg-card p-4 space-y-4">
+                    {/* Active Filter Summary */}
+                    {activeFilterCount > 0 && (
+                        <div className="p-3 bg-primary/5 border border-primary/20 rounded-lg">
+                            <div className="flex items-start gap-2">
+                                <Filter className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-xs font-semibold text-primary uppercase tracking-wide mb-1">Active Filters</p>
+                                    <p className="text-sm text-foreground">
+                                        {getFilterSummary(filters, userGroups).join(" • ")}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     {/* Quick Filters */}
                     <div className="space-y-2">
                         <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Quick Filters</h3>
@@ -608,19 +673,42 @@ export function WatchList() {
                     {/* Search */}
                     <div className="space-y-1.5">
                         <Label className="text-xs text-muted-foreground uppercase tracking-wide">Title search</Label>
-                        <Input
-                            placeholder="Search movies…"
-                            value={filters.search}
-                            onChange={e => updateFilter("search", e.target.value)}
-                        />
+                        <div className="relative">
+                            <Input
+                                placeholder="Search movies…"
+                                value={filters.search}
+                                onChange={e => updateFilter("search", e.target.value)}
+                                className={filters.search ? "border-primary ring-1 ring-primary/20" : ""}
+                            />
+                            {filters.search && (
+                                <button
+                                    onClick={() => updateFilter("search", "")}
+                                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-muted rounded-sm transition-colors"
+                                    title="Clear search"
+                                >
+                                    <X className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground" />
+                                </button>
+                            )}
+                        </div>
                     </div>
 
                     {/* Rating range */}
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-1.5">
-                            <Label className="text-xs text-muted-foreground uppercase tracking-wide">Min rating</Label>
+                            <div className="flex items-center justify-between">
+                                <Label className="text-xs text-muted-foreground uppercase tracking-wide">Min rating</Label>
+                                {filters.ratingMin && (
+                                    <button
+                                        onClick={() => updateFilter("ratingMin", "")}
+                                        className="p-0.5 hover:bg-muted rounded-sm transition-colors"
+                                        title="Clear min rating"
+                                    >
+                                        <X className="h-3 w-3 text-muted-foreground hover:text-foreground" />
+                                    </button>
+                                )}
+                            </div>
                             <Select value={filters.ratingMin || "any"} onValueChange={v => updateFilter("ratingMin", v === "any" ? "" : v)}>
-                                <SelectTrigger>
+                                <SelectTrigger className={filters.ratingMin ? "border-primary ring-1 ring-primary/20" : ""}>
                                     <SelectValue placeholder="Any" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -632,9 +720,20 @@ export function WatchList() {
                             </Select>
                         </div>
                         <div className="space-y-1.5">
-                            <Label className="text-xs text-muted-foreground uppercase tracking-wide">Max rating</Label>
+                            <div className="flex items-center justify-between">
+                                <Label className="text-xs text-muted-foreground uppercase tracking-wide">Max rating</Label>
+                                {filters.ratingMax && (
+                                    <button
+                                        onClick={() => updateFilter("ratingMax", "")}
+                                        className="p-0.5 hover:bg-muted rounded-sm transition-colors"
+                                        title="Clear max rating"
+                                    >
+                                        <X className="h-3 w-3 text-muted-foreground hover:text-foreground" />
+                                    </button>
+                                )}
+                            </div>
                             <Select value={filters.ratingMax || "any"} onValueChange={v => updateFilter("ratingMax", v === "any" ? "" : v)}>
-                                <SelectTrigger>
+                                <SelectTrigger className={filters.ratingMax ? "border-primary ring-1 ring-primary/20" : ""}>
                                     <SelectValue placeholder="Any" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -668,19 +767,43 @@ export function WatchList() {
                             {/* Date range */}
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-1.5">
-                                    <Label className="text-xs text-muted-foreground uppercase tracking-wide">Watched from</Label>
+                                    <div className="flex items-center justify-between">
+                                        <Label className="text-xs text-muted-foreground uppercase tracking-wide">Watched from</Label>
+                                        {filters.watchedFrom && (
+                                            <button
+                                                onClick={() => updateFilter("watchedFrom", "")}
+                                                className="p-0.5 hover:bg-muted rounded-sm transition-colors"
+                                                title="Clear from date"
+                                            >
+                                                <X className="h-3 w-3 text-muted-foreground hover:text-foreground" />
+                                            </button>
+                                        )}
+                                    </div>
                                     <Input
                                         type="date"
                                         value={filters.watchedFrom}
                                         onChange={e => updateFilter("watchedFrom", e.target.value)}
+                                        className={filters.watchedFrom ? "border-primary ring-1 ring-primary/20" : ""}
                                     />
                                 </div>
                                 <div className="space-y-1.5">
-                                    <Label className="text-xs text-muted-foreground uppercase tracking-wide">Watched to</Label>
+                                    <div className="flex items-center justify-between">
+                                        <Label className="text-xs text-muted-foreground uppercase tracking-wide">Watched to</Label>
+                                        {filters.watchedTo && (
+                                            <button
+                                                onClick={() => updateFilter("watchedTo", "")}
+                                                className="p-0.5 hover:bg-muted rounded-sm transition-colors"
+                                                title="Clear to date"
+                                            >
+                                                <X className="h-3 w-3 text-muted-foreground hover:text-foreground" />
+                                            </button>
+                                        )}
+                                    </div>
                                     <Input
                                         type="date"
                                         value={filters.watchedTo}
                                         onChange={e => updateFilter("watchedTo", e.target.value)}
+                                        className={filters.watchedTo ? "border-primary ring-1 ring-primary/20" : ""}
                                     />
                                 </div>
                             </div>
@@ -712,41 +835,63 @@ export function WatchList() {
                                 {/* Privacy */}
                                 <div className="flex items-center gap-2">
                                     <Label className="text-sm font-medium whitespace-nowrap">Show:</Label>
-                                    <Select
-                                        value={filters.privacyFilter}
-                                        onValueChange={v => updateFilter("privacyFilter", v as FilterState["privacyFilter"])}
-                                    >
-                                        <SelectTrigger className="w-[150px]">
-                                            <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="all">All watches</SelectItem>
-                                            <SelectItem value="private">Private only</SelectItem>
-                                            <SelectItem value="shared">Shared only</SelectItem>
-                                        </SelectContent>
-                                    </Select>
+                                    <div className="relative flex items-center gap-2">
+                                        <Select
+                                            value={filters.privacyFilter}
+                                            onValueChange={v => updateFilter("privacyFilter", v as FilterState["privacyFilter"])}
+                                        >
+                                            <SelectTrigger className={`w-[150px] ${filters.privacyFilter !== "all" ? "border-primary ring-1 ring-primary/20" : ""}`}>
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="all">All watches</SelectItem>
+                                                <SelectItem value="private">Private only</SelectItem>
+                                                <SelectItem value="shared">Shared only</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                        {filters.privacyFilter !== "all" && (
+                                            <button
+                                                onClick={() => updateFilter("privacyFilter", "all")}
+                                                className="p-0.5 hover:bg-muted rounded-sm transition-colors"
+                                                title="Clear privacy filter"
+                                            >
+                                                <X className="h-3 w-3 text-muted-foreground hover:text-foreground" />
+                                            </button>
+                                        )}
+                                    </div>
                                 </div>
 
                                 {/* Group */}
                                 {userGroups.length > 0 && (
                                     <div className="flex items-center gap-2">
                                         <Label className="text-sm font-medium whitespace-nowrap">Group:</Label>
-                                        <Select
-                                            value={filters.groupId || "all"}
-                                            onValueChange={v => updateFilter("groupId", v === "all" ? "" : v)}
-                                        >
-                                            <SelectTrigger className="w-[200px]">
-                                                <SelectValue placeholder="All groups" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="all">All groups</SelectItem>
-                                                {userGroups.map(group => (
-                                                    <SelectItem key={group.id} value={String(group.id)}>
-                                                        {group.name}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
+                                        <div className="relative flex items-center gap-2">
+                                            <Select
+                                                value={filters.groupId || "all"}
+                                                onValueChange={v => updateFilter("groupId", v === "all" ? "" : v)}
+                                            >
+                                                <SelectTrigger className={`w-[200px] ${filters.groupId ? "border-primary ring-1 ring-primary/20" : ""}`}>
+                                                    <SelectValue placeholder="All groups" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="all">All groups</SelectItem>
+                                                    {userGroups.map(group => (
+                                                        <SelectItem key={group.id} value={String(group.id)}>
+                                                            {group.name}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                            {filters.groupId && (
+                                                <button
+                                                    onClick={() => updateFilter("groupId", "")}
+                                                    className="p-0.5 hover:bg-muted rounded-sm transition-colors"
+                                                    title="Clear group filter"
+                                                >
+                                                    <X className="h-3 w-3 text-muted-foreground hover:text-foreground" />
+                                                </button>
+                                            )}
+                                        </div>
                                     </div>
                                 )}
                             </div>
