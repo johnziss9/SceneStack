@@ -32,7 +32,7 @@ export default function RegisterPage() {
 
     const validateForm = (): boolean => {
         let isValid = true;
-        let firstErrorRef: React.RefObject<HTMLDivElement> | null = null;
+        let firstErrorRef: React.RefObject<HTMLDivElement | null> | null = null;
 
         // Username validation
         if (!username) {

@@ -91,7 +91,7 @@ export default function ProfilePage() {
 
     const handleSaveProfile = async () => {
         let isValid = true;
-        let firstErrorRef: React.RefObject<HTMLDivElement> | null = null;
+        let firstErrorRef: React.RefObject<HTMLDivElement | null> | null = null;
 
         // Reset errors
         setEditUsernameError('');
@@ -150,7 +150,7 @@ export default function ProfilePage() {
 
     const handleChangePassword = async () => {
         let isValid = true;
-        let firstErrorRef: React.RefObject<HTMLDivElement> | null = null;
+        let firstErrorRef: React.RefObject<HTMLDivElement | null> | null = null;
 
         // Reset errors
         setCurrentPasswordError('');

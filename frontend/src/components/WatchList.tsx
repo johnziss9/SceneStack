@@ -644,24 +644,34 @@ export function WatchList() {
                 <>
                     {/* Watches Grid */}
                     <div className={`grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 ${isBulkMode ? 'p-4 rounded-lg bg-muted/30' : ''}`}>
-                        {filteredWatches.map(groupedWatch => (
-                            <div key={groupedWatch.movieId} className="relative">
-                                {isBulkMode && (
-                                    <div
-                                        className="absolute inset-0 z-10 cursor-pointer"
-                                        onClick={() => toggleMovieSelection(groupedWatch.movieId)}
-                                    >
-                                        <div className="absolute top-2 right-2 pointer-events-none">
-                                            <Checkbox
-                                                checked={selectedMovieIds.has(groupedWatch.movieId)}
-                                                className="bg-background border-2 border-primary data-[state=checked]:bg-primary data-[state=checked]:border-primary"
-                                            />
+                        {filteredWatches.map(groupedWatch => {
+                            const isSelected = selectedMovieIds.has(groupedWatch.movieId);
+                            return (
+                                <div
+                                    key={groupedWatch.movieId}
+                                    className={`relative rounded-lg transition-all ${
+                                        isBulkMode && isSelected
+                                            ? 'ring-2 ring-primary ring-offset-2 ring-offset-background'
+                                            : ''
+                                    }`}
+                                >
+                                    {isBulkMode && (
+                                        <div
+                                            className="absolute inset-0 z-10 cursor-pointer"
+                                            onClick={() => toggleMovieSelection(groupedWatch.movieId)}
+                                        >
+                                            <div className="absolute top-2 right-2 pointer-events-none">
+                                                <Checkbox
+                                                    checked={isSelected}
+                                                    className="bg-background border-2 border-primary data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                                                />
+                                            </div>
                                         </div>
-                                    </div>
-                                )}
-                                <WatchCard groupedWatch={groupedWatch} />
-                            </div>
-                        ))}
+                                    )}
+                                    <WatchCard groupedWatch={groupedWatch} />
+                                </div>
+                            );
+                        })}
                     </div>
 
                     {/* Load More */}

@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Lock, Users } from 'lucide-react';
+import { Loader2, Lock, Users, Repeat } from 'lucide-react';
 import { watchApi } from '@/lib';
 import type { TmdbMovie, CreateWatchRequest, GroupBasicInfo } from '@/types';
 import { groupApi } from '@/lib/api';
@@ -88,7 +88,7 @@ export function WatchForm({ movie, open, onOpenChange, onSuccess }: WatchFormPro
     // Validation function
     const validateForm = (): boolean => {
         let isValid = true;
-        let firstErrorRef: React.RefObject<HTMLDivElement> | null = null;
+        let firstErrorRef: React.RefObject<HTMLDivElement | null> | null = null;
 
         // Reset errors
         setDateError(null);
@@ -388,19 +388,45 @@ export function WatchForm({ movie, open, onOpenChange, onSuccess }: WatchFormPro
                         />
                     </div>
 
-                    {/* Rewatch Checkbox */}
-                    <div className="flex items-center gap-2">
-                        <input
-                            id="isRewatch"
-                            type="checkbox"
-                            checked={isRewatch}
-                            onChange={(e) => setIsRewatch(e.target.checked)}
-                            className="h-4 w-4 rounded border-input bg-background"
-                        />
-                        <Label htmlFor="isRewatch" className="cursor-pointer">
-                            This is a rewatch
-                        </Label>
-                    </div>
+                    {/* Rewatch Card */}
+                    <button
+                        type="button"
+                        onClick={() => setIsRewatch(!isRewatch)}
+                        className={`group w-full relative overflow-hidden rounded-lg border-2 p-3 transition-all duration-200 hover:shadow-md ${
+                            isRewatch
+                                ? 'border-primary bg-gradient-to-r from-primary/10 to-transparent'
+                                : 'border-border bg-card hover:border-primary/50'
+                        }`}
+                    >
+                        <div className="flex items-center gap-3">
+                            <div className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center transition-colors ${
+                                isRewatch
+                                    ? 'bg-primary/20'
+                                    : 'bg-primary/10 group-hover:bg-primary/20'
+                            }`}>
+                                <Repeat className={`h-4 w-4 transition-colors ${
+                                    isRewatch ? 'text-primary' : 'text-primary/70'
+                                }`} />
+                            </div>
+                            <div className="flex-1 text-left">
+                                <h3 className={`font-semibold text-sm transition-colors ${
+                                    isRewatch ? 'text-primary' : 'group-hover:text-primary'
+                                }`}>
+                                    This is a rewatch
+                                </h3>
+                                <p className="text-xs text-muted-foreground">
+                                    You've seen this movie before
+                                </p>
+                            </div>
+                            {isRewatch && (
+                                <div className="flex-shrink-0 w-5 h-5 rounded-full bg-primary flex items-center justify-center">
+                                    <svg className="w-3 h-3 text-primary-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                    </svg>
+                                </div>
+                            )}
+                        </div>
+                    </button>
                     </div>
                     {/* End Left Column */}
 
