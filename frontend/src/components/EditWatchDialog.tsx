@@ -18,7 +18,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Slider } from '@/components/ui/slider';
-import { groupApi } from '@/lib/api';
+import { groupApi, statsApi } from '@/lib/api';
 import type { GroupBasicInfo } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import {
@@ -52,6 +52,9 @@ export default function EditWatchDialog({
     const [isRewatch, setIsRewatch] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [locationSuggestions, setLocationSuggestions] = useState<string[]>([]);
+    const [showLocationSuggestions, setShowLocationSuggestions] = useState(false);
+    const [filteredLocationSuggestions, setFilteredLocationSuggestions] = useState<string[]>([]);
 
     // Privacy & Sharing - Simplified state management
     type SharingMode = 'private' | 'specific' | 'all';
@@ -104,9 +107,10 @@ export default function EditWatchDialog({
             setRatingError(null);
             setLocationError(null);
 
-            // Fetch user's groups
+            // Fetch user's groups and location suggestions
             if (user) {
                 fetchUserGroups();
+                fetchLocationSuggestions();
             }
         }
     }, [watch, open, user]);
@@ -148,6 +152,54 @@ export default function EditWatchDialog({
             setIsLoadingGroups(false);
         }
     };
+
+    const fetchLocationSuggestions = async () => {
+        try {
+            const stats = await statsApi.getStats();
+            const userLocations = stats.watchesByLocation
+                .map(item => item.location)
+                .filter(loc => loc !== 'Cinema' && loc !== 'Home'); // Filter out standard options
+
+            // Common location suggestions
+            const commonLocations = [
+                "Drive-in",
+                "Airplane",
+                "Hotel",
+                "Outdoor cinema",
+                "Film festival",
+                "Work",
+                "School"
+            ];
+
+            // Combine user locations (first) with common locations
+            const combined = [...new Set([...userLocations, ...commonLocations])];
+            setLocationSuggestions(combined);
+        } catch (err) {
+            // If stats fail, just use common suggestions
+            const commonLocations = [
+                "Drive-in",
+                "Airplane",
+                "Hotel",
+                "Outdoor cinema",
+                "Film festival",
+                "Work",
+                "School"
+            ];
+            setLocationSuggestions(commonLocations);
+        }
+    };
+
+    // Filter location suggestions based on input
+    useEffect(() => {
+        if (customLocation.trim()) {
+            const filtered = locationSuggestions.filter(loc =>
+                loc.toLowerCase().includes(customLocation.toLowerCase())
+            );
+            setFilteredLocationSuggestions(filtered);
+        } else {
+            setFilteredLocationSuggestions(locationSuggestions);
+        }
+    }, [customLocation, locationSuggestions]);
 
     // Validation function
     const validateForm = (): boolean => {
@@ -384,7 +436,7 @@ export default function EditWatchDialog({
 
                         {/* Custom Location (if Other selected) */}
                         {location === 'Other' && (
-                            <>
+                            <div className="relative">
                                 <Input
                                     id="customLocation"
                                     type="text"
@@ -392,19 +444,43 @@ export default function EditWatchDialog({
                                     onChange={(e) => {
                                         setCustomLocation(e.target.value);
                                         setLocationError(null);
+                                        setShowLocationSuggestions(true);
                                     }}
+                                    onFocus={() => setShowLocationSuggestions(true)}
                                     onBlur={() => {
-                                        if (location === 'Other' && !customLocation.trim()) {
-                                            setLocationError('Please specify the location');
-                                        }
+                                        // Delay to allow clicking on suggestions
+                                        setTimeout(() => {
+                                            setShowLocationSuggestions(false);
+                                            if (location === 'Other' && !customLocation.trim()) {
+                                                setLocationError('Please specify the location');
+                                            }
+                                        }, 200);
                                     }}
-                                    placeholder="Enter location"
+                                    placeholder="Enter location (e.g., Drive-in, Hotel)..."
                                     className={locationError ? 'border-destructive' : ''}
                                 />
-                                {locationError && (
-                                    <p className="text-sm text-destructive">{locationError}</p>
+                                {showLocationSuggestions && filteredLocationSuggestions.length > 0 && (
+                                    <div className="absolute z-50 w-full mt-1 bg-popover border rounded-md shadow-md max-h-60 overflow-y-auto">
+                                        {filteredLocationSuggestions.map((suggestion, index) => (
+                                            <button
+                                                key={index}
+                                                type="button"
+                                                className="w-full text-left px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground transition-colors"
+                                                onClick={() => {
+                                                    setCustomLocation(suggestion);
+                                                    setShowLocationSuggestions(false);
+                                                    setLocationError(null);
+                                                }}
+                                            >
+                                                {suggestion}
+                                            </button>
+                                        ))}
+                                    </div>
                                 )}
-                            </>
+                                {locationError && (
+                                    <p className="text-sm text-destructive mt-1">{locationError}</p>
+                                )}
+                            </div>
                         )}
                     </div>
 

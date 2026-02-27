@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Loader2, Lock, Users, Repeat } from 'lucide-react';
 import { watchApi } from '@/lib';
 import type { TmdbMovie, CreateWatchRequest, GroupBasicInfo } from '@/types';
-import { groupApi } from '@/lib/api';
+import { groupApi, statsApi } from '@/lib/api';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Slider } from '@/components/ui/slider';
 import { toast } from '@/lib/toast';
@@ -52,6 +52,9 @@ export function WatchForm({ movie, open, onOpenChange, onSuccess }: WatchFormPro
     const [customLocation, setCustomLocation] = useState('');
     const [watchedWith, setWatchedWith] = useState('');
     const [isRewatch, setIsRewatch] = useState(false);
+    const [locationSuggestions, setLocationSuggestions] = useState<string[]>([]);
+    const [showLocationSuggestions, setShowLocationSuggestions] = useState(false);
+    const [filteredLocationSuggestions, setFilteredLocationSuggestions] = useState<string[]>([]);
 
     // Privacy & Sharing - Simplified state management
     type SharingMode = 'private' | 'specific' | 'all';
@@ -69,6 +72,7 @@ export function WatchForm({ movie, open, onOpenChange, onSuccess }: WatchFormPro
     useEffect(() => {
         if (open && user) {
             fetchUserGroups();
+            fetchLocationSuggestions();
         }
     }, [open, user]);
 
@@ -84,6 +88,54 @@ export function WatchForm({ movie, open, onOpenChange, onSuccess }: WatchFormPro
             setIsLoadingGroups(false);
         }
     };
+
+    const fetchLocationSuggestions = async () => {
+        try {
+            const stats = await statsApi.getStats();
+            const userLocations = stats.watchesByLocation
+                .map(item => item.location)
+                .filter(loc => loc !== 'Cinema' && loc !== 'Home'); // Filter out standard options
+
+            // Common location suggestions
+            const commonLocations = [
+                "Drive-in",
+                "Airplane",
+                "Hotel",
+                "Outdoor cinema",
+                "Film festival",
+                "Work",
+                "School"
+            ];
+
+            // Combine user locations (first) with common locations
+            const combined = [...new Set([...userLocations, ...commonLocations])];
+            setLocationSuggestions(combined);
+        } catch (err) {
+            // If stats fail, just use common suggestions
+            const commonLocations = [
+                "Drive-in",
+                "Airplane",
+                "Hotel",
+                "Outdoor cinema",
+                "Film festival",
+                "Work",
+                "School"
+            ];
+            setLocationSuggestions(commonLocations);
+        }
+    };
+
+    // Filter location suggestions based on input
+    useEffect(() => {
+        if (customLocation.trim()) {
+            const filtered = locationSuggestions.filter(loc =>
+                loc.toLowerCase().includes(customLocation.toLowerCase())
+            );
+            setFilteredLocationSuggestions(filtered);
+        } else {
+            setFilteredLocationSuggestions(locationSuggestions);
+        }
+    }, [customLocation, locationSuggestions]);
 
     // Validation function
     const validateForm = (): boolean => {
@@ -341,26 +393,50 @@ export function WatchForm({ movie, open, onOpenChange, onSuccess }: WatchFormPro
 
                         {/* Show text input when "Other" is selected */}
                         {watchLocation === "Other" && (
-                            <>
+                            <div className="relative">
                                 <Input
                                     type="text"
-                                    placeholder="Enter location (e.g., Friend's house, Drive-in)..."
+                                    placeholder="Enter location (e.g., Drive-in, Hotel)..."
                                     value={customLocation}
                                     onChange={(e) => {
                                         setCustomLocation(e.target.value);
-                                        setLocationError(null); // Clear error on change
+                                        setLocationError(null);
+                                        setShowLocationSuggestions(true);
                                     }}
+                                    onFocus={() => setShowLocationSuggestions(true)}
                                     onBlur={() => {
-                                        if (watchLocation === "Other" && !customLocation.trim()) {
-                                            setLocationError('Please specify the location');
-                                        }
+                                        // Delay to allow clicking on suggestions
+                                        setTimeout(() => {
+                                            setShowLocationSuggestions(false);
+                                            if (watchLocation === "Other" && !customLocation.trim()) {
+                                                setLocationError('Please specify the location');
+                                            }
+                                        }, 200);
                                     }}
                                     className={locationError ? 'border-destructive' : ''}
                                 />
-                                {locationError && (
-                                    <p className="text-sm text-destructive">{locationError}</p>
+                                {showLocationSuggestions && filteredLocationSuggestions.length > 0 && (
+                                    <div className="absolute z-50 w-full mt-1 bg-popover border rounded-md shadow-md max-h-60 overflow-y-auto">
+                                        {filteredLocationSuggestions.map((suggestion, index) => (
+                                            <button
+                                                key={index}
+                                                type="button"
+                                                className="w-full text-left px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground transition-colors"
+                                                onClick={() => {
+                                                    setCustomLocation(suggestion);
+                                                    setShowLocationSuggestions(false);
+                                                    setLocationError(null);
+                                                }}
+                                            >
+                                                {suggestion}
+                                            </button>
+                                        ))}
+                                    </div>
                                 )}
-                            </>
+                                {locationError && (
+                                    <p className="text-sm text-destructive mt-1">{locationError}</p>
+                                )}
+                            </div>
                         )}
                     </div>
 
