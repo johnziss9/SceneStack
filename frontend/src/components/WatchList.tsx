@@ -437,55 +437,88 @@ export function WatchList() {
                     ? 'sticky top-0 z-30 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 py-3 px-4 -mx-4 border-b shadow-sm'
                     : ''
             }`}>
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                    {/* Bulk Edit toggle - First on mobile, right side on desktop */}
-                    <div className="order-1 sm:order-2">
-                        {!isBulkMode ? (
+                <div className="flex flex-col gap-2">
+                    {/* Mobile: 50/50 buttons | Desktop: standard layout */}
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                        {/* Mobile: Row with 50/50 buttons | Desktop: Filters section on left */}
+                        <div className="flex gap-2">
+                            {/* Filters toggle - 50% on mobile */}
                             <Button
-                                onClick={enterBulkMode}
                                 variant="outline"
-                                title="Select multiple movies to update privacy settings"
-                                className="gap-2 w-fit"
+                                onClick={() => setFiltersOpen(prev => !prev)}
+                                className="gap-2 flex-1 sm:flex-initial"
                             >
-                                Select Multiple
+                                <Filter className="h-4 w-4" />
+                                Filters
+                                {activeFilterCount > 0 && (
+                                    <span className="ml-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground">
+                                        {activeFilterCount}
+                                    </span>
+                                )}
                             </Button>
-                        ) : (
-                            <Button onClick={exitBulkMode} variant="outline" className="w-fit">Done</Button>
-                        )}
+
+                            {/* Bulk Edit toggle - 50% on mobile, hidden on desktop */}
+                            {!isBulkMode ? (
+                                <Button
+                                    onClick={enterBulkMode}
+                                    variant="outline"
+                                    title="Select multiple movies to update privacy settings"
+                                    className="gap-2 flex-1 sm:hidden"
+                                >
+                                    Select Multiple
+                                </Button>
+                            ) : (
+                                <Button onClick={exitBulkMode} variant="outline" className="flex-1 sm:hidden">Done</Button>
+                            )}
+
+                            {/* Desktop only: Clear all */}
+                            {activeFilterCount > 0 && (
+                                <Button variant="ghost" size="sm" onClick={clearFilters} className="gap-1 text-muted-foreground hidden sm:flex">
+                                    <X className="h-3 w-3" />
+                                    Clear all
+                                </Button>
+                            )}
+
+                            {/* Desktop only: Result count */}
+                            <span className="text-sm text-muted-foreground hidden sm:flex sm:items-center">
+                                {isRefetching
+                                    ? "Searching…"
+                                    : `${filteredWatches.length} of ${totalCount} ${totalCount === 1 ? "movie" : "movies"}`
+                                }
+                            </span>
+                        </div>
+
+                        {/* Desktop only: Bulk Edit toggle on the right */}
+                        <div className="hidden sm:block">
+                            {!isBulkMode ? (
+                                <Button
+                                    onClick={enterBulkMode}
+                                    variant="outline"
+                                    title="Select multiple movies to update privacy settings"
+                                    className="gap-2"
+                                >
+                                    Select Multiple
+                                </Button>
+                            ) : (
+                                <Button onClick={exitBulkMode} variant="outline">Done</Button>
+                            )}
+                        </div>
                     </div>
 
-                    {/* Filters row - Second on mobile, left side on desktop */}
-                    <div className="flex items-center gap-2 flex-wrap order-2 sm:order-1">
-                        {/* Filters toggle */}
-                        <Button
-                            variant="outline"
-                            onClick={() => setFiltersOpen(prev => !prev)}
-                            className="gap-2"
-                        >
-                            <Filter className="h-4 w-4" />
-                            Filters
-                            {activeFilterCount > 0 && (
-                                <span className="ml-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground">
-                                    {activeFilterCount}
-                                </span>
-                            )}
-                        </Button>
-
-                        {/* Clear all */}
-                        {activeFilterCount > 0 && (
-                            <Button variant="ghost" size="sm" onClick={clearFilters} className="gap-1 text-muted-foreground">
-                                <X className="h-3 w-3" />
-                                Clear all
-                            </Button>
-                        )}
-
-                        {/* Result count / loading indicator */}
+                    {/* Mobile only: Result count + Clear all underneath */}
+                    <div className="flex items-center gap-2 sm:hidden ml-1">
                         <span className="text-sm text-muted-foreground">
                             {isRefetching
                                 ? "Searching…"
                                 : `${filteredWatches.length} of ${totalCount} ${totalCount === 1 ? "movie" : "movies"}`
                             }
                         </span>
+                        {activeFilterCount > 0 && (
+                            <Button variant="ghost" size="sm" onClick={clearFilters} className="gap-1 text-muted-foreground">
+                                <X className="h-3 w-3" />
+                                Clear all
+                            </Button>
+                        )}
                     </div>
                 </div>
             </div>
