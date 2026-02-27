@@ -62,10 +62,25 @@ export const WatchCard = memo(function WatchCard({ groupedWatch }: WatchCardProp
                         )}
 
                         {watchCount > 1 && (
-                            <div className="absolute top-2 left-2 bg-primary text-primary-foreground px-2 py-1 rounded text-xs font-semibold flex items-center gap-1">
-                                <Eye className="w-3 h-3" />
-                                {watchCount}x
-                            </div>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <div className={`absolute top-2 left-2 px-2 py-1 rounded text-xs font-semibold flex items-center gap-1 ${
+                                        watchCount >= 5
+                                            ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg'
+                                            : 'bg-primary text-primary-foreground'
+                                    }`}>
+                                        {watchCount >= 5 ? (
+                                            <Sparkles className="w-3 h-3" />
+                                        ) : (
+                                            <Eye className="w-3 h-3" />
+                                        )}
+                                        {watchCount}x
+                                    </div>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    <p>You've watched this {watchCount} time{watchCount > 1 ? 's' : ''}!</p>
+                                </TooltipContent>
+                            </Tooltip>
                         )}
                     </div>
                 </CardHeader>
