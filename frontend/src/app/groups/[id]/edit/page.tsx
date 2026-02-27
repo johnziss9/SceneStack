@@ -28,8 +28,9 @@ export default function EditGroupPage({ params }: EditGroupPageProps) {
     const [description, setDescription] = useState("");
     const [nameError, setNameError] = useState<string | null>(null);
 
-    // Ref for auto-scrolling to error
+    // Refs for auto-scrolling to error and focus management
     const nameRef = useRef<HTMLDivElement>(null);
+    const nameInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
         async function loadParams() {
@@ -54,6 +55,11 @@ export default function EditGroupPage({ params }: EditGroupPageProps) {
             setGroup(data);
             setName(data.name);
             setDescription(data.description || "");
+
+            // Auto-focus name field after data loads
+            setTimeout(() => {
+                nameInputRef.current?.focus();
+            }, 100);
         } catch (err) {
             console.error("Failed to fetch group:", err);
             toast.error("Failed to load group");
@@ -173,6 +179,7 @@ export default function EditGroupPage({ params }: EditGroupPageProps) {
                                     Group Name <span className="text-destructive">*</span>
                                 </Label>
                                 <Input
+                                    ref={nameInputRef}
                                     id="name"
                                     type="text"
                                     value={name}

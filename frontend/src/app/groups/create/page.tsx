@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { groupApi } from "@/lib/api";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,8 +20,16 @@ export default function CreateGroupPage() {
     const [description, setDescription] = useState("");
     const [nameError, setNameError] = useState<string | null>(null);
 
-    // Ref for auto-scrolling to error
+    // Refs for auto-scrolling to error and focus management
     const nameRef = useRef<HTMLDivElement>(null);
+    const nameInputRef = useRef<HTMLInputElement>(null);
+
+    // Auto-focus name field when page loads
+    useEffect(() => {
+        if (nameInputRef.current) {
+            nameInputRef.current.focus();
+        }
+    }, []);
 
     const validateForm = (): boolean => {
         let isValid = true;
@@ -118,6 +126,7 @@ export default function CreateGroupPage() {
                                     Group Name <span className="text-destructive">*</span>
                                 </Label>
                                 <Input
+                                    ref={nameInputRef}
                                     id="name"
                                     type="text"
                                     value={name}

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,9 +16,17 @@ export default function LoginPage() {
     const [password, setPassword] = useState('');
     const [isLoading, setIsLoading] = useState(false);
 
-    // Refs for auto-scrolling to errors
+    // Refs for auto-scrolling to errors and focus management
     const emailRef = useRef<HTMLDivElement>(null);
     const passwordRef = useRef<HTMLDivElement>(null);
+    const emailInputRef = useRef<HTMLInputElement>(null);
+
+    // Auto-focus email field when page loads
+    useEffect(() => {
+        if (emailInputRef.current) {
+            emailInputRef.current.focus();
+        }
+    }, []);
 
     // Form validation
     const [emailError, setEmailError] = useState('');
@@ -140,6 +148,7 @@ export default function LoginPage() {
                         <div ref={emailRef}>
                             <Label htmlFor="email">Email</Label>
                             <Input
+                                ref={emailInputRef}
                                 id="email"
                                 type="email"
                                 value={email}

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,11 +18,19 @@ export default function RegisterPage() {
     const [confirmPassword, setConfirmPassword] = useState('');
     const [isLoading, setIsLoading] = useState(false);
 
-    // Refs for auto-scrolling to errors
+    // Refs for auto-scrolling to errors and focus management
     const usernameRef = useRef<HTMLDivElement>(null);
     const emailRef = useRef<HTMLDivElement>(null);
     const passwordRef = useRef<HTMLDivElement>(null);
     const confirmPasswordRef = useRef<HTMLDivElement>(null);
+    const usernameInputRef = useRef<HTMLInputElement>(null);
+
+    // Auto-focus username field when page loads
+    useEffect(() => {
+        if (usernameInputRef.current) {
+            usernameInputRef.current.focus();
+        }
+    }, []);
 
     // Form validation errors
     const [usernameError, setUsernameError] = useState('');
@@ -201,6 +209,7 @@ export default function RegisterPage() {
                         <div ref={usernameRef}>
                             <Label htmlFor="username">Username</Label>
                             <Input
+                                ref={usernameInputRef}
                                 id="username"
                                 type="text"
                                 value={username}
