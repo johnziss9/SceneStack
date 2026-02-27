@@ -18,7 +18,7 @@ import { groupApi } from "@/lib/api";
 import type { GroupBasicInfo } from "@/types";
 import { BulkMakePrivateDialog } from "./BulkMakePrivateDialog";
 import { BulkShareWithGroupsDialog } from "./BulkShareWithGroupsDialog";
-import { Film, Filter, X, Info } from "lucide-react";
+import { Film, Filter, X, Info, ChevronDown, ChevronUp, Star, Calendar, Repeat } from "lucide-react";
 
 const PAGE_SIZE = 20;
 
@@ -99,6 +99,8 @@ export function WatchList() {
     const [filters, setFilters] = useState<FilterState>(() => readFiltersFromUrl(searchParams));
 
     const [filtersOpen, setFiltersOpen] = useState(false);
+    const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+    const [isScrolled, setIsScrolled] = useState(false);
     const [groupedWatches, setGroupedWatches] = useState<GroupedWatch[]>([]);
     const [isInitialLoad, setIsInitialLoad] = useState(true);
     const [isRefetching, setIsRefetching] = useState(false);
@@ -216,6 +218,15 @@ export function WatchList() {
             .catch(() => { /* groups filter is optional */ });
     }, []);
 
+    // Sticky toolbar on scroll
+    useEffect(() => {
+        const handleScroll = () => {
+            setIsScrolled(window.scrollY > 100);
+        };
+        window.addEventListener('scroll', handleScroll);
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, []);
+
     const updateFilter = (key: keyof FilterState, value: FilterState[keyof FilterState]) => {
         setGroupedWatches([]);
         setHasMore(false);
@@ -228,6 +239,23 @@ export function WatchList() {
         setHasMore(false);
         setCurrentPage(1);
         setFilters(DEFAULT_FILTERS);
+    };
+
+    // Quick filter presets
+    const applyQuickFilter = (preset: "highlyRated" | "recent" | "rewatches") => {
+        setGroupedWatches([]);
+        setHasMore(false);
+        setCurrentPage(1);
+
+        if (preset === "highlyRated") {
+            setFilters({ ...DEFAULT_FILTERS, ratingMin: "7", sortBy: "highestRated" });
+        } else if (preset === "recent") {
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+            setFilters({ ...DEFAULT_FILTERS, watchedFrom: thirtyDaysAgo.toISOString().split('T')[0], sortBy: "recentlyWatched" });
+        } else if (preset === "rewatches") {
+            setFilters({ ...DEFAULT_FILTERS, rewatchOnly: true, sortBy: "mostWatched" });
+        }
     };
 
     const loadMore = async () => {
@@ -402,54 +430,64 @@ export function WatchList() {
     }
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-4">
             {/* Toolbar: Filters toggle + Bulk Edit */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div className="flex items-center gap-2 flex-wrap">
-                    {/* Filters toggle */}
-                    <Button
-                        variant="outline"
-                        onClick={() => setFiltersOpen(prev => !prev)}
-                        className="gap-2"
-                    >
-                        <Filter className="h-4 w-4" />
-                        Filters
-                        {activeFilterCount > 0 && (
-                            <span className="ml-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground">
-                                {activeFilterCount}
-                            </span>
+            <div className={`transition-all ${
+                isScrolled
+                    ? 'sticky top-0 z-30 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 py-3 px-4 -mx-4 border-b shadow-sm'
+                    : ''
+            }`}>
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    {/* Bulk Edit toggle - First on mobile, right side on desktop */}
+                    <div className="order-1 sm:order-2">
+                        {!isBulkMode ? (
+                            <Button
+                                onClick={enterBulkMode}
+                                variant="outline"
+                                title="Select multiple movies to update privacy settings"
+                                className="gap-2 w-fit"
+                            >
+                                Select Multiple
+                            </Button>
+                        ) : (
+                            <Button onClick={exitBulkMode} variant="outline" className="w-fit">Done</Button>
                         )}
-                    </Button>
+                    </div>
 
-                    {/* Clear all */}
-                    {activeFilterCount > 0 && (
-                        <Button variant="ghost" size="sm" onClick={clearFilters} className="gap-1 text-muted-foreground">
-                            <X className="h-3 w-3" />
-                            Clear all
+                    {/* Filters row - Second on mobile, left side on desktop */}
+                    <div className="flex items-center gap-2 flex-wrap order-2 sm:order-1">
+                        {/* Filters toggle */}
+                        <Button
+                            variant="outline"
+                            onClick={() => setFiltersOpen(prev => !prev)}
+                            className="gap-2"
+                        >
+                            <Filter className="h-4 w-4" />
+                            Filters
+                            {activeFilterCount > 0 && (
+                                <span className="ml-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground">
+                                    {activeFilterCount}
+                                </span>
+                            )}
                         </Button>
-                    )}
 
-                    {/* Result count / loading indicator */}
-                    <span className="text-sm text-muted-foreground">
-                        {isRefetching
-                            ? "Searching…"
-                            : `${filteredWatches.length} of ${totalCount} ${totalCount === 1 ? "movie" : "movies"}`
-                        }
-                    </span>
+                        {/* Clear all */}
+                        {activeFilterCount > 0 && (
+                            <Button variant="ghost" size="sm" onClick={clearFilters} className="gap-1 text-muted-foreground">
+                                <X className="h-3 w-3" />
+                                Clear all
+                            </Button>
+                        )}
+
+                        {/* Result count / loading indicator */}
+                        <span className="text-sm text-muted-foreground">
+                            {isRefetching
+                                ? "Searching…"
+                                : `${filteredWatches.length} of ${totalCount} ${totalCount === 1 ? "movie" : "movies"}`
+                            }
+                        </span>
+                    </div>
                 </div>
-
-                {/* Bulk Edit toggle */}
-                {!isBulkMode ? (
-                    <Button
-                        onClick={enterBulkMode}
-                        variant="outline"
-                        title="Select multiple movies to update privacy settings"
-                    >
-                        Select Multiple
-                    </Button>
-                ) : (
-                    <Button onClick={exitBulkMode} variant="outline">Done</Button>
-                )}
             </div>
 
             {/* Bulk Mode Banner */}
@@ -466,6 +504,46 @@ export function WatchList() {
             {/* Collapsible filter panel */}
             {filtersOpen && (
                 <div className="rounded-lg border bg-card p-4 space-y-4">
+                    {/* Quick Filters */}
+                    <div className="space-y-2">
+                        <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Quick Filters</h3>
+                        <div className="flex flex-wrap gap-2">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => applyQuickFilter("highlyRated")}
+                                className="gap-1.5 text-xs sm:text-sm flex-1 sm:flex-none"
+                            >
+                                <Star className="h-3.5 w-3.5" />
+                                <span className="hidden sm:inline">Highly Rated </span>(7+)
+                            </Button>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => applyQuickFilter("recent")}
+                                className="gap-1.5 text-xs sm:text-sm flex-1 sm:flex-none"
+                            >
+                                <Calendar className="h-3.5 w-3.5" />
+                                <span className="hidden sm:inline">Last </span>30 Days
+                            </Button>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => applyQuickFilter("rewatches")}
+                                className="gap-1.5 text-xs sm:text-sm flex-1 sm:flex-none"
+                            >
+                                <Repeat className="h-3.5 w-3.5" />
+                                Rewatches<span className="hidden sm:inline"> Only</span>
+                            </Button>
+                        </div>
+                    </div>
+
+                    {/* Basic Filters Header */}
+                    <div className="flex items-center gap-2 pb-2 border-b">
+                        <Filter className="h-4 w-4 text-muted-foreground" />
+                        <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Basic Filters</h3>
+                    </div>
+
                     {/* Row 1: Search + Sort */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="space-y-1.5">
@@ -524,91 +602,111 @@ export function WatchList() {
                         </div>
                     </div>
 
-                    {/* Row 3: Date range */}
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-1.5">
-                            <Label className="text-xs text-muted-foreground uppercase tracking-wide">Watched from</Label>
-                            <Input
-                                type="date"
-                                value={filters.watchedFrom}
-                                onChange={e => updateFilter("watchedFrom", e.target.value)}
-                            />
-                        </div>
-                        <div className="space-y-1.5">
-                            <Label className="text-xs text-muted-foreground uppercase tracking-wide">Watched to</Label>
-                            <Input
-                                type="date"
-                                value={filters.watchedTo}
-                                onChange={e => updateFilter("watchedTo", e.target.value)}
-                            />
-                        </div>
-                    </div>
+                    {/* Advanced Filters Toggle */}
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+                        className="w-full gap-2 text-muted-foreground hover:text-foreground"
+                    >
+                        {showAdvancedFilters ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                        {showAdvancedFilters ? "Hide Advanced Filters" : "Show Advanced Filters"}
+                    </Button>
 
-                    {/* Row 4: Rewatches + Privacy + Group */}
-                    <div className="flex flex-wrap items-center gap-x-6 gap-y-4">
-                        {/* Rewatches only */}
-                        <div className="flex items-center gap-2">
-                            <Switch
-                                id="rewatch-only"
-                                checked={filters.rewatchOnly}
-                                onCheckedChange={v => updateFilter("rewatchOnly", v)}
-                                className="data-[state=checked]:bg-orange-500 data-[state=unchecked]:bg-zinc-600 dark:data-[state=unchecked]:bg-zinc-600"
-                            />
-                            <Label htmlFor="rewatch-only" className="cursor-pointer">Rewatches only</Label>
-                        </div>
-
-                        {/* Unrated only */}
-                        <div className="flex items-center gap-2">
-                            <Switch
-                                id="unrated-only"
-                                checked={filters.unratedOnly}
-                                onCheckedChange={v => updateFilter("unratedOnly", v)}
-                                className="data-[state=checked]:bg-orange-500 data-[state=unchecked]:bg-zinc-600 dark:data-[state=unchecked]:bg-zinc-600"
-                            />
-                            <Label htmlFor="unrated-only" className="cursor-pointer">No rating</Label>
-                        </div>
-
-                        {/* Privacy */}
-                        <div className="flex items-center gap-2">
-                            <Label className="text-sm font-medium whitespace-nowrap">Show:</Label>
-                            <Select
-                                value={filters.privacyFilter}
-                                onValueChange={v => updateFilter("privacyFilter", v as FilterState["privacyFilter"])}
-                            >
-                                <SelectTrigger className="w-[150px]">
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">All watches</SelectItem>
-                                    <SelectItem value="private">Private only</SelectItem>
-                                    <SelectItem value="shared">Shared only</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-
-                        {/* Group */}
-                        {userGroups.length > 0 && (
-                            <div className="flex items-center gap-2">
-                                <Label className="text-sm font-medium whitespace-nowrap">Group:</Label>
-                                <Select
-                                    value={filters.groupId || "all"}
-                                    onValueChange={v => updateFilter("groupId", v === "all" ? "" : v)}
-                                >
-                                    <SelectTrigger className="w-[200px]">
-                                        <SelectValue placeholder="All groups" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="all">All groups</SelectItem>
-                                        {userGroups.map(group => (
-                                            <SelectItem key={group.id} value={String(group.id)}>
-                                                {group.name}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
+                    {/* Advanced Filters */}
+                    {showAdvancedFilters && (
+                        <div className="space-y-4 pt-2 border-t">
+                            <div className="flex items-center gap-2 pb-2">
+                                <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Advanced Filters</h3>
                             </div>
-                        )}
-                    </div>
+
+                            {/* Date range */}
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-1.5">
+                                    <Label className="text-xs text-muted-foreground uppercase tracking-wide">Watched from</Label>
+                                    <Input
+                                        type="date"
+                                        value={filters.watchedFrom}
+                                        onChange={e => updateFilter("watchedFrom", e.target.value)}
+                                    />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <Label className="text-xs text-muted-foreground uppercase tracking-wide">Watched to</Label>
+                                    <Input
+                                        type="date"
+                                        value={filters.watchedTo}
+                                        onChange={e => updateFilter("watchedTo", e.target.value)}
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Rewatches + Unrated + Privacy + Group */}
+                            <div className="flex flex-wrap items-center gap-x-6 gap-y-4">
+                                {/* Rewatches only */}
+                                <div className="flex items-center gap-2">
+                                    <Switch
+                                        id="rewatch-only"
+                                        checked={filters.rewatchOnly}
+                                        onCheckedChange={v => updateFilter("rewatchOnly", v)}
+                                        className="data-[state=checked]:bg-orange-500 data-[state=unchecked]:bg-zinc-600 dark:data-[state=unchecked]:bg-zinc-600"
+                                    />
+                                    <Label htmlFor="rewatch-only" className="cursor-pointer">Rewatches only</Label>
+                                </div>
+
+                                {/* Unrated only */}
+                                <div className="flex items-center gap-2">
+                                    <Switch
+                                        id="unrated-only"
+                                        checked={filters.unratedOnly}
+                                        onCheckedChange={v => updateFilter("unratedOnly", v)}
+                                        className="data-[state=checked]:bg-orange-500 data-[state=unchecked]:bg-zinc-600 dark:data-[state=unchecked]:bg-zinc-600"
+                                    />
+                                    <Label htmlFor="unrated-only" className="cursor-pointer">No rating</Label>
+                                </div>
+
+                                {/* Privacy */}
+                                <div className="flex items-center gap-2">
+                                    <Label className="text-sm font-medium whitespace-nowrap">Show:</Label>
+                                    <Select
+                                        value={filters.privacyFilter}
+                                        onValueChange={v => updateFilter("privacyFilter", v as FilterState["privacyFilter"])}
+                                    >
+                                        <SelectTrigger className="w-[150px]">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">All watches</SelectItem>
+                                            <SelectItem value="private">Private only</SelectItem>
+                                            <SelectItem value="shared">Shared only</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
+                                {/* Group */}
+                                {userGroups.length > 0 && (
+                                    <div className="flex items-center gap-2">
+                                        <Label className="text-sm font-medium whitespace-nowrap">Group:</Label>
+                                        <Select
+                                            value={filters.groupId || "all"}
+                                            onValueChange={v => updateFilter("groupId", v === "all" ? "" : v)}
+                                        >
+                                            <SelectTrigger className="w-[200px]">
+                                                <SelectValue placeholder="All groups" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="all">All groups</SelectItem>
+                                                {userGroups.map(group => (
+                                                    <SelectItem key={group.id} value={String(group.id)}>
+                                                        {group.name}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
                 </div>
             )}
 
