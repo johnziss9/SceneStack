@@ -370,6 +370,9 @@ export default function EditWatchDialog({
             <DialogContent className="sm:max-w-[900px] max-h-[90vh] flex flex-col">
                 <DialogHeader>
                     <DialogTitle>Edit Watch: {watch.movie.title}</DialogTitle>
+                    <DialogDescription>
+                        Update the details of this watch entry
+                    </DialogDescription>
                 </DialogHeader>
 
                 <form ref={formRef} onSubmit={handleSubmit} className="overflow-y-auto flex-1 pr-2" noValidate>

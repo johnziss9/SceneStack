@@ -25,36 +25,17 @@ export function MovieInsight({ movieId, watchCount, isPremium }: MovieInsightPro
     const [isRegenerating, setIsRegenerating] = useState(false);
     const [error, setError] = useState<'premium' | 'rate-limit' | 'general' | null>(null);
     const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
+    const [hasChecked, setHasChecked] = useState(false);
 
     // Don't render if user hasn't watched the movie
     if (watchCount === 0) {
         return null;
     }
 
-    // Load cached insight on mount (if premium user)
-    useEffect(() => {
-        if (isPremium) {
-            loadCachedInsight();
-        }
-    }, [movieId, isPremium]);
-
-    const loadCachedInsight = async () => {
-        try {
-            const cached = await aiApi.getCachedInsight(movieId);
-            setInsight(cached);
-        } catch (err: unknown) {
-            // 404 is expected if no cached insight exists - that's okay
-            if (typeof err === 'object' && err !== null && 'status' in err && (err as { status: number }).status === 404) {
-                return;
-            }
-            // Other errors can be silently ignored (we'll show generate button)
-            console.error('Error loading cached insight:', err);
-        }
-    };
-
     const handleGenerate = async () => {
         setIsLoading(true);
         setError(null);
+        setHasChecked(true);
 
         try {
             const result = await aiApi.generateInsight({ movieId });
@@ -186,22 +167,25 @@ export function MovieInsight({ movieId, watchCount, isPremium }: MovieInsightPro
                     </div>
                 )}
 
-                {/* Premium User: No Insight Yet - Show Generate Button */}
+                {/* Premium User: No Insight Yet - Show Load/Generate Button */}
                 {isPremium && !insight && !isLoading && !error && (
                     <div className="text-center py-6">
                         <p className="text-sm text-muted-foreground mb-4">
-                            Generate a personalised AI insight that combines the movie's plot with your viewing history
+                            {!hasChecked
+                                ? 'Load your personalised AI insight for this film'
+                                : 'Generate a personalised AI insight that combines the movie\'s plot with your viewing history'
+                            }
                         </p>
                         <Button onClick={handleGenerate} disabled={isLoading}>
                             {isLoading ? (
                                 <>
                                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                    Generating...
+                                    {!hasChecked ? 'Loading...' : 'Generating...'}
                                 </>
                             ) : (
                                 <>
                                     <Sparkles className="mr-2 h-4 w-4" />
-                                    Generate AI Insight
+                                    {!hasChecked ? 'Load AI Insight' : 'Generate AI Insight'}
                                 </>
                             )}
                         </Button>

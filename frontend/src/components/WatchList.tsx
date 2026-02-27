@@ -18,7 +18,7 @@ import { groupApi } from "@/lib/api";
 import type { GroupBasicInfo } from "@/types";
 import { BulkMakePrivateDialog } from "./BulkMakePrivateDialog";
 import { BulkShareWithGroupsDialog } from "./BulkShareWithGroupsDialog";
-import { Film, Filter, X, Info, ChevronDown, ChevronUp, Star, Calendar, Repeat } from "lucide-react";
+import { Film, Filter, X, Info, ChevronDown, ChevronUp, Star, Calendar, Repeat, ArrowUpDown } from "lucide-react";
 
 const PAGE_SIZE = 20;
 
@@ -277,7 +277,7 @@ export function WatchList() {
         });
     };
 
-    const selectAll = () => setSelectedMovieIds(new Set(filteredWatches.map(gw => gw.movieId)));
+    const selectAll = () => setSelectedMovieIds(new Set(sortedWatches.map(gw => gw.movieId)));
     const deselectAll = () => setSelectedMovieIds(new Set());
 
     const handleBulkMakePrivate = async () => {
@@ -285,7 +285,7 @@ export function WatchList() {
             setIsProcessing(true);
             setProcessedCount(0);
 
-            const watchIds = filteredWatches
+            const watchIds = sortedWatches
                 .filter(gw => selectedMovieIds.has(gw.movieId))
                 .flatMap(gw => gw.watches.map(w => w.id));
 
@@ -329,7 +329,7 @@ export function WatchList() {
             setIsProcessing(true);
             setProcessedCount(0);
 
-            const watchIds = filteredWatches
+            const watchIds = sortedWatches
                 .filter(gw => selectedMovieIds.has(gw.movieId))
                 .flatMap(gw => gw.watches.map(w => w.id));
 
@@ -376,7 +376,19 @@ export function WatchList() {
         return true;
     });
 
-    const allVisibleMovieIds = filteredWatches.map(gw => gw.movieId);
+    // When sorting by highest rated, move unrated movies to the end
+    const sortedWatches = filters.sortBy === "highestRated"
+        ? [...filteredWatches].sort((a, b) => {
+            // If a has no rating, move it to the end
+            if (!a.averageRating || a.averageRating === 0) return 1;
+            // If b has no rating, move it to the end
+            if (!b.averageRating || b.averageRating === 0) return -1;
+            // Both have ratings, backend already sorted them
+            return 0;
+        })
+        : filteredWatches;
+
+    const allVisibleMovieIds = sortedWatches.map(gw => gw.movieId);
     const allSelected = allVisibleMovieIds.length > 0 && allVisibleMovieIds.every(id => selectedMovieIds.has(id));
     const activeFilterCount = countActiveFilters(filters);
 
@@ -441,7 +453,7 @@ export function WatchList() {
                     {/* Mobile: 50/50 buttons | Desktop: standard layout */}
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                         {/* Mobile: Row with 50/50 buttons | Desktop: Filters section on left */}
-                        <div className="flex gap-2">
+                        <div className="flex gap-2 flex-wrap">
                             {/* Filters toggle - 50% on mobile */}
                             <Button
                                 variant="outline"
@@ -471,6 +483,22 @@ export function WatchList() {
                                 <Button onClick={exitBulkMode} variant="outline" className="flex-1 sm:hidden">Done</Button>
                             )}
 
+                            {/* Sort dropdown - full width on mobile, normal on desktop */}
+                            <div className="w-full sm:w-auto">
+                                <Select value={filters.sortBy} onValueChange={v => updateFilter("sortBy", v)}>
+                                    <SelectTrigger className="gap-2 w-full sm:w-[180px]">
+                                        <ArrowUpDown className="h-4 w-4 text-foreground" />
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="recentlyWatched">Recently Watched</SelectItem>
+                                        <SelectItem value="title">Title A–Z</SelectItem>
+                                        <SelectItem value="highestRated">Highest Rated</SelectItem>
+                                        <SelectItem value="mostWatched">Most Watched</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
                             {/* Desktop only: Clear all */}
                             {activeFilterCount > 0 && (
                                 <Button variant="ghost" size="sm" onClick={clearFilters} className="gap-1 text-muted-foreground hidden sm:flex">
@@ -483,7 +511,7 @@ export function WatchList() {
                             <span className="text-sm text-muted-foreground hidden sm:flex sm:items-center">
                                 {isRefetching
                                     ? "Searching…"
-                                    : `${filteredWatches.length} of ${totalCount} ${totalCount === 1 ? "movie" : "movies"}`
+                                    : `${sortedWatches.length} of ${totalCount} ${totalCount === 1 ? "movie" : "movies"}`
                                 }
                             </span>
                         </div>
@@ -510,7 +538,7 @@ export function WatchList() {
                         <span className="text-sm text-muted-foreground">
                             {isRefetching
                                 ? "Searching…"
-                                : `${filteredWatches.length} of ${totalCount} ${totalCount === 1 ? "movie" : "movies"}`
+                                : `${sortedWatches.length} of ${totalCount} ${totalCount === 1 ? "movie" : "movies"}`
                             }
                         </span>
                         {activeFilterCount > 0 && (
@@ -577,33 +605,17 @@ export function WatchList() {
                         <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Basic Filters</h3>
                     </div>
 
-                    {/* Row 1: Search + Sort */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div className="space-y-1.5">
-                            <Label className="text-xs text-muted-foreground uppercase tracking-wide">Title search</Label>
-                            <Input
-                                placeholder="Search movies…"
-                                value={filters.search}
-                                onChange={e => updateFilter("search", e.target.value)}
-                            />
-                        </div>
-                        <div className="space-y-1.5">
-                            <Label className="text-xs text-muted-foreground uppercase tracking-wide">Sort by</Label>
-                            <Select value={filters.sortBy} onValueChange={v => updateFilter("sortBy", v)}>
-                                <SelectTrigger>
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="recentlyWatched">Recently Watched</SelectItem>
-                                    <SelectItem value="title">Title A–Z</SelectItem>
-                                    <SelectItem value="highestRated">Highest Rated</SelectItem>
-                                    <SelectItem value="mostWatched">Most Watched</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
+                    {/* Search */}
+                    <div className="space-y-1.5">
+                        <Label className="text-xs text-muted-foreground uppercase tracking-wide">Title search</Label>
+                        <Input
+                            placeholder="Search movies…"
+                            value={filters.search}
+                            onChange={e => updateFilter("search", e.target.value)}
+                        />
                     </div>
 
-                    {/* Row 2: Rating range */}
+                    {/* Rating range */}
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-1.5">
                             <Label className="text-xs text-muted-foreground uppercase tracking-wide">Min rating</Label>
@@ -752,7 +764,7 @@ export function WatchList() {
                             onCheckedChange={checked => { if (checked) selectAll(); else deselectAll(); }}
                         />
                         <span className="text-sm font-medium">
-                            {allSelected ? "Deselect all" : "Select all"} ({filteredWatches.length} {filteredWatches.length === 1 ? "movie" : "movies"})
+                            {allSelected ? "Deselect all" : "Select all"} ({sortedWatches.length} {sortedWatches.length === 1 ? "movie" : "movies"})
                         </span>
                     </label>
                     {selectedMovieIds.size > 0 && (
@@ -764,7 +776,7 @@ export function WatchList() {
             )}
 
             {/* No matches state */}
-            {filteredWatches.length === 0 && activeFilterCount > 0 ? (
+            {sortedWatches.length === 0 && activeFilterCount > 0 ? (
                 <div className="flex flex-col items-center justify-center py-16 space-y-4">
                     <Film className="h-12 w-12 text-muted-foreground" />
                     <p className="text-lg font-medium">No matches for your filters</p>
@@ -775,7 +787,7 @@ export function WatchList() {
                 <>
                     {/* Watches Grid */}
                     <div className={`grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 ${isBulkMode ? 'p-4 rounded-lg bg-muted/30' : ''}`}>
-                        {filteredWatches.map(groupedWatch => {
+                        {sortedWatches.map(groupedWatch => {
                             const isSelected = selectedMovieIds.has(groupedWatch.movieId);
                             return (
                                 <div
