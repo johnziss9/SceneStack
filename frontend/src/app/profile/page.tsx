@@ -20,7 +20,7 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { LogOut, User as UserIcon, Edit, Save, X, Lock, Trash2, Shield, Settings as SettingsIcon, Sparkles, Crown, Zap, Users as UsersIcon, Search } from 'lucide-react';
+import { LogOut, User as UserIcon, Edit, Save, X, Lock, Trash2, Shield, Settings as SettingsIcon, Sparkles, Crown, Zap, Users as UsersIcon, Search, Check } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { AiUsageStats } from '@/components/AiUsageStats';
 import { PrivacySettings } from '@/components/PrivacySettings';
@@ -74,6 +74,69 @@ export default function ProfilePage() {
 
     // Upgrade modal state
     const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+
+    // Password strength calculation
+    const calculatePasswordStrength = (password: string): {
+        score: number;
+        label: string;
+        color: string;
+        requirements: {
+            minLength: boolean;
+            hasUppercase: boolean;
+            hasLowercase: boolean;
+            hasNumber: boolean;
+            hasSpecial: boolean;
+        };
+    } => {
+        if (!password) {
+            return {
+                score: 0,
+                label: '',
+                color: '',
+                requirements: {
+                    minLength: false,
+                    hasUppercase: false,
+                    hasLowercase: false,
+                    hasNumber: false,
+                    hasSpecial: false,
+                },
+            };
+        }
+
+        let score = 0;
+        const requirements = {
+            minLength: password.length >= 8,
+            hasUppercase: /[A-Z]/.test(password),
+            hasLowercase: /[a-z]/.test(password),
+            hasNumber: /[0-9]/.test(password),
+            hasSpecial: /[^A-Za-z0-9]/.test(password),
+        };
+
+        // Score calculation
+        if (requirements.minLength) score += 20;
+        if (requirements.hasUppercase) score += 20;
+        if (requirements.hasLowercase) score += 20;
+        if (requirements.hasNumber) score += 20;
+        if (requirements.hasSpecial) score += 20;
+
+        // Determine strength label and color
+        let label = '';
+        let color = '';
+        if (score < 40) {
+            label = 'Weak';
+            color = 'text-red-500';
+        } else if (score < 80) {
+            label = 'Fair';
+            color = 'text-orange-500';
+        } else {
+            label = 'Strong';
+            color = 'text-green-500';
+        }
+
+        return { score, label, color, requirements };
+    };
+
+    const passwordStrength = calculatePasswordStrength(newPassword);
 
     const handleEditClick = () => {
         setEditUsername(user?.username || '');
@@ -169,10 +232,22 @@ export default function ProfilePage() {
             setNewPasswordError('New password is required');
             isValid = false;
             if (!firstErrorRef) firstErrorRef = newPasswordRef;
-        } else if (newPassword.length < 6) {
-            setNewPasswordError('Password must be at least 6 characters');
-            isValid = false;
-            if (!firstErrorRef) firstErrorRef = newPasswordRef;
+        } else {
+            const strength = calculatePasswordStrength(newPassword);
+            const { requirements } = strength;
+
+            const failedRequirements: string[] = [];
+            if (!requirements.minLength) failedRequirements.push('at least 8 characters');
+            if (!requirements.hasUppercase) failedRequirements.push('one uppercase letter');
+            if (!requirements.hasLowercase) failedRequirements.push('one lowercase letter');
+            if (!requirements.hasNumber) failedRequirements.push('one number');
+            if (!requirements.hasSpecial) failedRequirements.push('one special character');
+
+            if (failedRequirements.length > 0) {
+                setNewPasswordError(`Password must contain ${failedRequirements.join(', ')}`);
+                isValid = false;
+                if (!firstErrorRef) firstErrorRef = newPasswordRef;
+            }
         }
 
         // Validate confirm password
@@ -739,6 +814,137 @@ export default function ProfilePage() {
                             {newPasswordError && (
                                 <p className="text-sm text-destructive">{newPasswordError}</p>
                             )}
+
+                            {/* Password Strength Meter */}
+                            {newPassword && (
+                                <div className="space-y-2">
+                                    <div className="flex items-center justify-between text-sm">
+                                        <span className="text-muted-foreground">Password strength:</span>
+                                        <span className={`font-medium ${passwordStrength.color}`}>
+                                            {passwordStrength.label}
+                                        </span>
+                                    </div>
+                                    <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
+                                        <div
+                                            className={`h-full transition-all duration-300 ${
+                                                passwordStrength.score < 40
+                                                    ? 'bg-red-500'
+                                                    : passwordStrength.score < 80
+                                                    ? 'bg-orange-500'
+                                                    : 'bg-green-500'
+                                            }`}
+                                            style={{ width: `${passwordStrength.score}%` }}
+                                        />
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Password Requirements */}
+                            <div className="space-y-1.5 pt-1">
+                                <p className="text-xs text-muted-foreground font-medium">Password must contain:</p>
+                                <div className="space-y-1">
+                                    <div className="flex items-center gap-2 text-xs">
+                                        <div
+                                            className={`flex items-center justify-center w-4 h-4 rounded-full ${
+                                                passwordStrength.requirements.minLength
+                                                    ? 'bg-green-500/10 text-green-500'
+                                                    : 'bg-muted text-muted-foreground'
+                                            }`}
+                                        >
+                                            {passwordStrength.requirements.minLength && <Check className="w-3 h-3" />}
+                                        </div>
+                                        <span
+                                            className={
+                                                passwordStrength.requirements.minLength
+                                                    ? 'text-foreground'
+                                                    : 'text-muted-foreground'
+                                            }
+                                        >
+                                            At least 8 characters
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center gap-2 text-xs">
+                                        <div
+                                            className={`flex items-center justify-center w-4 h-4 rounded-full ${
+                                                passwordStrength.requirements.hasUppercase
+                                                    ? 'bg-green-500/10 text-green-500'
+                                                    : 'bg-muted text-muted-foreground'
+                                            }`}
+                                        >
+                                            {passwordStrength.requirements.hasUppercase && <Check className="w-3 h-3" />}
+                                        </div>
+                                        <span
+                                            className={
+                                                passwordStrength.requirements.hasUppercase
+                                                    ? 'text-foreground'
+                                                    : 'text-muted-foreground'
+                                            }
+                                        >
+                                            One uppercase letter (A-Z)
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center gap-2 text-xs">
+                                        <div
+                                            className={`flex items-center justify-center w-4 h-4 rounded-full ${
+                                                passwordStrength.requirements.hasLowercase
+                                                    ? 'bg-green-500/10 text-green-500'
+                                                    : 'bg-muted text-muted-foreground'
+                                            }`}
+                                        >
+                                            {passwordStrength.requirements.hasLowercase && <Check className="w-3 h-3" />}
+                                        </div>
+                                        <span
+                                            className={
+                                                passwordStrength.requirements.hasLowercase
+                                                    ? 'text-foreground'
+                                                    : 'text-muted-foreground'
+                                            }
+                                        >
+                                            One lowercase letter (a-z)
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center gap-2 text-xs">
+                                        <div
+                                            className={`flex items-center justify-center w-4 h-4 rounded-full ${
+                                                passwordStrength.requirements.hasNumber
+                                                    ? 'bg-green-500/10 text-green-500'
+                                                    : 'bg-muted text-muted-foreground'
+                                            }`}
+                                        >
+                                            {passwordStrength.requirements.hasNumber && <Check className="w-3 h-3" />}
+                                        </div>
+                                        <span
+                                            className={
+                                                passwordStrength.requirements.hasNumber
+                                                    ? 'text-foreground'
+                                                    : 'text-muted-foreground'
+                                            }
+                                        >
+                                            One number (0-9)
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center gap-2 text-xs">
+                                        <div
+                                            className={`flex items-center justify-center w-4 h-4 rounded-full ${
+                                                passwordStrength.requirements.hasSpecial
+                                                    ? 'bg-green-500/10 text-green-500'
+                                                    : 'bg-muted text-muted-foreground'
+                                            }`}
+                                        >
+                                            {passwordStrength.requirements.hasSpecial && <Check className="w-3 h-3" />}
+                                        </div>
+                                        <span
+                                            className={
+                                                passwordStrength.requirements.hasSpecial
+                                                    ? 'text-foreground'
+                                                    : 'text-muted-foreground'
+                                            }
+                                        >
+                                            One special character (!@#$%^&*)
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
                         <div ref={confirmPasswordRef} className="space-y-2">
