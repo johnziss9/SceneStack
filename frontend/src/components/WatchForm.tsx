@@ -30,12 +30,13 @@ export function WatchForm({ movie, open, onOpenChange, onSuccess }: WatchFormPro
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    // Refs for auto-scrolling to errors
+    // Refs for auto-scrolling to errors and focus management
     const formRef = useRef<HTMLFormElement>(null);
     const dateRef = useRef<HTMLDivElement>(null);
     const ratingRef = useRef<HTMLDivElement>(null);
     const locationRef = useRef<HTMLDivElement>(null);
     const privacyRef = useRef<HTMLDivElement>(null);
+    const dateInputRef = useRef<HTMLInputElement>(null);
 
     // Validation errors
     const [dateError, setDateError] = useState<string | null>(null);
@@ -70,6 +71,17 @@ export function WatchForm({ movie, open, onOpenChange, onSuccess }: WatchFormPro
     // Group selection modal
     const [isGroupSelectionOpen, setIsGroupSelectionOpen] = useState(false);
     const [tempSelectedGroups, setTempSelectedGroups] = useState<number[]>([]);
+
+    // Auto-focus first input when dialog opens
+    useEffect(() => {
+        if (open && dateInputRef.current) {
+            // Small delay to ensure dialog animation completes
+            const timer = setTimeout(() => {
+                dateInputRef.current?.focus();
+            }, 100);
+            return () => clearTimeout(timer);
+        }
+    }, [open]);
 
     // Fetch user's groups when dialog opens
     useEffect(() => {
@@ -337,6 +349,7 @@ export function WatchForm({ movie, open, onOpenChange, onSuccess }: WatchFormPro
                     <div ref={dateRef} className="space-y-2">
                         <Label htmlFor="watchedDate">Watch Date *</Label>
                         <Input
+                            ref={dateInputRef}
                             id="watchedDate"
                             type="date"
                             value={watchedDate}

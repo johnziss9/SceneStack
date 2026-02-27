@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useWatchlist } from '@/contexts/WatchlistContext';
 import { Button } from '@/components/ui/button';
@@ -12,6 +12,8 @@ export function Navigation() {
     const { user, loading } = useAuth();
     const { count: watchlistCount } = useWatchlist();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const menuButtonRef = useRef<HTMLButtonElement>(null);
+    const mobileMenuRef = useRef<HTMLDivElement>(null);
     const closeMenu = () => setIsMenuOpen(false);
 
     // Close menu on Escape key press
@@ -36,6 +38,57 @@ export function Navigation() {
         return () => {
             document.body.style.overflow = '';
         };
+    }, [isMenuOpen]);
+
+    // Focus management: focus first menu item when opening, return focus to button when closing
+    useEffect(() => {
+        if (isMenuOpen && mobileMenuRef.current) {
+            // Focus first focusable element in menu
+            const firstFocusable = mobileMenuRef.current.querySelector<HTMLElement>(
+                'a, button, [tabindex]:not([tabindex="-1"])'
+            );
+            if (firstFocusable) {
+                setTimeout(() => firstFocusable.focus(), 100);
+            }
+        } else if (!isMenuOpen && menuButtonRef.current) {
+            // Return focus to menu button when closing
+            menuButtonRef.current.focus();
+        }
+    }, [isMenuOpen]);
+
+    // Focus trap: keep focus within mobile menu when open
+    useEffect(() => {
+        if (!isMenuOpen || !mobileMenuRef.current) return;
+
+        const handleTabKey = (e: KeyboardEvent) => {
+            if (e.key !== 'Tab' || !mobileMenuRef.current) return;
+
+            const focusableElements = mobileMenuRef.current.querySelectorAll<HTMLElement>(
+                'a, button, [tabindex]:not([tabindex="-1"])'
+            );
+
+            if (focusableElements.length === 0) return;
+
+            const firstElement = focusableElements[0];
+            const lastElement = focusableElements[focusableElements.length - 1];
+
+            if (e.shiftKey) {
+                // Shift+Tab: if on first element, wrap to last
+                if (document.activeElement === firstElement) {
+                    e.preventDefault();
+                    lastElement.focus();
+                }
+            } else {
+                // Tab: if on last element, wrap to first
+                if (document.activeElement === lastElement) {
+                    e.preventDefault();
+                    firstElement.focus();
+                }
+            }
+        };
+
+        document.addEventListener('keydown', handleTabKey);
+        return () => document.removeEventListener('keydown', handleTabKey);
     }, [isMenuOpen]);
 
     return (
@@ -106,9 +159,11 @@ export function Navigation() {
 
                             {/* Hamburger — visible on mobile only */}
                             <button
+                                ref={menuButtonRef}
                                 className="md:hidden p-2 rounded-md hover:bg-muted transition-colors"
                                 onClick={() => setIsMenuOpen((prev) => !prev)}
                                 aria-label={isMenuOpen ? 'Close menu' : 'Open menu'}
+                                aria-expanded={isMenuOpen}
                             >
                                 {isMenuOpen ? (
                                     <X className="h-5 w-5" />
@@ -134,6 +189,7 @@ export function Navigation() {
 
             {/* Mobile menu dropdown */}
             <div
+                ref={mobileMenuRef}
                 className={`
                     md:hidden border-t bg-background absolute left-0 right-0 z-40
                     transform transition-all duration-300 ease-in-out origin-top
@@ -142,6 +198,8 @@ export function Navigation() {
                         : '-translate-y-2 opacity-0 scale-y-95 pointer-events-none'
                     }
                 `}
+                role="navigation"
+                aria-label="Mobile navigation menu"
             >
                 <div className="max-w-7xl mx-auto px-4 py-3 flex flex-col gap-1">
                     {user ? (
