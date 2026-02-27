@@ -28,6 +28,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { LoadingTips } from "@/components/LoadingTips";
 import { MovieInsight } from '@/components/MovieInsight';
 import { useAuth } from '@/contexts/AuthContext';
+import { formatWatchDate } from '@/lib/utils';
 
 interface WatchDetailPageProps {
   params: Promise<{ id: string }>;
@@ -461,7 +462,7 @@ export default function WatchDetailPage({ params }: WatchDetailPageProps) {
                       {watches.map((watch) => (
                         <tr key={watch.id} className="border-b last:border-0 hover:bg-muted/40 transition-colors">
                           <td className="py-3 px-4 text-sm whitespace-nowrap">
-                            {new Date(watch.watchedDate).toLocaleDateString('en-GB', {
+                            {formatWatchDate(watch.watchedDate, {
                               day: 'numeric', month: 'short', year: 'numeric'
                             })}
                             {watch.isRewatch && (
@@ -525,7 +526,7 @@ export default function WatchDetailPage({ params }: WatchDetailPageProps) {
                 {deletingWatch && (
                   <div className="mt-2 text-sm">
                     <strong>{deletingWatch.movie.title}</strong> watched on{' '}
-                    {new Date(deletingWatch.watchedDate).toLocaleDateString('en-GB', {
+                    {formatWatchDate(deletingWatch.watchedDate, {
                       day: 'numeric', month: 'short', year: 'numeric'
                     })}
                   </div>

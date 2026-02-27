@@ -16,6 +16,7 @@ import { groupApi, statsApi } from '@/lib/api';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Slider } from '@/components/ui/slider';
 import { toast } from '@/lib/toast';
+import { dateStringToISO } from '@/lib/utils';
 
 interface WatchFormProps {
     movie: TmdbMovie | null;
@@ -263,7 +264,7 @@ export function WatchForm({ movie, open, onOpenChange, onSuccess }: WatchFormPro
         try {
             const watchData: CreateWatchRequest = {
                 tmdbId: movie.id,
-                watchedDate: new Date(watchedDate).toISOString(),
+                watchedDate: dateStringToISO(watchedDate),
                 rating: rating ? parseFloat(rating) : undefined,
                 notes: notes || undefined,
                 watchLocation: watchLocation === "Other" ? customLocation : watchLocation || undefined,

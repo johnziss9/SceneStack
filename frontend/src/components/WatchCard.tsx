@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { UpgradeToPremiumModal } from "./UpgradeToPremiumModal";
 import { useAuth } from "@/contexts/AuthContext";
 import Link from "next/link";
+import { formatWatchDate } from "@/lib/utils";
 
 interface WatchCardProps {
     groupedWatch: GroupedWatch;
@@ -25,11 +26,7 @@ export const WatchCard = memo(function WatchCard({ groupedWatch }: WatchCardProp
         : null;
     const lastWatch = watches[0];
 
-    const lastWatchedDate = new Date(lastWatch.watchedDate).toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-    });
+    const lastWatchedDate = formatWatchDate(lastWatch.watchedDate);
 
     const posterUrl = movie.posterPath
         ? `https://image.tmdb.org/t/p/w342${movie.posterPath}`

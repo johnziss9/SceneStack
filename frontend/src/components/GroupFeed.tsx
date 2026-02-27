@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { LoadingTips } from "@/components/LoadingTips";
 import { Eye, MapPin, Users as UsersIcon, ChevronDown } from "lucide-react";
 import Link from "next/link";
+import { formatWatchDate } from "@/lib/utils";
 
 interface GroupFeedProps {
     groupId: number;
@@ -127,11 +128,7 @@ export function GroupFeed({ groupId }: GroupFeedProps) {
                     ? `https://image.tmdb.org/t/p/w185${item.posterPath}`
                     : null;
 
-                const watchedDate = new Date(item.watchedDate).toLocaleDateString("en-US", {
-                    month: "short",
-                    day: "numeric",
-                    year: "numeric",
-                });
+                const watchedDate = formatWatchDate(item.watchedDate);
 
                 return (
                     <Card

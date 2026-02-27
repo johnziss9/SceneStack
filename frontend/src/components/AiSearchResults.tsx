@@ -8,6 +8,7 @@ import Link from 'next/link';
 import type { AiSearchResponse } from '@/types';
 import React from 'react';
 import { LoadingTips } from '@/components/LoadingTips';
+import { formatWatchDate } from '@/lib/utils';
 
 interface AiSearchResultsProps {
     results: AiSearchResponse | null;
@@ -83,7 +84,7 @@ export const AiSearchResults = memo(function AiSearchResults({
                         ? `https://image.tmdb.org/t/p/w342${movie.posterPath}`
                         : null;
 
-                    const watchDate = new Date(watch.watchedDate).toLocaleDateString('en-GB', {
+                    const watchDate = formatWatchDate(watch.watchedDate, {
                         day: 'numeric',
                         month: 'short',
                         year: 'numeric',

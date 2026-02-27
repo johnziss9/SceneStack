@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { watchApi } from '@/lib';
 import type { Watch, UpdateWatchRequest } from '@/types';
 import { toast } from '@/lib/toast';
+import { dateStringToISO, isoToDateString } from '@/lib/utils';
 import {
     Dialog,
     DialogContent,
@@ -100,7 +101,7 @@ export default function EditWatchDialog({
     // Populate form when watch changes OR when dialog opens
     useEffect(() => {
         if (watch && open) {
-            setWatchedDate(watch.watchedDate.split('T')[0]); // Extract YYYY-MM-DD
+            setWatchedDate(isoToDateString(watch.watchedDate)); // Extract YYYY-MM-DD
             setRating(watch.rating?.toString() || '');
 
             // Handle location
@@ -327,7 +328,7 @@ export default function EditWatchDialog({
             const finalLocation = location === 'Other' ? customLocation : location;
 
             const updateData: UpdateWatchRequest = {
-                watchedDate: new Date(watchedDate).toISOString(),
+                watchedDate: dateStringToISO(watchedDate),
                 rating: rating ? parseFloat(rating) : undefined,
                 notes: notes || undefined,
                 watchLocation: finalLocation || undefined,
