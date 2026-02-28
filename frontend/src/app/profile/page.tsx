@@ -20,7 +20,7 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { LogOut, User as UserIcon, Edit, Save, X, Lock, Trash2, Shield, Settings as SettingsIcon, Sparkles, Crown, Zap, Users as UsersIcon, Search, Check } from 'lucide-react';
+import { LogOut, User as UserIcon, Edit, Save, X, Lock, Trash2, Shield, Settings as SettingsIcon, Sparkles, Crown, Zap, Users as UsersIcon, Search, Check, Download, FileJson, FileSpreadsheet } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { AiUsageStats } from '@/components/AiUsageStats';
 import { PrivacySettings } from '@/components/PrivacySettings';
@@ -74,6 +74,10 @@ export default function ProfilePage() {
 
     // Upgrade modal state
     const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+
+    // Data export state
+    const [isExportingCsv, setIsExportingCsv] = useState(false);
+    const [isExportingJson, setIsExportingJson] = useState(false);
 
     // Password strength calculation
     const calculatePasswordStrength = (password: string): {
@@ -312,6 +316,63 @@ export default function ProfilePage() {
             setShowDeleteDialog(false);
             setDeletePassword('');
             setDeletePasswordError('');
+        }
+    };
+
+    const handleExportData = async (format: 'csv' | 'json') => {
+        const setLoading = format === 'csv' ? setIsExportingCsv : setIsExportingJson;
+        setLoading(true);
+
+        try {
+            const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5127';
+            const token = document.cookie
+                .split('; ')
+                .find(row => row.startsWith('auth_token='))
+                ?.split('=')[1];
+
+            const response = await fetch(`${API_URL}/api/users/export-data?format=${format}`, {
+                method: 'GET',
+                headers: {
+                    'Accept': format === 'csv' ? 'application/zip' : 'application/json',
+                    ...(token && { Authorization: `Bearer ${token}` }),
+                },
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to export data');
+            }
+
+            // Get filename from Content-Disposition header or create default
+            const contentDisposition = response.headers.get('Content-Disposition');
+            let filename = format === 'csv'
+                ? `scenestack-export-${new Date().toISOString().split('T')[0]}.zip`
+                : `scenestack-export-${new Date().toISOString().split('T')[0]}.json`;
+
+            if (contentDisposition) {
+                // Match filename=value (with or without quotes, stop at semicolon)
+                const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/i);
+                if (filenameMatch && filenameMatch[1]) {
+                    filename = filenameMatch[1].replace(/['"]/g, '');
+                }
+            }
+
+            // Create blob and download
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+
+            const formatLabel = format === 'csv' ? 'CSV (ZIP)' : 'JSON';
+            toast.success(`Data exported successfully as ${formatLabel}`);
+        } catch (error: any) {
+            toast.error(error.message || `Failed to export data`);
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -986,6 +1047,48 @@ export default function ProfilePage() {
                         {/* AI Usage Stats (premium only) */}
                         {(user as any)?.isPremium && <AiUsageStats />}
 
+                        {/* Your Data Card */}
+                        <Card>
+                            <CardHeader>
+                                <div className="flex items-center gap-2">
+                                    <Download className="h-5 w-5 text-primary" />
+                                    <CardTitle>Your Data</CardTitle>
+                                </div>
+                                <CardDescription>
+                                    Export your complete watch history, groups, watchlist, and account data
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                <p className="text-sm text-muted-foreground">
+                                    Download all your data in your preferred format.
+                                </p>
+                                <div className="flex flex-col sm:flex-row gap-3">
+                                    <Button
+                                        variant="outline"
+                                        onClick={() => handleExportData('csv')}
+                                        disabled={isExportingCsv || isExportingJson}
+                                        className="flex-1"
+                                    >
+                                        <FileSpreadsheet className="h-4 w-4 mr-2" />
+                                        {isExportingCsv ? 'Exporting...' : 'Download CSV (ZIP)'}
+                                    </Button>
+                                    <Button
+                                        variant="outline"
+                                        onClick={() => handleExportData('json')}
+                                        disabled={isExportingCsv || isExportingJson}
+                                        className="flex-1"
+                                    >
+                                        <FileJson className="h-4 w-4 mr-2" />
+                                        {isExportingJson ? 'Exporting...' : 'Download JSON'}
+                                    </Button>
+                                </div>
+                                <div className="text-xs text-muted-foreground space-y-1">
+                                    <p>• <strong>CSV (ZIP):</strong> Multiple files (watches, watchlist, groups, account) - compatible with Excel/Google Sheets</p>
+                                    <p>• <strong>JSON:</strong> Single file with all data - for developers/technical users</p>
+                                </div>
+                            </CardContent>
+                        </Card>
+
                         {/* Danger Zone Card */}
                         <Card className="border-destructive">
                     <CardHeader>
@@ -1022,7 +1125,7 @@ export default function ProfilePage() {
 
             {/* Delete Account Dialog */}
             <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-                <AlertDialogContent>
+                <AlertDialogContent className="max-w-md">
                     <AlertDialogHeader>
                         <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                         <AlertDialogDescription asChild>
@@ -1040,9 +1143,43 @@ export default function ProfilePage() {
                             </div>
                         </AlertDialogDescription>
                     </AlertDialogHeader>
-                    <div className="space-y-2 py-4">
+
+                    {/* Export Data Reminder */}
+                    <div className="border-t pt-4">
+                        <div className="flex items-center gap-2 mb-3">
+                            <Download className="h-4 w-4 text-primary" />
+                            <p className="text-sm font-medium">Before you go, download your data:</p>
+                        </div>
+                        <div className="flex gap-2">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleExportData('csv')}
+                                disabled={isExportingCsv || isExportingJson}
+                                className="flex-1"
+                            >
+                                <FileSpreadsheet className="h-3 w-3 mr-1" />
+                                {isExportingCsv ? 'Exporting...' : 'CSV (ZIP)'}
+                            </Button>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleExportData('json')}
+                                disabled={isExportingCsv || isExportingJson}
+                                className="flex-1"
+                            >
+                                <FileJson className="h-3 w-3 mr-1" />
+                                {isExportingJson ? 'Exporting...' : 'JSON'}
+                            </Button>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-2">
+                            CSV contains multiple files (watches, watchlist, groups, account)
+                        </p>
+                    </div>
+
+                    <div className="space-y-2 py-4 border-t">
                         <Label htmlFor="deletePassword">
-                            Enter your password to confirm
+                            Enter your password to confirm deletion
                         </Label>
                         <Input
                             id="deletePassword"

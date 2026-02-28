@@ -103,4 +103,32 @@ public class UsersController : ControllerBase
 
         return Ok(new { message = "Account deleted successfully" });
     }
+
+    // GET: api/users/export-data?format=csv|json
+    [HttpGet("export-data")]
+    public async Task<IActionResult> ExportData([FromQuery] string format = "csv")
+    {
+        var userId = User.GetUserId();
+
+        // Validate format parameter
+        if (format != "csv" && format != "json")
+        {
+            return BadRequest(new { message = "Invalid format. Must be 'csv' or 'json'" });
+        }
+
+        try
+        {
+            var (content, contentType, fileName) = await _userService.ExportUserDataAsync(userId, format);
+
+            return File(
+                content,
+                contentType,
+                fileName
+            );
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = $"Failed to export data: {ex.Message}" });
+        }
+    }
 }
