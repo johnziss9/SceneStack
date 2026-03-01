@@ -18,7 +18,7 @@ import { groupApi } from "@/lib/api";
 import type { GroupBasicInfo } from "@/types";
 import { BulkMakePrivateDialog } from "./BulkMakePrivateDialog";
 import { BulkShareWithGroupsDialog } from "./BulkShareWithGroupsDialog";
-import { Film, Filter, X, Info, ChevronDown, ChevronUp, Star, Calendar, Repeat, ArrowUpDown } from "lucide-react";
+import { Film, Filter, X, Info, ChevronDown, ChevronUp, Star, Calendar, Repeat, ArrowUpDown, Loader2 } from "lucide-react";
 
 const PAGE_SIZE = 20;
 
@@ -173,17 +173,26 @@ export function WatchList() {
     // Debounce search
     const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const [debouncedSearch, setDebouncedSearch] = useState(filters.search);
+    const [isSearchPending, setIsSearchPending] = useState(false);
 
     // Sync debounced search when search changes
     useEffect(() => {
         if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+
+        // Set pending state if search value differs from debounced value
+        if (filters.search !== debouncedSearch) {
+            setIsSearchPending(true);
+        }
+
         searchDebounceRef.current = setTimeout(() => {
             setDebouncedSearch(filters.search);
+            setIsSearchPending(false);
         }, 300);
+
         return () => {
             if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
         };
-    }, [filters.search]);
+    }, [filters.search, debouncedSearch]);
 
     // Persist filters to URL whenever they change
     useEffect(() => {
@@ -678,9 +687,15 @@ export function WatchList() {
                                 placeholder="Search movies…"
                                 value={filters.search}
                                 onChange={e => updateFilter("search", e.target.value)}
-                                className={filters.search ? "border-primary ring-1 ring-primary/20" : ""}
+                                className={filters.search ? "border-primary ring-1 ring-primary/20 pr-16" : ""}
                             />
-                            {filters.search && (
+                            {isSearchPending && (
+                                <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1.5 text-xs text-muted-foreground pointer-events-none">
+                                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                    <span className="hidden sm:inline">Searching…</span>
+                                </div>
+                            )}
+                            {filters.search && !isSearchPending && (
                                 <button
                                     onClick={() => updateFilter("search", "")}
                                     className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-muted rounded-sm transition-colors"
