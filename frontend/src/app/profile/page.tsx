@@ -83,6 +83,9 @@ export default function ProfilePage() {
     const [showDeactivateDialog, setShowDeactivateDialog] = useState(false);
     const [isDeactivating, setIsDeactivating] = useState(false);
 
+    // Logout confirmation state
+    const [showLogoutDialog, setShowLogoutDialog] = useState(false);
+
     // Upgrade modal state
     const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
@@ -435,7 +438,11 @@ export default function ProfilePage() {
         }
     };
 
-    const handleLogout = () => {
+    const handleLogoutClick = () => {
+        setShowLogoutDialog(true);
+    };
+
+    const handleLogoutConfirm = () => {
         logout();
     };
 
@@ -585,7 +592,7 @@ export default function ProfilePage() {
                     </div>
                     <Button
                         variant="outline"
-                        onClick={handleLogout}
+                        onClick={handleLogoutClick}
                         className="flex-shrink-0 mr-4"
                     >
                         <LogOut className="h-4 w-4 mr-2" />
@@ -1350,6 +1357,24 @@ export default function ProfilePage() {
                             disabled={isDeactivating}
                         >
                             {isDeactivating ? 'Deactivating...' : 'Deactivate Account'}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            {/* Logout Confirmation Dialog */}
+            <AlertDialog open={showLogoutDialog} onOpenChange={setShowLogoutDialog}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Log out?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Are you sure you want to log out of your account?
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Stay logged in</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleLogoutConfirm}>
+                            Log out
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
