@@ -278,4 +278,185 @@ public class UsersControllerTests
         var badRequestResult = result.Should().BeOfType<BadRequestObjectResult>().Subject;
         badRequestResult.Value.Should().BeEquivalentTo(new { message = "Failed to delete account. Please check your password and try again." });
     }
+
+    [Fact]
+    public async Task DeactivateAccount_ValidUser_ReturnsOk()
+    {
+        // Arrange
+        var userService = Substitute.For<IUserService>();
+        var controller = CreateControllerWithAuthenticatedUser(userService, userId: 1);
+
+        userService.DeactivateAccountAsync(1).Returns(true);
+
+        // Act
+        var result = await controller.DeactivateAccount();
+
+        // Assert
+        var okResult = result.Should().BeOfType<OkObjectResult>().Subject;
+        okResult.Value.Should().BeEquivalentTo(new { message = "Account deactivated successfully. You can reactivate anytime by logging in." });
+    }
+
+    [Fact]
+    public async Task DeactivateAccount_ServiceFails_ReturnsBadRequest()
+    {
+        // Arrange
+        var userService = Substitute.For<IUserService>();
+        var controller = CreateControllerWithAuthenticatedUser(userService, userId: 1);
+
+        userService.DeactivateAccountAsync(1).Returns(false);
+
+        // Act
+        var result = await controller.DeactivateAccount();
+
+        // Assert
+        var badRequestResult = result.Should().BeOfType<BadRequestObjectResult>().Subject;
+        badRequestResult.Value.Should().BeEquivalentTo(new { message = "Failed to deactivate account" });
+    }
+
+    [Fact]
+    public async Task ReactivateAccount_ValidUser_ReturnsOk()
+    {
+        // Arrange
+        var userService = Substitute.For<IUserService>();
+        var controller = CreateControllerWithAuthenticatedUser(userService, userId: 1);
+
+        userService.ReactivateAccountAsync(1).Returns(true);
+
+        // Act
+        var result = await controller.ReactivateAccount();
+
+        // Assert
+        var okResult = result.Should().BeOfType<OkObjectResult>().Subject;
+        okResult.Value.Should().BeEquivalentTo(new { message = "Account reactivated successfully" });
+    }
+
+    [Fact]
+    public async Task ReactivateAccount_ServiceFails_ReturnsBadRequest()
+    {
+        // Arrange
+        var userService = Substitute.For<IUserService>();
+        var controller = CreateControllerWithAuthenticatedUser(userService, userId: 1);
+
+        userService.ReactivateAccountAsync(1).Returns(false);
+
+        // Act
+        var result = await controller.ReactivateAccount();
+
+        // Assert
+        var badRequestResult = result.Should().BeOfType<BadRequestObjectResult>().Subject;
+        badRequestResult.Value.Should().BeEquivalentTo(new { message = "Failed to reactivate account" });
+    }
+
+    [Fact]
+    public async Task GetCreatedGroupsWithEligibility_ReturnsGroupsWithTransferInfo()
+    {
+        // Arrange
+        var userService = Substitute.For<IUserService>();
+        var controller = CreateControllerWithAuthenticatedUser(userService, userId: 1);
+
+        var groups = new List<GroupWithTransferEligibilityResponse>
+        {
+            new GroupWithTransferEligibilityResponse(
+                GroupId: 1,
+                GroupName: "Test Group",
+                MemberCount: 3,
+                EligibleMembers: new List<EligibleTransferMember>
+                {
+                    new EligibleTransferMember(
+                        UserId: 2,
+                        Username: "premiumuser",
+                        IsPremium: true,
+                        IsAdmin: true,
+                        IsEligible: true
+                    )
+                },
+                CanTransfer: true
+            )
+        };
+
+        userService.GetCreatedGroupsWithTransferEligibilityAsync(1).Returns(groups);
+
+        // Act
+        var result = await controller.GetCreatedGroupsWithEligibility();
+
+        // Assert
+        var okResult = result.Should().BeOfType<OkObjectResult>().Subject;
+        var returnedGroups = okResult.Value.Should().BeAssignableTo<IEnumerable<GroupWithTransferEligibilityResponse>>().Subject;
+        returnedGroups.Should().HaveCount(1);
+        returnedGroups.First().CanTransfer.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task ManageGroupsBeforeDeletion_ValidActions_ReturnsOk()
+    {
+        // Arrange
+        var userService = Substitute.For<IUserService>();
+        var controller = CreateControllerWithAuthenticatedUser(userService, userId: 1);
+
+        var groupActions = new List<GroupActionRequest>
+        {
+            new GroupActionRequest(GroupId: 1, Action: "transfer", TransferToUserId: 2),
+            new GroupActionRequest(GroupId: 2, Action: "delete", TransferToUserId: null)
+        };
+
+        var request = new ManageGroupsBeforeDeletionRequest(groupActions);
+
+        // Act
+        var result = await controller.ManageGroupsBeforeDeletion(request);
+
+        // Assert
+        var okResult = result.Should().BeOfType<OkObjectResult>().Subject;
+        okResult.Value.Should().BeEquivalentTo(new { message = "Groups managed successfully" });
+        await userService.Received(1).ManageGroupsBeforeDeletionAsync(1, groupActions);
+    }
+
+    [Fact]
+    public async Task ManageGroupsBeforeDeletion_InvalidAction_ReturnsBadRequest()
+    {
+        // Arrange
+        var userService = Substitute.For<IUserService>();
+        var controller = CreateControllerWithAuthenticatedUser(userService, userId: 1);
+
+        var groupActions = new List<GroupActionRequest>
+        {
+            new GroupActionRequest(GroupId: 1, Action: "transfer", TransferToUserId: null) // Missing TransferToUserId
+        };
+
+        var request = new ManageGroupsBeforeDeletionRequest(groupActions);
+
+        userService.ManageGroupsBeforeDeletionAsync(1, groupActions)
+            .Returns(Task.FromException(new InvalidOperationException("Transfer requires a target user ID")));
+
+        // Act
+        var result = await controller.ManageGroupsBeforeDeletion(request);
+
+        // Assert
+        var badRequestResult = result.Should().BeOfType<BadRequestObjectResult>().Subject;
+        badRequestResult.Value.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task ManageGroupsBeforeDeletion_TransferToDeactivatedUser_ReturnsBadRequest()
+    {
+        // Arrange
+        var userService = Substitute.For<IUserService>();
+        var controller = CreateControllerWithAuthenticatedUser(userService, userId: 1);
+
+        var groupActions = new List<GroupActionRequest>
+        {
+            new GroupActionRequest(GroupId: 1, Action: "transfer", TransferToUserId: 2)
+        };
+
+        var request = new ManageGroupsBeforeDeletionRequest(groupActions);
+
+        userService.ManageGroupsBeforeDeletionAsync(1, groupActions)
+            .Returns(Task.FromException(new InvalidOperationException("User 2 is not eligible to receive group ownership (deleted or deactivated)")));
+
+        // Act
+        var result = await controller.ManageGroupsBeforeDeletion(request);
+
+        // Assert
+        var badRequestResult = result.Should().BeOfType<BadRequestObjectResult>().Subject;
+        badRequestResult.Value.Should().NotBeNull();
+    }
 }

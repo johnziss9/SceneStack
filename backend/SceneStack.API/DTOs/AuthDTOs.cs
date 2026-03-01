@@ -15,5 +15,8 @@ public record AuthResponse(
     string Token,
     string Username,
     string Email,
-    int UserId  // This is the domain User.Id (int)
+    int UserId,  // This is the domain User.Id (int)
+    bool IsDeactivated = false,
+    DateTime? DeactivatedAt = null,
+    int? DaysUntilPermanentDeletion = null
 );

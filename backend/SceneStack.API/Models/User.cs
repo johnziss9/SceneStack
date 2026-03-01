@@ -16,6 +16,14 @@ public class User
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     public bool IsDeleted { get; set; } = false;
+    public DateTime? DeletedAt { get; set; }
+
+    // Deactivation (soft lockout, can reactivate anytime)
+    public bool IsDeactivated { get; set; } = false;
+    public DateTime? DeactivatedAt { get; set; }
+
+    // Pending group actions (stored as JSON, executed after 30 days if not reactivated)
+    public string? PendingGroupActions { get; set; }
 
     // Navigation properties
     public ICollection<Watch> Watches { get; set; } = new List<Watch>();

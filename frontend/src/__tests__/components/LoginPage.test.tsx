@@ -179,17 +179,20 @@ describe('LoginPage', () => {
             await user.click(submitButton);
 
             await waitFor(() => {
-                expect(mockToast.success).toHaveBeenCalledWith('Logged in successfully!');
+                expect(mockToast.success).toHaveBeenCalledWith(
+                    'Logged in successfully!',
+                    expect.any(Object)
+                );
             });
         });
 
         it('should show error toast on failed login', async () => {
             const user = userEvent.setup();
             mockLogin.mockRejectedValue(new Error('Invalid credentials'));
-            
+
             // Suppress expected console.error
             const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
-            
+
             render(<LoginPage />);
 
             const emailInput = screen.getByLabelText(/email/i);
@@ -201,9 +204,12 @@ describe('LoginPage', () => {
             await user.click(submitButton);
 
             await waitFor(() => {
-                expect(mockToast.error).toHaveBeenCalledWith('Invalid email or password');
+                expect(mockToast.error).toHaveBeenCalledWith(
+                    'Invalid credentials',
+                    expect.any(Object)
+                );
             });
-            
+
             consoleErrorSpy.mockRestore();
         });
 

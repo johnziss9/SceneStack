@@ -34,6 +34,7 @@ public class GroupMemberResponse
     // Flattened user info for easier frontend access
     public string Username { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
+    public bool IsDeactivated { get; set; } = false;
 
     // Nested user info (kept for backwards compatibility)
     public UserBasicInfo User { get; set; } = null!;
@@ -44,6 +45,7 @@ public class GroupFeedItemResponse
     public int Id { get; set; }
     public int UserId { get; set; }
     public string Username { get; set; } = string.Empty;
+    public bool IsDeactivated { get; set; }
     public int MovieId { get; set; }
     public string MovieTitle { get; set; } = string.Empty;
     public string? PosterPath { get; set; }
@@ -106,6 +108,7 @@ public class GroupMemberStats
     public string Username { get; set; } = string.Empty;
     public int WatchCount { get; set; }
     public double? AverageRating { get; set; }
+    public bool IsDeactivated { get; set; }
 }
 
 public class SharedMovieStats

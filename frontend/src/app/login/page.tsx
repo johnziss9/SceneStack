@@ -83,9 +83,10 @@ export default function LoginPage() {
         try {
             await login({ email, password });
             toast.success('Logged in successfully!');
-        } catch (error) {
-            console.error('Login error:', error);
-            toast.error('Invalid email or password');
+        } catch (error: any) {
+            // ApiError has the message directly on the error object
+            const errorMessage = error?.message || error?.response?.data?.message || 'Invalid email or password';
+            toast.error(errorMessage);
         } finally {
             setIsLoading(false);
         }

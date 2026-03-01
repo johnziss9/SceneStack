@@ -13,11 +13,13 @@ public class UserService : IUserService
 {
     private readonly ApplicationDbContext _context;
     private readonly UserManager<ApplicationUser> _userManager;
+    private readonly ILogger<UserService> _logger;
 
-    public UserService(ApplicationDbContext context, UserManager<ApplicationUser> userManager)
+    public UserService(ApplicationDbContext context, UserManager<ApplicationUser> userManager, ILogger<UserService> logger)
     {
         _context = context;
         _userManager = userManager;
+        _logger = logger;
     }
 
     public async Task<User?> GetProfileAsync(int userId)
@@ -135,19 +137,20 @@ public class UserService : IUserService
             return false;
         }
 
-        // Soft delete the domain user
+        // Start the 30-day deletion process
         var domainUser = await _context.Users.FindAsync(userId);
         if (domainUser != null)
         {
-            domainUser.IsDeleted = true;
+            // Deactivate and schedule for deletion
+            domainUser.IsDeactivated = true;
+            domainUser.DeactivatedAt = DateTime.UtcNow;
+            domainUser.DeletedAt = DateTime.UtcNow; // Start 30-day countdown
             domainUser.UpdatedAt = DateTime.UtcNow;
+            // NOTE: IsDeleted will be set to true after 30 days by background job
             await _context.SaveChangesAsync();
         }
 
-        // Delete the ApplicationUser (hard delete from Identity)
-        var result = await _userManager.DeleteAsync(authUser);
-
-        return result.Succeeded;
+        return true;
     }
 
     public async Task<(byte[] content, string contentType, string fileName)> ExportUserDataAsync(int userId, string format)
@@ -403,5 +406,255 @@ public class UserService : IUserService
 
         // Escape double quotes by doubling them
         return value.Replace("\"", "\"\"");
+    }
+
+    public async Task<List<GroupWithTransferEligibilityResponse>> GetCreatedGroupsWithTransferEligibilityAsync(int userId)
+    {
+        // Get all groups where this user is the owner (CreatedById)
+        var createdGroups = await _context.Groups
+            .Where(g => g.CreatedById == userId && !g.IsDeleted)
+            .Include(g => g.Members)
+                .ThenInclude(m => m.User)
+            .AsSplitQuery()
+            .ToListAsync();
+
+        var result = new List<GroupWithTransferEligibilityResponse>();
+
+        foreach (var group in createdGroups)
+        {
+            var eligibleMembers = new List<EligibleTransferMember>();
+
+            // Get all members except the owner, excluding deleted and deactivated users
+            var members = group.Members
+                .Where(m => m.UserId != userId &&
+                           m.User != null &&
+                           !m.User.IsDeleted &&
+                           !m.User.IsDeactivated)
+                .ToList();
+
+            foreach (var member in members)
+            {
+                // Check if member is eligible to receive ownership
+                // Eligible if: Premium (unlimited groups) OR Free user who hasn't created a group
+                bool isEligible;
+
+                if (member.User.IsPremium)
+                {
+                    // Premium users can have unlimited groups
+                    isEligible = true;
+                }
+                else
+                {
+                    // Free users can only create 1 group
+                    var hasCreatedGroup = await _context.Groups
+                        .AnyAsync(g => g.CreatedById == member.UserId && !g.IsDeleted);
+                    isEligible = !hasCreatedGroup;
+                }
+
+                eligibleMembers.Add(new EligibleTransferMember(
+                    UserId: member.UserId,
+                    Username: member.User.Username,
+                    IsPremium: member.User.IsPremium,
+                    IsAdmin: member.Role == GroupRole.Admin || member.Role == GroupRole.Creator,
+                    IsEligible: isEligible
+                ));
+            }
+
+            result.Add(new GroupWithTransferEligibilityResponse(
+                GroupId: group.Id,
+                GroupName: group.Name,
+                MemberCount: group.Members.Count,
+                EligibleMembers: eligibleMembers,
+                CanTransfer: eligibleMembers.Any(m => m.IsEligible)
+            ));
+        }
+
+        return result;
+    }
+
+    public async Task ManageGroupsBeforeDeletionAsync(int userId, List<GroupActionRequest> groupActions)
+    {
+        // Validate all actions before storing
+        foreach (var action in groupActions)
+        {
+            var group = await _context.Groups
+                .Include(g => g.Members)
+                .FirstOrDefaultAsync(g => g.Id == action.GroupId && g.CreatedById == userId && !g.IsDeleted);
+
+            if (group == null)
+            {
+                throw new InvalidOperationException($"Group {action.GroupId} not found or you don't own it");
+            }
+
+            if (action.Action == "transfer")
+            {
+                if (!action.TransferToUserId.HasValue)
+                {
+                    throw new InvalidOperationException($"Transfer requires a target user ID for group {action.GroupId}");
+                }
+
+                // Verify the target user is a member of the group
+                var targetMember = group.Members.FirstOrDefault(m => m.UserId == action.TransferToUserId.Value);
+                if (targetMember == null)
+                {
+                    throw new InvalidOperationException($"User {action.TransferToUserId} is not a member of group {action.GroupId}");
+                }
+
+                // Verify the target user is active (not deleted or deactivated)
+                var targetUser = await _context.Users
+                    .IgnoreQueryFilters()
+                    .FirstOrDefaultAsync(u => u.Id == action.TransferToUserId.Value);
+
+                if (targetUser == null || targetUser.IsDeleted || targetUser.IsDeactivated)
+                {
+                    throw new InvalidOperationException($"User {action.TransferToUserId} is not eligible to receive group ownership (deleted or deactivated)");
+                }
+            }
+            else if (action.Action != "delete")
+            {
+                throw new InvalidOperationException($"Invalid action: {action.Action}");
+            }
+        }
+
+        // Store actions as JSON to be executed later (after 30 days or when background job runs)
+        var user = await _context.Users.FindAsync(userId);
+        if (user != null)
+        {
+            user.PendingGroupActions = JsonSerializer.Serialize(groupActions);
+            user.UpdatedAt = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
+        }
+    }
+
+    public async Task ExecutePendingGroupActionsAsync(int userId)
+    {
+        var user = await _context.Users.FindAsync(userId);
+        if (user == null || string.IsNullOrEmpty(user.PendingGroupActions))
+        {
+            return;
+        }
+
+        // Deserialize the stored actions
+        var groupActions = JsonSerializer.Deserialize<List<GroupActionRequest>>(user.PendingGroupActions);
+        if (groupActions == null || groupActions.Count == 0)
+        {
+            return;
+        }
+
+        // Execute each action
+        foreach (var action in groupActions)
+        {
+            var group = await _context.Groups
+                .Include(g => g.Members)
+                .FirstOrDefaultAsync(g => g.Id == action.GroupId && !g.IsDeleted);
+
+            if (group == null)
+            {
+                continue; // Group was already deleted or doesn't exist
+            }
+
+            if (action.Action == "delete")
+            {
+                // Soft delete the group
+                group.IsDeleted = true;
+                group.DeletedAt = DateTime.UtcNow;
+                group.UpdatedAt = DateTime.UtcNow;
+            }
+            else if (action.Action == "transfer")
+            {
+                if (!action.TransferToUserId.HasValue)
+                {
+                    continue;
+                }
+
+                // Verify the target user is still a member
+                var targetMember = group.Members.FirstOrDefault(m => m.UserId == action.TransferToUserId.Value);
+                if (targetMember == null)
+                {
+                    // Target member left the group, delete it instead
+                    group.IsDeleted = true;
+                    group.DeletedAt = DateTime.UtcNow;
+                    group.UpdatedAt = DateTime.UtcNow;
+                    continue;
+                }
+
+                // Verify the target user is still active (not deleted or deactivated)
+                var targetUser = await _context.Users
+                    .IgnoreQueryFilters()
+                    .FirstOrDefaultAsync(u => u.Id == action.TransferToUserId.Value);
+
+                if (targetUser == null || targetUser.IsDeleted || targetUser.IsDeactivated)
+                {
+                    // Target user is no longer active, delete the group instead
+                    _logger.LogWarning(
+                        "Cannot transfer group {GroupId} to user {UserId} - user is deleted or deactivated. Deleting group instead.",
+                        group.Id,
+                        action.TransferToUserId.Value);
+                    group.IsDeleted = true;
+                    group.DeletedAt = DateTime.UtcNow;
+                    group.UpdatedAt = DateTime.UtcNow;
+                    continue;
+                }
+
+                // Transfer ownership
+                group.CreatedById = action.TransferToUserId.Value;
+                group.UpdatedAt = DateTime.UtcNow;
+
+                // Update the new owner's role to Creator
+                targetMember.Role = GroupRole.Creator;
+
+                // Remove the old creator from the group members
+                var oldCreator = group.Members.FirstOrDefault(m => m.UserId == userId);
+                if (oldCreator != null)
+                {
+                    _context.GroupMembers.Remove(oldCreator);
+                }
+            }
+        }
+
+        // Clear the pending actions
+        user.PendingGroupActions = null;
+        await _context.SaveChangesAsync();
+    }
+
+    public async Task<bool> DeactivateAccountAsync(int userId)
+    {
+        var user = await _context.Users.FindAsync(userId);
+        if (user == null)
+        {
+            return false;
+        }
+
+        user.IsDeactivated = true;
+        user.DeactivatedAt = DateTime.UtcNow;
+        user.UpdatedAt = DateTime.UtcNow;
+
+        await _context.SaveChangesAsync();
+
+        return true;
+    }
+
+    public async Task<bool> ReactivateAccountAsync(int userId)
+    {
+        var user = await _context.Users.FindAsync(userId);
+        if (user == null)
+        {
+            return false;
+        }
+
+        user.IsDeactivated = false;
+        user.DeactivatedAt = null;
+        user.UpdatedAt = DateTime.UtcNow;
+
+        // If they were scheduled for deletion, cancel it
+        user.IsDeleted = false;
+        user.DeletedAt = null;
+
+        // Clear any pending group actions (groups are safe, nothing happens to them)
+        user.PendingGroupActions = null;
+
+        await _context.SaveChangesAsync();
+
+        return true;
     }
 }

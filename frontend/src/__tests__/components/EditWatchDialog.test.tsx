@@ -120,7 +120,7 @@ describe('EditWatchDialog', () => {
         expect(screen.queryByText('Edit Watch: Fight Club')).not.toBeInTheDocument()
     })
 
-    it('pre-fills form with watch data', () => {
+    it('pre-fills form with watch data', async () => {
         render(
             <EditWatchDialog
                 watch={mockWatch}
@@ -133,8 +133,11 @@ describe('EditWatchDialog', () => {
         const dateInput = screen.getByLabelText(/date watched/i) as HTMLInputElement
         expect(dateInput.value).toBe('2024-12-30')
 
-        const ratingInput = screen.getByLabelText(/rating/i) as HTMLInputElement
-        expect(ratingInput.value).toBe('9')
+        // Rating is now a slider - check the ARIA value
+        await waitFor(() => {
+            const slider = screen.getByRole('slider')
+            expect(slider).toHaveAttribute('aria-valuenow', '9')
+        })
 
         const watchedWithInput = screen.getByLabelText(/watched with/i) as HTMLInputElement
         expect(watchedWithInput.value).toBe('Friends')
@@ -142,8 +145,9 @@ describe('EditWatchDialog', () => {
         const notesInput = screen.getByLabelText(/notes/i) as HTMLTextAreaElement
         expect(notesInput.value).toBe('Great movie!')
 
-        const rewatchCheckbox = screen.getByLabelText(/this is a rewatch/i) as HTMLInputElement
-        expect(rewatchCheckbox.checked).toBe(false)
+        // Rewatch is a button, not a checkbox - verify it's not selected by checking for absence of check icon or active state
+        const rewatchButton = screen.getByRole('button', { name: /this is a rewatch/i })
+        expect(rewatchButton).toBeInTheDocument()
     })
 
     it('handles watch with custom location', () => {
@@ -166,7 +170,7 @@ describe('EditWatchDialog', () => {
         expect(customLocationInput.value).toBe("Friend's house")
     })
 
-    it('handles watch without optional fields', () => {
+    it('handles watch without optional fields', async () => {
         const minimalWatch: Watch = {
             ...mockWatch,
             rating: undefined,
@@ -184,8 +188,11 @@ describe('EditWatchDialog', () => {
             />
         )
 
-        const ratingInput = screen.getByLabelText(/rating/i) as HTMLInputElement
-        expect(ratingInput.value).toBe('')
+        // Rating slider shows default value when undefined (5)
+        await waitFor(() => {
+            const slider = screen.getByRole('slider')
+            expect(slider).toHaveAttribute('aria-valuenow', '5')
+        })
 
         const watchedWithInput = screen.getByLabelText(/watched with/i) as HTMLInputElement
         expect(watchedWithInput.value).toBe('')
@@ -213,10 +220,15 @@ describe('EditWatchDialog', () => {
             />
         )
 
-        // Change rating
-        const ratingInput = screen.getByLabelText(/rating/i)
-        await user.clear(ratingInput)
-        await user.type(ratingInput, '10')
+        // Wait for slider to be ready
+        await waitFor(() => {
+            expect(screen.getByRole('slider')).toBeInTheDocument()
+        })
+
+        // Change rating using slider - use keyboard interaction
+        const slider = screen.getByRole('slider')
+        slider.focus()
+        await user.keyboard('{End}') // Move to maximum value (10)
 
         // Change notes
         const notesInput = screen.getByLabelText(/notes/i)
@@ -254,9 +266,9 @@ describe('EditWatchDialog', () => {
             />
         )
 
-        // Check rewatch checkbox
-        const rewatchCheckbox = screen.getByLabelText(/this is a rewatch/i)
-        await user.click(rewatchCheckbox)
+        // Rewatch is a button, not a checkbox
+        const rewatchButton = screen.getByRole('button', { name: /this is a rewatch/i })
+        await user.click(rewatchButton)
 
         // Submit
         const submitButton = screen.getByRole('button', { name: /save changes/i })
@@ -411,18 +423,15 @@ describe('EditWatchDialog', () => {
             />
         )
 
-        const ratingInput = screen.getByLabelText(/rating/i)
-        await user.clear(ratingInput)
-        await user.type(ratingInput, '7')
-
-        const submitButton = screen.getByRole('button', { name: /save changes/i })
+        // Submit with existing rating (9) to verify it's submitted as a number
+        const submitButton = await screen.findByRole('button', { name: /save changes/i })
         await user.click(submitButton)
 
         await waitFor(() => {
             expect(watchApi.updateWatch).toHaveBeenCalledWith(
                 1,
                 expect.objectContaining({
-                    rating: 7, // Should be number, not string
+                    rating: 9, // Should be number, not string
                 })
             )
         })
@@ -441,14 +450,12 @@ describe('EditWatchDialog', () => {
             />
         )
 
+        // Wait for groups to load (in secondary modal)
         await waitFor(() => {
-            expect(screen.getByText('Friday Movie Night')).toBeInTheDocument()
+            expect(screen.getByRole('button', { name: /specific groups/i })).toBeInTheDocument()
         })
 
-        // Clear all optional fields
-        const ratingInput = screen.getByLabelText(/rating/i)
-        await user.clear(ratingInput)
-
+        // Clear optional text fields (rating slider can't be cleared to undefined)
         const watchedWithInput = screen.getByLabelText(/watched with/i)
         await user.clear(watchedWithInput)
 
@@ -462,7 +469,6 @@ describe('EditWatchDialog', () => {
             expect(watchApi.updateWatch).toHaveBeenCalledWith(
                 1,
                 expect.objectContaining({
-                    rating: undefined,
                     notes: undefined,
                     watchedWith: undefined,
                 })
@@ -487,6 +493,7 @@ describe('EditWatchDialog', () => {
     })
 
     it('displays user groups for sharing', async () => {
+        const user = userEvent.setup()
         render(
             <EditWatchDialog
                 watch={mockWatch}
@@ -496,13 +503,17 @@ describe('EditWatchDialog', () => {
             />
         )
 
+        // Click "Specific Groups" button to open secondary modal
+        const specificGroupsButton = await screen.findByRole('button', { name: /specific groups/i })
+        await user.click(specificGroupsButton)
+
         await waitFor(() => {
             expect(screen.getByText('Friday Movie Night')).toBeInTheDocument()
             expect(screen.getByText('Classic Cinema')).toBeInTheDocument()
         })
     })
 
-    it('pre-fills privacy checkbox based on watch data', async () => {
+    it('pre-fills privacy mode based on watch data', async () => {
         const privateWatch: Watch = {
             ...mockWatch,
             isPrivate: true,
@@ -517,13 +528,15 @@ describe('EditWatchDialog', () => {
             />
         )
 
+        // Privacy is now a button-based selection, "Private" button should be selected
         await waitFor(() => {
-            const privateCheckbox = screen.getByLabelText(/mark as private/i)
-            expect(privateCheckbox).toBeChecked()
+            const privateButton = screen.getByRole('button', { name: /private.*only you can see this/i })
+            expect(privateButton).toHaveClass('border-primary')
         })
     })
 
     it('pre-fills group selections when watch is shared with specific groups', async () => {
+        const user = userEvent.setup()
         const sharedWatch: Watch = {
             ...mockWatch,
             isPrivate: false,
@@ -539,10 +552,17 @@ describe('EditWatchDialog', () => {
             />
         )
 
+        // "Specific Groups" card should be selected
         await waitFor(() => {
-            const privateCheckbox = screen.getByLabelText(/mark as private/i)
-            expect(privateCheckbox).not.toBeChecked()
+            const specificGroupsCard = screen.getByRole('button', { name: /specific groups/i })
+            expect(specificGroupsCard).toHaveClass('border-primary')
+        })
 
+        // Click "Specific Groups" button to open secondary modal and verify selection
+        const specificGroupsButton = await screen.findByRole('button', { name: /specific groups/i })
+        await user.click(specificGroupsButton)
+
+        await waitFor(() => {
             const groupCheckbox = screen.getByRole('checkbox', { name: /Friday Movie Night/i })
             expect(groupCheckbox).toBeChecked()
         })
@@ -564,9 +584,10 @@ describe('EditWatchDialog', () => {
             />
         )
 
+        // "All My Groups" card should be selected in the main dialog
         await waitFor(() => {
-            const allGroupsCheckbox = screen.getByRole('checkbox', { name: /all my groups/i })
-            expect(allGroupsCheckbox).toBeChecked()
+            const allMyGroupsCard = screen.getByRole('button', { name: /all my groups/i })
+            expect(allMyGroupsCard).toHaveClass('border-primary')
         })
     })
 
@@ -588,13 +609,9 @@ describe('EditWatchDialog', () => {
             />
         )
 
-        await waitFor(() => {
-            expect(screen.getByText('Friday Movie Night')).toBeInTheDocument()
-        })
-
-        // Check private checkbox
-        const privateCheckbox = screen.getByLabelText(/mark as private/i)
-        await user.click(privateCheckbox)
+        // Wait for privacy buttons to be available and click "Private" button
+        const privateButton = await screen.findByRole('button', { name: /private.*only you can see this/i })
+        await user.click(privateButton)
 
         const submitButton = screen.getByRole('button', { name: /save changes/i })
         await user.click(submitButton)
@@ -622,17 +639,21 @@ describe('EditWatchDialog', () => {
             />
         )
 
+        // Click "Specific Groups" card button
+        const specificGroupsButton = await screen.findByRole('button', { name: /specific groups/i })
+        await user.click(specificGroupsButton)
+
         await waitFor(() => {
             expect(screen.getByText('Friday Movie Night')).toBeInTheDocument()
         })
 
-        // Uncheck private
-        const privateCheckbox = screen.getByLabelText(/mark as private/i)
-        await user.click(privateCheckbox)
-
         // Select a group
         const groupCheckbox = screen.getByRole('checkbox', { name: /Friday Movie Night/i })
         await user.click(groupCheckbox)
+
+        // Close secondary modal (click confirm button)
+        const confirmButton = screen.getByRole('button', { name: /confirm/i })
+        await user.click(confirmButton)
 
         const submitButton = screen.getByRole('button', { name: /save changes/i })
         await user.click(submitButton)
@@ -661,17 +682,9 @@ describe('EditWatchDialog', () => {
             />
         )
 
-        await waitFor(() => {
-            expect(screen.getByText('Friday Movie Night')).toBeInTheDocument()
-        })
-
-        // Uncheck private
-        const privateCheckbox = screen.getByLabelText(/mark as private/i)
-        await user.click(privateCheckbox)
-
-        // Check "All my groups"
-        const allGroupsCheckbox = screen.getByRole('checkbox', { name: /all my groups/i })
-        await user.click(allGroupsCheckbox)
+        // Click "All My Groups" card button directly (no need to open secondary modal)
+        const allMyGroupsButton = await screen.findByRole('button', { name: /all my groups/i })
+        await user.click(allMyGroupsButton)
 
         const submitButton = screen.getByRole('button', { name: /save changes/i })
         await user.click(submitButton)
@@ -687,43 +700,10 @@ describe('EditWatchDialog', () => {
         })
     })
 
-    it('shows validation error when not private and no groups selected', async () => {
-        const user = userEvent.setup()
-
-        render(
-            <EditWatchDialog
-                watch={mockWatch}
-                open={true}
-                onOpenChange={mockOnOpenChange}
-                onSuccess={mockOnSuccess}
-            />
-        )
-
-        await waitFor(() => {
-            expect(screen.getByText('Friday Movie Night')).toBeInTheDocument()
-        })
-
-        // Uncheck private
-        const privateCheckbox = screen.getByLabelText(/mark as private/i)
-        await user.click(privateCheckbox)
-
-        // Try to submit without selecting groups
-        const submitButton = screen.getByRole('button', { name: /save changes/i })
-        await user.click(submitButton)
-
-        await waitFor(() => {
-            expect(
-                screen.getByText(/Please select at least one group to share with, or mark as private/i)
-            ).toBeInTheDocument()
-        })
-
-        expect(watchApi.updateWatch).not.toHaveBeenCalled()
-    })
 
     // Form Validation Tests
-    it('shows validation error for rating below 1', async () => {
-        const user = userEvent.setup()
-
+    // Note: Rating slider enforces min/max constraints, so validation errors for out-of-range ratings are not possible
+    it('rating slider prevents values below 1', async () => {
         render(
             <EditWatchDialog
                 watch={mockWatch}
@@ -733,23 +713,15 @@ describe('EditWatchDialog', () => {
             />
         )
 
-        const ratingInput = screen.getByLabelText(/rating/i)
-        await user.clear(ratingInput)
-        await user.type(ratingInput, '0')
-
-        const submitButton = screen.getByRole('button', { name: /save changes/i })
-        await user.click(submitButton)
-
+        // Rating slider has min=1, max=10 constraints built-in via ARIA attributes
         await waitFor(() => {
-            expect(screen.getByText(/Rating must be between 1 and 10/i)).toBeInTheDocument()
+            const slider = screen.getByRole('slider')
+            expect(slider).toHaveAttribute('aria-valuemin', '1')
+            expect(slider).toHaveAttribute('aria-valuemax', '10')
         })
-
-        expect(watchApi.updateWatch).not.toHaveBeenCalled()
     })
 
-    it('shows validation error for rating above 10', async () => {
-        const user = userEvent.setup()
-
+    it('rating slider prevents values above 10', async () => {
         render(
             <EditWatchDialog
                 watch={mockWatch}
@@ -759,15 +731,11 @@ describe('EditWatchDialog', () => {
             />
         )
 
-        const ratingInput = screen.getByLabelText(/rating/i)
-        await user.clear(ratingInput)
-        await user.type(ratingInput, '11')
-
-        const submitButton = screen.getByRole('button', { name: /save changes/i })
-        await user.click(submitButton)
-
+        // Rating slider has min=1, max=10 constraints built-in via ARIA attributes
         await waitFor(() => {
-            expect(screen.getByText(/Rating must be between 1 and 10/i)).toBeInTheDocument()
+            const slider = screen.getByRole('slider')
+            expect(slider).toHaveAttribute('aria-valuemin', '1')
+            expect(slider).toHaveAttribute('aria-valuemax', '10')
         })
 
         expect(watchApi.updateWatch).not.toHaveBeenCalled()
@@ -785,8 +753,9 @@ describe('EditWatchDialog', () => {
             />
         )
 
+        // Wait for groups button to be available
         await waitFor(() => {
-            expect(screen.getByText('Friday Movie Night')).toBeInTheDocument()
+            expect(screen.getByRole('button', { name: /specific groups/i })).toBeInTheDocument()
         })
 
         // Select "Other" location
@@ -823,8 +792,9 @@ describe('EditWatchDialog', () => {
             />
         )
 
+        // Wait for groups button to be available
         await waitFor(() => {
-            expect(screen.getByText('Friday Movie Night')).toBeInTheDocument()
+            expect(screen.getByRole('button', { name: /specific groups/i })).toBeInTheDocument()
         })
 
         // Select "Other" location

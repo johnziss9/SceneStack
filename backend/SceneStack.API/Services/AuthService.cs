@@ -2,6 +2,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using SceneStack.API.Data;
 using SceneStack.API.DTOs;
@@ -27,20 +28,61 @@ public class AuthService : IAuthService
 
     public async Task<AuthResponse?> RegisterAsync(RegisterRequest request)
     {
-        // 1. Create the domain user first
+        // 1. Check if deleted users with this email or username exist
+        var deletedUsersToAnonymize = await _context.Users
+            .IgnoreQueryFilters()
+            .Where(u => u.IsDeleted && (u.Email == request.Email || u.Username == request.Username))
+            .ToListAsync();
+
+        // 2. Clean up old AspNetUsers records and anonymize email/username for deleted accounts
+        foreach (var deletedUser in deletedUsersToAnonymize)
+        {
+            // Delete old AspNetUsers records
+            var existingAuthUser = await _userManager.Users
+                .FirstOrDefaultAsync(au => au.DomainUserId == deletedUser.Id);
+
+            if (existingAuthUser != null)
+            {
+                await _userManager.DeleteAsync(existingAuthUser);
+            }
+
+            // Anonymize email if it matches
+            if (deletedUser.Email == request.Email)
+            {
+                deletedUser.Email = $"deleted_{deletedUser.Id}_{Guid.NewGuid().ToString().Substring(0, 8)}@deleted.local";
+            }
+
+            // Anonymize username if it matches
+            if (deletedUser.Username == request.Username)
+            {
+                deletedUser.Username = $"deleted_{deletedUser.Id}_{Guid.NewGuid().ToString().Substring(0, 8)}";
+            }
+
+            deletedUser.UpdatedAt = DateTime.UtcNow;
+        }
+
+        if (deletedUsersToAnonymize.Any())
+        {
+            await _context.SaveChangesAsync();
+        }
+
+        // 3. Create the domain user
+        // Note: We keep old deleted User records for data integrity (group history, etc.)
+        // and create a new User record for the new registration
         var domainUser = new User
         {
             Username = request.Username,
             Email = request.Email,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow,
-            IsDeleted = false
+            IsDeleted = false,
+            IsDeactivated = false
         };
 
         _context.Users.Add(domainUser);
         await _context.SaveChangesAsync();
 
-        // 2. Create the authentication user
+        // 4. Create the authentication user
         var authUser = new ApplicationUser
         {
             UserName = request.Username,
@@ -59,14 +101,15 @@ public class AuthService : IAuthService
             return null;
         }
 
-        // 3. Generate JWT token
+        // 5. Generate JWT token
         var token = GenerateJwtToken(authUser, domainUser);
 
         return new AuthResponse(
             Token: token,
             Username: domainUser.Username,
             Email: domainUser.Email,
-            UserId: domainUser.Id
+            UserId: domainUser.Id,
+            IsDeactivated: false
         );
     }
 
@@ -86,21 +129,45 @@ public class AuthService : IAuthService
             return null;
         }
 
-        // 3. Load the domain user
-        var domainUser = await _context.Users.FindAsync(authUser.DomainUserId);
+        // 3. Load the domain user (bypass query filter to check deleted accounts)
+        var domainUser = await _context.Users
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(u => u.Id == authUser.DomainUserId);
+
         if (domainUser == null)
         {
             return null;
         }
 
-        // 4. Generate JWT token
+        // 4. Check if account is permanently deleted
+        if (domainUser.IsDeleted)
+        {
+            Console.WriteLine($"Account {request.Email} is permanently deleted (IsDeleted={domainUser.IsDeleted})");
+            throw new InvalidOperationException("Account has been permanently deactivated and cannot be accessed.");
+        }
+
+        // 5. Generate JWT token
         var token = GenerateJwtToken(authUser, domainUser);
+
+        // 6. Calculate days until permanent deletion ONLY if scheduled for deletion
+        int? daysUntilPermanentDeletion = null;
+        if (domainUser.IsDeactivated && domainUser.DeletedAt.HasValue)
+        {
+            // DeletedAt is set = account is scheduled for deletion (30-day countdown)
+            var daysSinceDeletionStarted = (DateTime.UtcNow - domainUser.DeletedAt.Value).Days;
+            var daysRemaining = 30 - daysSinceDeletionStarted;
+            daysUntilPermanentDeletion = daysRemaining > 0 ? daysRemaining : 0;
+        }
+        // If deactivated but DeletedAt is null = simple deactivation (no countdown)
 
         return new AuthResponse(
             Token: token,
             Username: domainUser.Username,
             Email: domainUser.Email,
-            UserId: domainUser.Id
+            UserId: domainUser.Id,
+            IsDeactivated: domainUser.IsDeactivated,
+            DeactivatedAt: domainUser.DeactivatedAt,
+            DaysUntilPermanentDeletion: daysUntilPermanentDeletion
         );
     }
 

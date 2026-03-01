@@ -1,6 +1,7 @@
 import { GroupedWatch, PaginatedGroupedWatches, GetGroupedWatchesParams } from '@/types/watch';
 import { api } from './api-client';
 import type { UserStats } from '@/types/stats';
+import type { GroupWithTransferEligibility } from '@/types/groupTransfer';
 import type {
     TmdbSearchResponse,
     MovieDetail,
@@ -256,7 +257,23 @@ export const userApi = {
     changePassword: (data: ChangePasswordRequest) =>
         api.put<{ message: string }>('/api/users/password', data),
 
+    // GET: api/users/groups/created
+    getCreatedGroupsWithEligibility: () =>
+        api.get<GroupWithTransferEligibility[]>('/api/users/groups/created'),
+
+    // POST: api/users/groups/manage
+    manageGroupsBeforeDeletion: (groupActions: Array<{ groupId: number; action: string; transferToUserId?: number }>) =>
+        api.post<{ message: string }>('/api/users/groups/manage', { groupActions }),
+
     // DELETE: api/users/account
     deleteAccount: (data: DeleteAccountRequest) =>
         api.delete<{ message: string }>('/api/users/account', data),
+
+    // POST: api/users/deactivate
+    deactivate: () =>
+        api.post<{ message: string }>('/api/users/deactivate'),
+
+    // POST: api/users/reactivate
+    reactivate: () =>
+        api.post<{ message: string }>('/api/users/reactivate'),
 };

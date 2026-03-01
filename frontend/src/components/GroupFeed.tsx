@@ -166,6 +166,11 @@ export function GroupFeed({ groupId }: GroupFeedProps) {
                                             <span className="font-semibold text-primary">
                                                 {item.username}
                                             </span>
+                                            {item.isDeactivated && (
+                                                <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded">
+                                                    Inactive
+                                                </span>
+                                            )}
                                             <span className="text-muted-foreground text-sm">watched</span>
                                             {item.isRewatch && (
                                                 <span className="text-xs bg-primary/15 text-primary px-2 py-0.5 rounded-full font-medium">

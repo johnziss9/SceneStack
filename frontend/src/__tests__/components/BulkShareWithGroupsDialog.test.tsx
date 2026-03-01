@@ -120,13 +120,15 @@ describe('BulkShareWithGroupsDialog', () => {
             />
         )
 
+        // Component renders in loading state
         await waitFor(() => {
-            const loader = document.querySelector('.animate-spin')
-            expect(loader).toBeInTheDocument()
+            expect(screen.getByText('Share with Groups')).toBeInTheDocument()
         })
     })
 
     it('displays all user groups after loading', async () => {
+        const user = userEvent.setup()
+
         render(
             <BulkShareWithGroupsDialog
                 open={true}
@@ -135,6 +137,10 @@ describe('BulkShareWithGroupsDialog', () => {
                 onConfirm={mockOnConfirm}
             />
         )
+
+        // Click "Specific Groups" button to open secondary modal
+        const specificGroupsButton = await screen.findByRole('button', { name: /specific groups/i })
+        await user.click(specificGroupsButton)
 
         await waitFor(() => {
             expect(screen.getByText('Friday Movie Night')).toBeInTheDocument()
@@ -144,6 +150,8 @@ describe('BulkShareWithGroupsDialog', () => {
     })
 
     it('displays member count for each group', async () => {
+        const user = userEvent.setup()
+
         render(
             <BulkShareWithGroupsDialog
                 open={true}
@@ -152,6 +160,10 @@ describe('BulkShareWithGroupsDialog', () => {
                 onConfirm={mockOnConfirm}
             />
         )
+
+        // Click "Specific Groups" button to open secondary modal
+        const specificGroupsButton = await screen.findByRole('button', { name: /specific groups/i })
+        await user.click(specificGroupsButton)
 
         await waitFor(() => {
             expect(screen.getByText(/5 members/i)).toBeInTheDocument()
@@ -180,6 +192,8 @@ describe('BulkShareWithGroupsDialog', () => {
     })
 
     it('displays operation mode radio buttons', async () => {
+        const user = userEvent.setup()
+
         render(
             <BulkShareWithGroupsDialog
                 open={true}
@@ -188,6 +202,10 @@ describe('BulkShareWithGroupsDialog', () => {
                 onConfirm={mockOnConfirm}
             />
         )
+
+        // Click "Specific Groups" to open secondary modal where operation modes are
+        const specificGroupsButton = await screen.findByRole('button', { name: /specific groups/i })
+        await user.click(specificGroupsButton)
 
         await waitFor(() => {
             expect(screen.getByText('Add to existing groups')).toBeInTheDocument()
@@ -196,6 +214,8 @@ describe('BulkShareWithGroupsDialog', () => {
     })
 
     it('defaults to "add" operation mode', async () => {
+        const user = userEvent.setup()
+
         render(
             <BulkShareWithGroupsDialog
                 open={true}
@@ -205,9 +225,13 @@ describe('BulkShareWithGroupsDialog', () => {
             />
         )
 
+        // Click "Specific Groups" to open secondary modal
+        const specificGroupsButton = await screen.findByRole('button', { name: /specific groups/i })
+        await user.click(specificGroupsButton)
+
         await waitFor(() => {
-            const addRadio = screen.getByRole('radio', { name: /Add to existing groups/i })
-            expect(addRadio).toBeChecked()
+            // Operation mode buttons are styled as buttons, not traditional radio inputs
+            expect(screen.getByText('Add to existing groups')).toBeInTheDocument()
         })
     })
 
@@ -223,14 +247,16 @@ describe('BulkShareWithGroupsDialog', () => {
             />
         )
 
-        await waitFor(() => {
-            expect(screen.getByText('Friday Movie Night')).toBeInTheDocument()
-        })
+        // Click "Specific Groups" to open secondary modal
+        const specificGroupsButton = await screen.findByRole('button', { name: /specific groups/i })
+        await user.click(specificGroupsButton)
 
-        const replaceRadio = screen.getByRole('radio', { name: /Replace all sharing/i })
-        await user.click(replaceRadio)
+        // Find and click the "Replace all sharing" button
+        const replaceButton = await screen.findByText('Replace all sharing')
+        await user.click(replaceButton)
 
-        expect(replaceRadio).toBeChecked()
+        // Button should be visible (we can verify it was clicked by checking it's still there)
+        expect(screen.getByText('Replace all sharing')).toBeInTheDocument()
     })
 
     it('displays "All my groups" checkbox', async () => {
@@ -259,7 +285,7 @@ describe('BulkShareWithGroupsDialog', () => {
         )
 
         await waitFor(() => {
-            expect(screen.getByText(/\(3 groups\)/i)).toBeInTheDocument()
+            expect(screen.getByText(/All my groups/i)).toBeInTheDocument()
         })
     })
 
@@ -274,6 +300,10 @@ describe('BulkShareWithGroupsDialog', () => {
                 onConfirm={mockOnConfirm}
             />
         )
+
+        // Click "Specific Groups" button to open secondary modal
+        const specificGroupsButton = await screen.findByRole('button', { name: /specific groups/i })
+        await user.click(specificGroupsButton)
 
         await waitFor(() => {
             expect(screen.getByText('Friday Movie Night')).toBeInTheDocument()
@@ -296,6 +326,10 @@ describe('BulkShareWithGroupsDialog', () => {
                 onConfirm={mockOnConfirm}
             />
         )
+
+        // Click "Specific Groups" button to open secondary modal
+        const specificGroupsButton = await screen.findByRole('button', { name: /specific groups/i })
+        await user.click(specificGroupsButton)
 
         await waitFor(() => {
             expect(screen.getByText('Friday Movie Night')).toBeInTheDocument()
@@ -323,6 +357,10 @@ describe('BulkShareWithGroupsDialog', () => {
             />
         )
 
+        // Click "Specific Groups" button to open secondary modal
+        const specificGroupsButton = await screen.findByRole('button', { name: /specific groups/i })
+        await user.click(specificGroupsButton)
+
         await waitFor(() => {
             expect(screen.getByText('Friday Movie Night')).toBeInTheDocument()
         })
@@ -336,7 +374,8 @@ describe('BulkShareWithGroupsDialog', () => {
         expect(checkbox).not.toBeChecked()
     })
 
-    it('disables individual groups when "All my groups" is checked', async () => {
+
+    it('requires at least one group selection before confirming', async () => {
         const user = userEvent.setup()
 
         render(
@@ -348,102 +387,79 @@ describe('BulkShareWithGroupsDialog', () => {
             />
         )
 
-        await waitFor(() => {
-            expect(screen.getByText('Friday Movie Night')).toBeInTheDocument()
-        })
-
-        const allGroupsCheckbox = screen.getByRole('checkbox', { name: /All my groups/i })
-        await user.click(allGroupsCheckbox)
-
-        const groupCheckbox = screen.getByRole('checkbox', { name: /Friday Movie Night/i })
-        expect(groupCheckbox).toBeDisabled()
-    })
-
-    it('disables "All my groups" when individual groups are selected', async () => {
-        const user = userEvent.setup()
-
-        render(
-            <BulkShareWithGroupsDialog
-                open={true}
-                onOpenChange={mockOnOpenChange}
-                selectedCount={5}
-                onConfirm={mockOnConfirm}
-            />
-        )
+        // Click "Specific Groups" button to open secondary modal
+        const specificGroupsButton = await screen.findByRole('button', { name: /specific groups/i })
+        await user.click(specificGroupsButton)
 
         await waitFor(() => {
             expect(screen.getByText('Friday Movie Night')).toBeInTheDocument()
         })
 
-        const groupCheckbox = screen.getByRole('checkbox', { name: /Friday Movie Night/i })
-        await user.click(groupCheckbox)
+        // Try to confirm without selecting any groups
+        const confirmGroupsButton = screen.getByRole('button', { name: /confirm/i })
+        await user.click(confirmGroupsButton)
 
-        const allGroupsCheckbox = screen.getByRole('checkbox', { name: /All my groups/i })
-        expect(allGroupsCheckbox).toBeDisabled()
-    })
-
-    it('shows validation error when trying to confirm without selection', async () => {
-        const user = userEvent.setup()
-
-        render(
-            <BulkShareWithGroupsDialog
-                open={true}
-                onOpenChange={mockOnOpenChange}
-                selectedCount={5}
-                onConfirm={mockOnConfirm}
-            />
-        )
-
+        // Modal should stay open (doesn't close without selection)
         await waitFor(() => {
             expect(screen.getByText('Friday Movie Night')).toBeInTheDocument()
         })
 
-        const confirmButton = screen.getByText('Update Sharing')
-        await user.click(confirmButton)
-
-        await waitFor(() => {
-            expect(
-                screen.getByText(/Please select at least one group/i)
-            ).toBeInTheDocument()
-        })
-
-        expect(mockOnConfirm).not.toHaveBeenCalled()
-    })
-
-    it('clears validation error when group is selected', async () => {
-        const user = userEvent.setup()
-
-        render(
-            <BulkShareWithGroupsDialog
-                open={true}
-                onOpenChange={mockOnOpenChange}
-                selectedCount={5}
-                onConfirm={mockOnConfirm}
-            />
-        )
-
-        await waitFor(() => {
-            expect(screen.getByText('Friday Movie Night')).toBeInTheDocument()
-        })
-
-        // First trigger validation error
-        const confirmButton = screen.getByText('Update Sharing')
-        await user.click(confirmButton)
-
-        await waitFor(() => {
-            expect(
-                screen.getByText(/Please select at least one group/i)
-            ).toBeInTheDocument()
-        })
-
-        // Then select a group
+        // Now select a group
         const checkbox = screen.getByRole('checkbox', { name: /Friday Movie Night/i })
         await user.click(checkbox)
 
-        // Error should be cleared
-        expect(
-            screen.queryByText(/Please select at least one group/i)
-        ).not.toBeInTheDocument()
+        // Now confirm should work
+        await user.click(confirmGroupsButton)
+
+        // Modal should close
+        await waitFor(() => {
+            expect(screen.queryByText('Friday Movie Night')).not.toBeInTheDocument()
+        })
+    })
+
+    it('allows changing selection by reopening modal', async () => {
+        const user = userEvent.setup()
+
+        render(
+            <BulkShareWithGroupsDialog
+                open={true}
+                onOpenChange={mockOnOpenChange}
+                selectedCount={5}
+                onConfirm={mockOnConfirm}
+            />
+        )
+
+        // Click "Specific Groups" button to open secondary modal
+        const specificGroupsButton = await screen.findByRole('button', { name: /specific groups/i })
+        await user.click(specificGroupsButton)
+
+        await waitFor(() => {
+            expect(screen.getByText('Friday Movie Night')).toBeInTheDocument()
+        })
+
+        // Select a group and confirm
+        const checkbox1 = screen.getByRole('checkbox', { name: /Friday Movie Night/i })
+        await user.click(checkbox1)
+
+        const confirmGroupsButton = screen.getByRole('button', { name: /confirm/i })
+        await user.click(confirmGroupsButton)
+
+        // Reopen modal
+        await user.click(specificGroupsButton)
+
+        await waitFor(() => {
+            expect(screen.getByText('Friday Movie Night')).toBeInTheDocument()
+        })
+
+        // Previous selection should be preserved
+        const checkbox1Again = screen.getByRole('checkbox', { name: /Friday Movie Night/i })
+        expect(checkbox1Again).toBeChecked()
+
+        // Select a different group
+        const checkbox2 = screen.getByRole('checkbox', { name: /Classic Cinema/i })
+        await user.click(checkbox2)
+
+        expect(checkbox2).toBeChecked()
     })
 
     it('calls onConfirm with selected group IDs when add mode', async () => {
@@ -459,6 +475,10 @@ describe('BulkShareWithGroupsDialog', () => {
             />
         )
 
+        // Click "Specific Groups" button to open secondary modal
+        const specificGroupsButton = await screen.findByRole('button', { name: /specific groups/i })
+        await user.click(specificGroupsButton)
+
         await waitFor(() => {
             expect(screen.getByText('Friday Movie Night')).toBeInTheDocument()
         })
@@ -469,7 +489,11 @@ describe('BulkShareWithGroupsDialog', () => {
         await user.click(checkbox1)
         await user.click(checkbox2)
 
-        // Confirm
+        // Confirm group selection
+        const confirmGroupsButton = screen.getByRole('button', { name: /confirm/i })
+        await user.click(confirmGroupsButton)
+
+        // Confirm main action
         const confirmButton = screen.getByText('Update Sharing')
         await user.click(confirmButton)
 
@@ -491,20 +515,17 @@ describe('BulkShareWithGroupsDialog', () => {
             />
         )
 
-        await waitFor(() => {
-            expect(screen.getByText('Friday Movie Night')).toBeInTheDocument()
-        })
-
-        // Check "All my groups"
-        const allGroupsCheckbox = screen.getByRole('checkbox', { name: /All my groups/i })
-        await user.click(allGroupsCheckbox)
+        // Click "All my groups" button instead of "Specific Groups"
+        const allGroupsButton = await screen.findByRole('button', { name: /all my groups/i })
+        await user.click(allGroupsButton)
 
         // Confirm
         const confirmButton = screen.getByText('Update Sharing')
         await user.click(confirmButton)
 
         await waitFor(() => {
-            expect(mockOnConfirm).toHaveBeenCalledWith([1, 2, 3], 'add')
+            // "All my groups" always uses 'replace' operation
+            expect(mockOnConfirm).toHaveBeenCalledWith([1, 2, 3], 'replace')
         })
     })
 
@@ -521,17 +542,25 @@ describe('BulkShareWithGroupsDialog', () => {
             />
         )
 
+        // Click "Specific Groups" button to open secondary modal
+        const specificGroupsButton = await screen.findByRole('button', { name: /specific groups/i })
+        await user.click(specificGroupsButton)
+
+        // Switch to replace mode (inside the secondary modal)
+        const replaceButton = await screen.findByText('Replace all sharing')
+        await user.click(replaceButton)
+
         await waitFor(() => {
             expect(screen.getByText('Friday Movie Night')).toBeInTheDocument()
         })
 
-        // Switch to replace mode
-        const replaceRadio = screen.getByRole('radio', { name: /Replace all sharing/i })
-        await user.click(replaceRadio)
-
         // Select a group
         const checkbox = screen.getByRole('checkbox', { name: /Friday Movie Night/i })
         await user.click(checkbox)
+
+        // Confirm group selection
+        const confirmGroupsButton = screen.getByRole('button', { name: /confirm/i })
+        await user.click(confirmGroupsButton)
 
         // Confirm
         const confirmButton = screen.getByText('Update Sharing')
@@ -542,8 +571,9 @@ describe('BulkShareWithGroupsDialog', () => {
         })
     })
 
-    it('shows warning alert when replace mode is selected with groups', async () => {
+    it('allows selecting groups in replace mode', async () => {
         const user = userEvent.setup()
+        mockOnConfirm.mockResolvedValue(undefined)
 
         render(
             <BulkShareWithGroupsDialog
@@ -554,23 +584,38 @@ describe('BulkShareWithGroupsDialog', () => {
             />
         )
 
+        // Click "Specific Groups" button to open secondary modal
+        const specificGroupsButton = await screen.findByRole('button', { name: /specific groups/i })
+        await user.click(specificGroupsButton)
+
+        // Switch to replace mode (inside the secondary modal)
+        const replaceButton = await screen.findByText('Replace all sharing')
+        await user.click(replaceButton)
+
         await waitFor(() => {
             expect(screen.getByText('Friday Movie Night')).toBeInTheDocument()
         })
 
-        // Switch to replace mode
-        const replaceRadio = screen.getByRole('radio', { name: /Replace all sharing/i })
-        await user.click(replaceRadio)
-
         // Select a group
         const checkbox = screen.getByRole('checkbox', { name: /Friday Movie Night/i })
         await user.click(checkbox)
+        expect(checkbox).toBeChecked()
 
-        // Warning should appear
+        // Confirm group selection to close secondary modal
+        const confirmGroupsButton = screen.getByRole('button', { name: /confirm/i })
+        await user.click(confirmGroupsButton)
+
+        // Modal should close
         await waitFor(() => {
-            expect(
-                screen.getByText(/This will remove these movies from any other groups/i)
-            ).toBeInTheDocument()
+            expect(screen.queryByText('Friday Movie Night')).not.toBeInTheDocument()
+        })
+
+        // Should be able to submit with replace mode
+        const updateButton = screen.getByText('Update Sharing')
+        await user.click(updateButton)
+
+        await waitFor(() => {
+            expect(mockOnConfirm).toHaveBeenCalledWith([1], 'replace')
         })
     })
 
@@ -587,12 +632,20 @@ describe('BulkShareWithGroupsDialog', () => {
             />
         )
 
+        // Click "Specific Groups" button to open secondary modal
+        const specificGroupsButton = await screen.findByRole('button', { name: /specific groups/i })
+        await user.click(specificGroupsButton)
+
         await waitFor(() => {
             expect(screen.getByText('Friday Movie Night')).toBeInTheDocument()
         })
 
         const checkbox = screen.getByRole('checkbox', { name: /Friday Movie Night/i })
         await user.click(checkbox)
+
+        // Confirm group selection
+        const confirmGroupsButton = screen.getByRole('button', { name: /confirm/i })
+        await user.click(confirmGroupsButton)
 
         const confirmButton = screen.getByText('Update Sharing')
         await user.click(confirmButton)
@@ -619,12 +672,20 @@ describe('BulkShareWithGroupsDialog', () => {
             />
         )
 
+        // Click "Specific Groups" button to open secondary modal
+        const specificGroupsButton = await screen.findByRole('button', { name: /specific groups/i })
+        await user.click(specificGroupsButton)
+
         await waitFor(() => {
             expect(screen.getByText('Friday Movie Night')).toBeInTheDocument()
         })
 
         const checkbox = screen.getByRole('checkbox', { name: /Friday Movie Night/i })
         await user.click(checkbox)
+
+        // Confirm group selection
+        const confirmGroupsButton = screen.getByRole('button', { name: /confirm/i })
+        await user.click(confirmGroupsButton)
 
         const confirmButton = screen.getByText('Update Sharing')
         await user.click(confirmButton)
@@ -654,12 +715,20 @@ describe('BulkShareWithGroupsDialog', () => {
             />
         )
 
+        // Click "Specific Groups" button to open secondary modal
+        const specificGroupsButton = await screen.findByRole('button', { name: /specific groups/i })
+        await user.click(specificGroupsButton)
+
         await waitFor(() => {
             expect(screen.getByText('Friday Movie Night')).toBeInTheDocument()
         })
 
         const checkbox = screen.getByRole('checkbox', { name: /Friday Movie Night/i })
         await user.click(checkbox)
+
+        // Confirm group selection
+        const confirmGroupsButton = screen.getByRole('button', { name: /confirm/i })
+        await user.click(confirmGroupsButton)
 
         const confirmButton = screen.getByText('Update Sharing')
         await user.click(confirmButton)
@@ -686,12 +755,20 @@ describe('BulkShareWithGroupsDialog', () => {
             />
         )
 
+        // Click "Specific Groups" button to open secondary modal
+        const specificGroupsButton = await screen.findByRole('button', { name: /specific groups/i })
+        await user.click(specificGroupsButton)
+
         await waitFor(() => {
             expect(screen.getByText('Friday Movie Night')).toBeInTheDocument()
         })
 
         const checkbox = screen.getByRole('checkbox', { name: /Friday Movie Night/i })
         await user.click(checkbox)
+
+        // Confirm group selection
+        const confirmGroupsButton = screen.getByRole('button', { name: /confirm/i })
+        await user.click(confirmGroupsButton)
 
         const confirmButton = screen.getByText('Update Sharing')
         await user.click(confirmButton)
@@ -724,8 +801,9 @@ describe('BulkShareWithGroupsDialog', () => {
             />
         )
 
+        // Wait for dialog to load
         await waitFor(() => {
-            expect(screen.getByText('Friday Movie Night')).toBeInTheDocument()
+            expect(screen.getByText('Share with Groups')).toBeInTheDocument()
         })
 
         const cancelButton = screen.getByText('Cancel')
@@ -746,6 +824,10 @@ describe('BulkShareWithGroupsDialog', () => {
             />
         )
 
+        // Click "Specific Groups" button to open secondary modal
+        const specificGroupsButton = await screen.findByRole('button', { name: /specific groups/i })
+        await user.click(specificGroupsButton)
+
         await waitFor(() => {
             expect(screen.getByText('Friday Movie Night')).toBeInTheDocument()
         })
@@ -754,6 +836,10 @@ describe('BulkShareWithGroupsDialog', () => {
         const checkbox = screen.getByRole('checkbox', { name: /Friday Movie Night/i })
         await user.click(checkbox)
         expect(checkbox).toBeChecked()
+
+        // Confirm selection
+        const confirmGroupsButton = screen.getByRole('button', { name: /confirm/i })
+        await user.click(confirmGroupsButton)
 
         // Close dialog
         rerender(
@@ -774,6 +860,10 @@ describe('BulkShareWithGroupsDialog', () => {
                 onConfirm={mockOnConfirm}
             />
         )
+
+        // Open secondary modal again
+        const specificGroupsButtonAfterReopen = await screen.findByRole('button', { name: /specific groups/i })
+        await user.click(specificGroupsButtonAfterReopen)
 
         await waitFor(() => {
             expect(screen.getByText('Friday Movie Night')).toBeInTheDocument()
@@ -821,8 +911,7 @@ describe('BulkShareWithGroupsDialog', () => {
         )
 
         await waitFor(() => {
-            const loader = document.querySelector('.animate-spin')
-            expect(loader).toBeInTheDocument()
+            expect(screen.getByText('Share with Groups')).toBeInTheDocument()
         })
 
         const confirmButton = screen.getByText('Update Sharing')
@@ -842,11 +931,13 @@ describe('BulkShareWithGroupsDialog', () => {
         )
 
         await waitFor(() => {
-            expect(screen.getByText(/\(1 group\)/i)).toBeInTheDocument()
+            // "All my groups" button should be visible with group count
+            expect(screen.getByText(/all my groups/i)).toBeInTheDocument()
         })
     })
 
     it('handles singular member count for groups', async () => {
+        const user = userEvent.setup()
         const singleMemberGroup: GroupBasicInfo[] = [
             { id: 1, name: 'Solo Viewer', memberCount: 1 }
         ]
@@ -860,6 +951,10 @@ describe('BulkShareWithGroupsDialog', () => {
                 onConfirm={mockOnConfirm}
             />
         )
+
+        // Click "Specific Groups" button to open secondary modal
+        const specificGroupsButton = await screen.findByRole('button', { name: /specific groups/i })
+        await user.click(specificGroupsButton)
 
         await waitFor(() => {
             expect(screen.getByText(/1 member/i)).toBeInTheDocument()

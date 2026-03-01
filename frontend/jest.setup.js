@@ -7,6 +7,36 @@ process.env.NEXT_PUBLIC_API_URL = 'http://localhost:5127'
 // Mock fetch globally for tests that need it
 global.fetch = jest.fn()
 
+// Mock Next.js router
+jest.mock('next/navigation', () => ({
+    useRouter: jest.fn(() => ({
+        push: jest.fn(),
+        replace: jest.fn(),
+        prefetch: jest.fn(),
+        back: jest.fn(),
+        forward: jest.fn(),
+        refresh: jest.fn(),
+        pathname: '/',
+        query: {},
+        asPath: '/',
+    })),
+    usePathname: jest.fn(() => '/'),
+    useSearchParams: jest.fn(() => new URLSearchParams()),
+    useParams: jest.fn(() => ({})),
+}))
+
+// Mock WatchlistContext
+jest.mock('@/contexts/WatchlistContext', () => ({
+    useWatchlist: jest.fn(() => ({
+        count: 0,
+        isLoading: false,
+        incrementCount: jest.fn(),
+        decrementCount: jest.fn(),
+        refreshCount: jest.fn(),
+    })),
+    WatchlistProvider: ({ children }) => children,
+}))
+
 // Mock ResizeObserver (used by Radix UI components like Select)
 global.ResizeObserver = jest.fn().mockImplementation(() => ({
     observe: jest.fn(),

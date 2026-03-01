@@ -51,8 +51,8 @@ describe('Navigation', () => {
         it('should show sign in and sign up buttons when not authenticated', () => {
             render(<Navigation />);
 
-            expect(screen.getByRole('button', { name: /sign in/i })).toBeInTheDocument();
-            expect(screen.getByRole('button', { name: /sign up/i })).toBeInTheDocument();
+            expect(screen.getAllByRole('button', { name: /sign in/i }).length).toBeGreaterThan(0);
+            expect(screen.getAllByRole('button', { name: /sign up/i }).length).toBeGreaterThan(0);
         });
 
         it('should not show my watches or profile when not authenticated', () => {
@@ -65,14 +65,16 @@ describe('Navigation', () => {
         it('should link sign in button to /login', () => {
             render(<Navigation />);
 
-            const signInLink = screen.getByRole('button', { name: /sign in/i }).closest('a');
+            const signInButtons = screen.getAllByRole('button', { name: /sign in/i });
+            const signInLink = signInButtons[0].closest('a');
             expect(signInLink).toHaveAttribute('href', '/login');
         });
 
         it('should link sign up button to /register', () => {
             render(<Navigation />);
 
-            const signUpLink = screen.getByRole('button', { name: /sign up/i }).closest('a');
+            const signUpButtons = screen.getAllByRole('button', { name: /sign up/i });
+            const signUpLink = signUpButtons[0].closest('a');
             expect(signUpLink).toHaveAttribute('href', '/register');
         });
     });
@@ -95,8 +97,8 @@ describe('Navigation', () => {
         it('should show my watches and profile when authenticated', () => {
             render(<Navigation />);
 
-            expect(screen.getByRole('button', { name: /my watches/i })).toBeInTheDocument();
-            expect(screen.getByText('testuser')).toBeInTheDocument();
+            expect(screen.getAllByRole('button', { name: /my watches/i }).length).toBeGreaterThan(0);
+            expect(screen.getAllByText('testuser').length).toBeGreaterThan(0);
         });
 
         it('should not show sign in and sign up when authenticated', () => {
@@ -109,28 +111,31 @@ describe('Navigation', () => {
         it('should link my watches to /watched', () => {
             render(<Navigation />);
 
-            const myWatchesLink = screen.getByRole('button', { name: /my watches/i }).closest('a');
+            const myWatchesButtons = screen.getAllByRole('button', { name: /my watches/i });
+            const myWatchesLink = myWatchesButtons[0].closest('a');
             expect(myWatchesLink).toHaveAttribute('href', '/watched');
         });
 
         it('should link profile button to /profile', () => {
             render(<Navigation />);
 
-            const profileButton = screen.getByText('testuser').closest('a');
+            const usernameElements = screen.getAllByText('testuser');
+            const profileButton = usernameElements[0].closest('a');
             expect(profileButton).toHaveAttribute('href', '/profile');
         });
 
         it('should display username in profile button', () => {
             render(<Navigation />);
 
-            expect(screen.getByText('testuser')).toBeInTheDocument();
+            expect(screen.getAllByText('testuser').length).toBeGreaterThan(0);
         });
 
         it('should show user icon in profile button', () => {
             render(<Navigation />);
 
             // Check for User icon (lucide-react renders as svg)
-            const profileButton = screen.getByText('testuser').closest('button');
+            const usernameElements = screen.getAllByText('testuser');
+            const profileButton = usernameElements[0].closest('button');
             const svg = profileButton?.querySelector('svg');
             expect(svg).toBeInTheDocument();
         });

@@ -50,7 +50,7 @@ describe('RegisterPage', () => {
         it('should show password requirements hint', () => {
             render(<RegisterPage />);
 
-            expect(screen.getByText(/must be 8\+ characters with uppercase, lowercase, and digit/i)).toBeInTheDocument();
+            expect(screen.getByText(/password must contain/i)).toBeInTheDocument();
         });
     });
 
@@ -65,8 +65,8 @@ describe('RegisterPage', () => {
             const submitButton = screen.getByRole('button', { name: /create account/i });
 
             await user.type(emailInput, 'test@example.com');
-            await user.type(passwordInput, 'Password123');
-            await user.type(confirmPasswordInput, 'Password123');
+            await user.type(passwordInput, 'Password123!');
+            await user.type(confirmPasswordInput, 'Password123!');
             await user.click(submitButton);
 
             expect(await screen.findByText('Username is required')).toBeInTheDocument();
@@ -129,7 +129,7 @@ describe('RegisterPage', () => {
             await user.type(confirmPasswordInput, 'Pass1');
             await user.click(submitButton);
 
-            expect(await screen.findByText('Password must be at least 8 characters')).toBeInTheDocument();
+            expect(await screen.findByText(/Password must contain.*at least 8 characters/)).toBeInTheDocument();
             expect(mockRegister).not.toHaveBeenCalled();
         });
 
@@ -145,11 +145,11 @@ describe('RegisterPage', () => {
 
             await user.type(usernameInput, 'testuser');
             await user.type(emailInput, 'test@example.com');
-            await user.type(passwordInput, 'password123');
-            await user.type(confirmPasswordInput, 'password123');
+            await user.type(passwordInput, 'password123!');
+            await user.type(confirmPasswordInput, 'password123!');
             await user.click(submitButton);
 
-            expect(await screen.findByText('Password must contain at least one uppercase letter')).toBeInTheDocument();
+            expect(await screen.findByText(/Password must contain.*one uppercase letter/)).toBeInTheDocument();
             expect(mockRegister).not.toHaveBeenCalled();
         });
 
@@ -165,8 +165,8 @@ describe('RegisterPage', () => {
 
             await user.type(usernameInput, 'testuser');
             await user.type(emailInput, 'test@example.com');
-            await user.type(passwordInput, 'Password123');
-            await user.type(confirmPasswordInput, 'Password456');
+            await user.type(passwordInput, 'Password123!');
+            await user.type(confirmPasswordInput, 'Password456!');
             await user.click(submitButton);
 
             expect(await screen.findByText('Passwords do not match')).toBeInTheDocument();
@@ -204,14 +204,14 @@ describe('RegisterPage', () => {
 
             await user.type(usernameInput, 'testuser');
             await user.type(emailInput, 'test@example.com');
-            await user.type(passwordInput, 'Password123');
-            await user.type(confirmPasswordInput, 'Password123');
+            await user.type(passwordInput, 'Password123!');
+            await user.type(confirmPasswordInput, 'Password123!');
             await user.click(submitButton);
 
             expect(mockRegister).toHaveBeenCalledWith({
                 username: 'testuser',
                 email: 'test@example.com',
-                password: 'Password123',
+                password: 'Password123!',
             });
         });
 
@@ -228,8 +228,8 @@ describe('RegisterPage', () => {
 
             await user.type(usernameInput, 'testuser');
             await user.type(emailInput, 'test@example.com');
-            await user.type(passwordInput, 'Password123');
-            await user.type(confirmPasswordInput, 'Password123');
+            await user.type(passwordInput, 'Password123!');
+            await user.type(confirmPasswordInput, 'Password123!');
             await user.click(submitButton);
 
             expect(screen.getByText('Creating account...')).toBeInTheDocument();
@@ -253,12 +253,15 @@ describe('RegisterPage', () => {
 
             await user.type(usernameInput, 'testuser');
             await user.type(emailInput, 'test@example.com');
-            await user.type(passwordInput, 'Password123');
-            await user.type(confirmPasswordInput, 'Password123');
+            await user.type(passwordInput, 'Password123!');
+            await user.type(confirmPasswordInput, 'Password123!');
             await user.click(submitButton);
 
             await waitFor(() => {
-                expect(mockToast.success).toHaveBeenCalledWith('Account created successfully!');
+                expect(mockToast.success).toHaveBeenCalledWith(
+                    'Account created successfully!',
+                    expect.any(Object)
+                );
             });
         });
 
@@ -279,12 +282,15 @@ describe('RegisterPage', () => {
 
             await user.type(usernameInput, 'testuser');
             await user.type(emailInput, 'existing@example.com');
-            await user.type(passwordInput, 'Password123');
-            await user.type(confirmPasswordInput, 'Password123');
+            await user.type(passwordInput, 'Password123!');
+            await user.type(confirmPasswordInput, 'Password123!');
             await user.click(submitButton);
 
             await waitFor(() => {
-                expect(mockToast.error).toHaveBeenCalledWith('Failed to create account. Email may already be in use.');
+                expect(mockToast.error).toHaveBeenCalledWith(
+                    'Failed to create account. Email may already be in use.',
+                    expect.any(Object)
+                );
             });
 
             consoleErrorSpy.mockRestore();

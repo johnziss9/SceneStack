@@ -48,7 +48,7 @@ public class WatchlistServiceTests
         {
             UserId = user.Id,
             MovieId = movie.Id,
-            Priority = WatchlistItemPriority.Normal,
+            Priority = 2,
             AddedAt = DateTime.UtcNow.AddDays(-2),
             CreatedAt = DateTime.UtcNow.AddDays(-2)
         };
@@ -57,7 +57,7 @@ public class WatchlistServiceTests
         {
             UserId = user.Id,
             MovieId = movie.Id + 1,
-            Priority = WatchlistItemPriority.Normal,
+            Priority = 2,
             AddedAt = DateTime.UtcNow.AddDays(-1),
             CreatedAt = DateTime.UtcNow.AddDays(-1)
         };
@@ -104,7 +104,7 @@ public class WatchlistServiceTests
         {
             UserId = user.Id,
             MovieId = movie.Id,
-            Priority = WatchlistItemPriority.Normal,
+            Priority = 2,
             AddedAt = DateTime.UtcNow.AddDays(-1),
             CreatedAt = DateTime.UtcNow.AddDays(-1)
         };
@@ -113,7 +113,7 @@ public class WatchlistServiceTests
         {
             UserId = user.Id,
             MovieId = movie2.Id,
-            Priority = WatchlistItemPriority.High,
+            Priority = 1,
             AddedAt = DateTime.UtcNow.AddDays(-2),
             CreatedAt = DateTime.UtcNow.AddDays(-2)
         };
@@ -126,8 +126,8 @@ public class WatchlistServiceTests
 
         // Assert
         result.Items.Should().HaveCount(2);
-        result.Items[0].Priority.Should().Be(WatchlistItemPriority.High); // High priority first
-        result.Items[1].Priority.Should().Be(WatchlistItemPriority.Normal);
+        result.Items[0].Priority.Should().Be(1); // High priority first
+        result.Items[1].Priority.Should().Be(2);
     }
 
     [Fact]
@@ -172,14 +172,14 @@ public class WatchlistServiceTests
         movieService.GetOrCreateFromTmdbAsync(Arg.Any<int>()).Returns(movie);
 
         // Act
-        var result = await service.AddToWatchlistAsync(user.Id, movie.TmdbId, "Must watch soon!", WatchlistItemPriority.High);
+        var result = await service.AddToWatchlistAsync(user.Id, movie.TmdbId, "Must watch soon!", 1);
 
         // Assert
         result.Should().NotBeNull();
         result.UserId.Should().Be(user.Id);
         result.MovieId.Should().Be(movie.Id);
         result.Notes.Should().Be("Must watch soon!");
-        result.Priority.Should().Be(WatchlistItemPriority.High);
+        result.Priority.Should().Be(1);
 
         var inDb = await context.WatchlistItems.FindAsync(result.Id);
         inDb.Should().NotBeNull();
@@ -199,7 +199,7 @@ public class WatchlistServiceTests
         movieService.GetOrCreateFromTmdbAsync(Arg.Any<int>()).Returns((Movie?)null);
 
         // Act
-        var act = async () => await service.AddToWatchlistAsync(user.Id, 999, null, WatchlistItemPriority.Normal);
+        var act = async () => await service.AddToWatchlistAsync(user.Id, 999, null, 2);
 
         // Assert
         await act.Should().ThrowAsync<InvalidOperationException>()
@@ -221,10 +221,10 @@ public class WatchlistServiceTests
         movieService.GetOrCreateFromTmdbAsync(Arg.Any<int>()).Returns(movie);
 
         // Add to watchlist first time
-        await service.AddToWatchlistAsync(user.Id, movie.TmdbId, null, WatchlistItemPriority.Normal);
+        await service.AddToWatchlistAsync(user.Id, movie.TmdbId, null, 2);
 
         // Act - try to add again
-        var act = async () => await service.AddToWatchlistAsync(user.Id, movie.TmdbId, null, WatchlistItemPriority.Normal);
+        var act = async () => await service.AddToWatchlistAsync(user.Id, movie.TmdbId, null, 2);
 
         // Assert
         await act.Should().ThrowAsync<InvalidOperationException>()
@@ -249,7 +249,7 @@ public class WatchlistServiceTests
             UserId = user.Id,
             MovieId = movie.Id,
             Notes = "Old notes",
-            Priority = WatchlistItemPriority.Normal,
+            Priority = 2,
             AddedAt = DateTime.UtcNow.AddDays(-5),
             CreatedAt = DateTime.UtcNow.AddDays(-5),
             IsDeleted = true,
@@ -261,7 +261,7 @@ public class WatchlistServiceTests
         movieService.GetOrCreateFromTmdbAsync(Arg.Any<int>()).Returns(movie);
 
         // Act - add again
-        var result = await service.AddToWatchlistAsync(user.Id, movie.TmdbId, "New notes", WatchlistItemPriority.High);
+        var result = await service.AddToWatchlistAsync(user.Id, movie.TmdbId, "New notes", 1);
 
         // Assert
         result.Should().NotBeNull();
@@ -269,7 +269,7 @@ public class WatchlistServiceTests
         result.IsDeleted.Should().BeFalse();
         result.DeletedAt.Should().BeNull();
         result.Notes.Should().Be("New notes");
-        result.Priority.Should().Be(WatchlistItemPriority.High);
+        result.Priority.Should().Be(1);
         result.AddedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(5));
     }
 
@@ -392,7 +392,7 @@ public class WatchlistServiceTests
             UserId = user.Id,
             MovieId = movie.Id,
             Notes = "Old notes",
-            Priority = WatchlistItemPriority.Normal,
+            Priority = 2,
             AddedAt = DateTime.UtcNow,
             CreatedAt = DateTime.UtcNow
         };
@@ -402,7 +402,7 @@ public class WatchlistServiceTests
         var updateRequest = new UpdateWatchlistItemRequest
         {
             Notes = "Updated notes",
-            Priority = WatchlistItemPriority.High
+            Priority = 1
         };
 
         // Act
@@ -411,11 +411,11 @@ public class WatchlistServiceTests
         // Assert
         result.Should().NotBeNull();
         result!.Notes.Should().Be("Updated notes");
-        result.Priority.Should().Be(WatchlistItemPriority.High);
+        result.Priority.Should().Be(1);
 
         var inDb = await context.WatchlistItems.FindAsync(item.Id);
         inDb!.Notes.Should().Be("Updated notes");
-        inDb.Priority.Should().Be(WatchlistItemPriority.High);
+        inDb.Priority.Should().Be(1);
     }
 
     [Fact]
@@ -432,7 +432,7 @@ public class WatchlistServiceTests
         var updateRequest = new UpdateWatchlistItemRequest
         {
             Notes = "Updated notes",
-            Priority = WatchlistItemPriority.High
+            Priority = 1
         };
 
         // Act

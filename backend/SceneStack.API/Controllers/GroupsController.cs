@@ -81,22 +81,25 @@ public class GroupsController : ControllerBase
                 Username = group.CreatedBy.Username,
                 Email = group.CreatedBy.Email
             },
-            Members = group.Members.Select(m => new GroupMemberResponse
-            {
-                UserId = m.UserId,
-                GroupId = m.GroupId,
-                Role = (int)m.Role,
-                RoleName = m.Role.ToString(),
-                JoinedAt = m.JoinedAt,
-                Username = m.User.Username,
-                Email = m.User.Email,
-                User = new UserBasicInfo
+            Members = group.Members
+                .Where(m => m.User != null) // Filter out members with deleted users
+                .Select(m => new GroupMemberResponse
                 {
-                    Id = m.User.Id,
+                    UserId = m.UserId,
+                    GroupId = m.GroupId,
+                    Role = (int)m.Role,
+                    RoleName = m.Role.ToString(),
+                    JoinedAt = m.JoinedAt,
                     Username = m.User.Username,
-                    Email = m.User.Email
-                }
-            }).ToList(),
+                    Email = m.User.Email,
+                    IsDeactivated = m.User.IsDeactivated,
+                    User = new UserBasicInfo
+                    {
+                        Id = m.User.Id,
+                        Username = m.User.Username,
+                        Email = m.User.Email
+                    }
+                }).ToList(),
             MemberCount = group.Members.Count
         };
 
@@ -134,20 +137,25 @@ public class GroupsController : ControllerBase
                     Username = group.CreatedBy.Username,
                     Email = group.CreatedBy.Email
                 },
-                Members = group.Members.Select(m => new GroupMemberResponse
-                {
-                    UserId = m.UserId,
-                    GroupId = m.GroupId,
-                    Role = (int)m.Role,
-                    RoleName = m.Role.ToString(),
-                    JoinedAt = m.JoinedAt,
-                    User = new UserBasicInfo
+                Members = group.Members
+                    .Where(m => m.User != null) // Filter out members with deleted users
+                    .Select(m => new GroupMemberResponse
                     {
-                        Id = m.User.Id,
+                        UserId = m.UserId,
+                        GroupId = m.GroupId,
+                        Role = (int)m.Role,
+                        RoleName = m.Role.ToString(),
+                        JoinedAt = m.JoinedAt,
                         Username = m.User.Username,
-                        Email = m.User.Email
-                    }
-                }).ToList(),
+                        Email = m.User.Email,
+                        IsDeactivated = m.User.IsDeactivated,
+                        User = new UserBasicInfo
+                        {
+                            Id = m.User.Id,
+                            Username = m.User.Username,
+                            Email = m.User.Email
+                        }
+                    }).ToList(),
                 MemberCount = group.Members.Count
             };
 
@@ -202,22 +210,25 @@ public class GroupsController : ControllerBase
                 Username = group.CreatedBy.Username,
                 Email = group.CreatedBy.Email
             },
-            Members = group.Members.Select(m => new GroupMemberResponse
-            {
-                UserId = m.UserId,
-                GroupId = m.GroupId,
-                Role = (int)m.Role,
-                RoleName = m.Role.ToString(),
-                JoinedAt = m.JoinedAt,
-                Username = m.User.Username,
-                Email = m.User.Email,
-                User = new UserBasicInfo
+            Members = group.Members
+                .Where(m => m.User != null) // Filter out members with deleted users
+                .Select(m => new GroupMemberResponse
                 {
-                    Id = m.User.Id,
+                    UserId = m.UserId,
+                    GroupId = m.GroupId,
+                    Role = (int)m.Role,
+                    RoleName = m.Role.ToString(),
+                    JoinedAt = m.JoinedAt,
                     Username = m.User.Username,
-                    Email = m.User.Email
-                }
-            }).ToList(),
+                    Email = m.User.Email,
+                    IsDeactivated = m.User.IsDeactivated,
+                    User = new UserBasicInfo
+                    {
+                        Id = m.User.Id,
+                        Username = m.User.Username,
+                        Email = m.User.Email
+                    }
+                }).ToList(),
             MemberCount = group.Members.Count
         };
 

@@ -85,18 +85,18 @@ describe('WatchlistCard', () => {
         expect(screen.getByText('No poster')).toBeInTheDocument()
     })
 
-    it('renders high priority badge', () => {
+    it('renders priority badge with number', () => {
         render(<WatchlistCard item={mockItem} onRemoved={mockOnRemoved} />)
 
-        expect(screen.getByText('High Priority')).toBeInTheDocument()
+        expect(screen.getByText('#1')).toBeInTheDocument()
     })
 
-    it('renders normal priority badge when priority is 0', () => {
+    it('renders priority badge with correct number when priority is 0', () => {
         const normalPriorityItem = { ...mockItem, priority: 0 }
 
         render(<WatchlistCard item={normalPriorityItem} onRemoved={mockOnRemoved} />)
 
-        expect(screen.getByText('Normal')).toBeInTheDocument()
+        expect(screen.getByText('#0')).toBeInTheDocument()
     })
 
     it('displays notes when provided', () => {
@@ -151,7 +151,7 @@ describe('WatchlistCard', () => {
         expect(screen.getByRole('button', { name: /remove from watchlist/i })).toBeInTheDocument()
     })
 
-    it('removes item from watchlist when remove button clicked', async () => {
+    it('removes item from watchlist when remove button clicked and confirmed', async () => {
         const user = userEvent.setup()
 
         render(<WatchlistCard item={mockItem} onRemoved={mockOnRemoved} />)
@@ -159,13 +159,21 @@ describe('WatchlistCard', () => {
         const removeButton = screen.getByRole('button', { name: /remove from watchlist/i })
         await user.click(removeButton)
 
+        // Confirmation dialog should appear
+        expect(screen.getByText('Remove from Watchlist')).toBeInTheDocument()
+        expect(screen.getByText(/Are you sure you want to remove/)).toBeInTheDocument()
+
+        // Click the confirm button
+        const confirmButton = screen.getByRole('button', { name: /^remove$/i })
+        await user.click(confirmButton)
+
         await waitFor(() => {
             expect(mockRemoveFromWatchlist).toHaveBeenCalledWith(1)
             expect(mockOnRemoved).toHaveBeenCalledWith(1)
         })
     })
 
-    it('shows loading state on remove button while removing', async () => {
+    it('disables dialog buttons while removing', async () => {
         mockRemoveFromWatchlist.mockImplementation(
             () => new Promise(resolve => setTimeout(resolve, 100))
         )
@@ -177,20 +185,16 @@ describe('WatchlistCard', () => {
         const removeButton = screen.getByRole('button', { name: /remove from watchlist/i })
         await user.click(removeButton)
 
-        // Should show loading spinner
-        expect(screen.getByRole('button', { name: /remove from watchlist/i })).toBeDisabled()
-    })
+        // Get the cancel and confirm buttons
+        const cancelButton = screen.getByRole('button', { name: /cancel/i })
+        const confirmButton = screen.getByRole('button', { name: /^remove$/i })
 
-    it('toggles priority when priority badge is clicked', async () => {
-        const user = userEvent.setup()
+        await user.click(confirmButton)
 
-        render(<WatchlistCard item={mockItem} onRemoved={mockOnRemoved} />)
-
-        const priorityButton = screen.getByText('High Priority')
-        await user.click(priorityButton)
-
+        // Buttons should be disabled during removal
         await waitFor(() => {
-            expect(mockUpdateWatchlistItem).toHaveBeenCalledWith(1, { priority: 0 })
+            expect(cancelButton).toBeDisabled()
+            expect(confirmButton).toBeDisabled()
         })
     })
 

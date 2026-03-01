@@ -20,6 +20,7 @@ public class GroupService : IGroupService
     public async Task<Group?> GetByIdAsync(int id, int requestingUserId)
     {
         var group = await _context.Groups
+            .AsNoTracking()
             .Include(g => g.CreatedBy)
             .Include(g => g.Members)
                 .ThenInclude(m => m.User)
@@ -42,6 +43,7 @@ public class GroupService : IGroupService
     public async Task<IEnumerable<GroupResponse>> GetUserGroupsAsync(int userId)
     {
         var groups = await _context.Groups
+            .AsNoTracking()
             .Include(g => g.CreatedBy)
             .Include(g => g.Members)
                 .ThenInclude(m => m.User)
@@ -63,22 +65,25 @@ public class GroupService : IGroupService
                 Username = g.CreatedBy.Username,
                 Email = g.CreatedBy.Email
             },
-            Members = g.Members.Select(m => new GroupMemberResponse
-            {
-                UserId = m.UserId,
-                GroupId = m.GroupId,
-                Role = (int)m.Role,
-                RoleName = m.Role.ToString(),
-                JoinedAt = m.JoinedAt,
-                Username = m.User.Username,
-                Email = m.User.Email,
-                User = new UserBasicInfo
+            Members = g.Members
+                .Where(m => m.User != null) // Filter out members with deleted users
+                .Select(m => new GroupMemberResponse
                 {
-                    Id = m.User.Id,
+                    UserId = m.UserId,
+                    GroupId = m.GroupId,
+                    Role = (int)m.Role,
+                    RoleName = m.Role.ToString(),
+                    JoinedAt = m.JoinedAt,
                     Username = m.User.Username,
-                    Email = m.User.Email
-                }
-            }).ToList(),
+                    Email = m.User.Email,
+                    IsDeactivated = m.User.IsDeactivated,
+                    User = new UserBasicInfo
+                    {
+                        Id = m.User.Id,
+                        Username = m.User.Username,
+                        Email = m.User.Email
+                    }
+                }).ToList(),
             MemberCount = g.Members.Count
         });
     }
@@ -340,6 +345,7 @@ public class GroupService : IGroupService
     public async Task<IEnumerable<GroupMemberResponse>> GetGroupMembersAsync(int groupId, int requestingUserId)
     {
         var group = await _context.Groups
+            .AsNoTracking()
             .Include(g => g.Members)
                 .ThenInclude(m => m.User)
             .FirstOrDefaultAsync(g => g.Id == groupId);
@@ -354,22 +360,25 @@ public class GroupService : IGroupService
             return Enumerable.Empty<GroupMemberResponse>();
         }
 
-        return group.Members.Select(m => new GroupMemberResponse
-        {
-            UserId = m.UserId,
-            GroupId = m.GroupId,
-            Role = (int)m.Role,
-            RoleName = m.Role.ToString(),
-            JoinedAt = m.JoinedAt,
-            Username = m.User.Username,
-            Email = m.User.Email,
-            User = new UserBasicInfo
+        return group.Members
+            .Where(m => m.User != null) // Filter out members with deleted users
+            .Select(m => new GroupMemberResponse
             {
-                Id = m.User.Id,
+                UserId = m.UserId,
+                GroupId = m.GroupId,
+                Role = (int)m.Role,
+                RoleName = m.Role.ToString(),
+                JoinedAt = m.JoinedAt,
                 Username = m.User.Username,
-                Email = m.User.Email
-            }
-        });
+                Email = m.User.Email,
+                IsDeactivated = m.User.IsDeactivated,
+                User = new UserBasicInfo
+                {
+                    Id = m.User.Id,
+                    Username = m.User.Username,
+                    Email = m.User.Email
+                }
+            });
     }
 
     public async Task<bool> CanUserCreateGroupAsync(int userId)
@@ -410,6 +419,7 @@ public class GroupService : IGroupService
     {
         // Verify requesting user is a member of the group
         var group = await _context.Groups
+            .AsNoTracking()
             .Include(g => g.Members)
                 .ThenInclude(m => m.User)
             .FirstOrDefaultAsync(g => g.Id == groupId);
@@ -454,6 +464,7 @@ public class GroupService : IGroupService
 
         // Per-member stats
         var memberStats = group.Members
+            .Where(m => m.User != null) // Filter out members with deleted users
             .Select(m =>
             {
                 var memberWatches = visibleWatches.Where(w => w.UserId == m.UserId).ToList();
@@ -469,7 +480,8 @@ public class GroupService : IGroupService
                     WatchCount = memberWatches.Count,
                     AverageRating = memberRated.Any()
                         ? Math.Round(memberRated.Average(w => w.Rating!.Value), 1)
-                        : null
+                        : null,
+                    IsDeactivated = m.User.IsDeactivated
                 };
             })
             .OrderByDescending(ms => ms.WatchCount)

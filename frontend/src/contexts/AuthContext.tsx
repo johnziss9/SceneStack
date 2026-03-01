@@ -13,6 +13,9 @@ interface AuthUser {
     isPremium: boolean;
     bio?: string;
     createdAt?: string;
+    isDeactivated?: boolean;
+    deactivatedAt?: string;
+    daysUntilPermanentDeletion?: number;
 }
 
 interface AuthContextType {
@@ -89,13 +92,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const payload = JSON.parse(atob(response.token.split('.')[1]));
         const isPremium = payload['IsPremium'] === 'True';
 
-        // Set user state
+        // Set user state with deactivation info
         setUser({
             id: response.userId,
             username: response.username,
             email: response.email,
             isPremium: isPremium,
+            isDeactivated: response.isDeactivated,
+            deactivatedAt: response.deactivatedAt,
+            daysUntilPermanentDeletion: response.daysUntilPermanentDeletion,
         });
+
+        // If account is deactivated, redirect to reactivate page
+        if (response.isDeactivated) {
+            router.push('/reactivate');
+            return;
+        }
 
         // Fetch full profile (with bio and createdAt)
         try {

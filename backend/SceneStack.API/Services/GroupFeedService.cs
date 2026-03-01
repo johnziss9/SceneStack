@@ -53,6 +53,7 @@ public class GroupFeedService : IGroupFeedService
             Id = w.Id,
             UserId = w.UserId,
             Username = w.User.Username,
+            IsDeactivated = w.User.IsDeactivated,
             MovieId = w.MovieId,
             MovieTitle = w.Movie.Title,
             PosterPath = w.Movie.PosterPath,
@@ -174,7 +175,7 @@ public class GroupFeedService : IGroupFeedService
                 AverageRating = g.Any(w => w.Rating.HasValue)
                     ? Math.Round(g.Where(w => w.Rating.HasValue).Average(w => w.Rating!.Value), 1)
                     : null,
-                WatchedByUsernames = g.Select(w => w.User.Username).Distinct().ToList()
+                WatchedByUsernames = g.Where(w => w.User != null).Select(w => w.User.Username).Distinct().ToList()
             })
             .OrderByDescending(m => m.WatchCount)
             .Take(10)
@@ -207,6 +208,10 @@ public class GroupFeedService : IGroupFeedService
 
         foreach (var watch in watches)
         {
+            // Skip watches from deleted users
+            if (watch.User == null)
+                continue;
+
             // User can always see their own watches
             if (watch.UserId == requestingUserId)
             {

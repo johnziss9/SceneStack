@@ -1,5 +1,7 @@
 using System.Text;
 using System.Threading.RateLimiting;
+using Hangfire;
+using Hangfire.PostgreSql;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -9,6 +11,7 @@ using SceneStack.API.Configuration;
 using SceneStack.API.Data;
 using SceneStack.API.Extensions;
 using SceneStack.API.Interfaces;
+using SceneStack.API.Jobs;
 using SceneStack.API.Models;
 using SceneStack.API.Services;
 
@@ -38,6 +41,16 @@ var dataSource = dataSourceBuilder.Build();
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(dataSource));
+
+// Add Hangfire
+builder.Services.AddHangfire(config => config
+    .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+    .UseSimpleAssemblyNameTypeSerializer()
+    .UseRecommendedSerializerSettings()
+    .UsePostgreSqlStorage(options =>
+        options.UseNpgsqlConnection(connectionString)));
+
+builder.Services.AddHangfireServer();
 
 // Add Identity
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
@@ -142,6 +155,19 @@ app.UseCors("AllowFrontend");
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseRateLimiter();
+
+// Configure Hangfire Dashboard (requires authentication)
+app.MapHangfireDashboard("/hangfire", new DashboardOptions
+{
+    Authorization = new[] { new HangfireDashboardAuthorizationFilter() }
+});
+
 app.MapControllers();
+
+// Schedule recurring jobs
+RecurringJob.AddOrUpdate<AccountCleanupJob>(
+    "account-cleanup",
+    job => job.ExecuteAsync(),
+    Cron.Daily(2)); // Runs daily at 2:00 AM
 
 app.Run();

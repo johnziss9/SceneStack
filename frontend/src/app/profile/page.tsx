@@ -20,15 +20,17 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { LogOut, User as UserIcon, Edit, Save, X, Lock, Trash2, Shield, Settings as SettingsIcon, Sparkles, Crown, Zap, Users as UsersIcon, Search, Check, Download, FileJson, FileSpreadsheet } from 'lucide-react';
+import { LogOut, User as UserIcon, Edit, Save, X, Lock, Trash2, Shield, Settings as SettingsIcon, Sparkles, Crown, Zap, Users as UsersIcon, Search, Check, Download, FileJson, FileSpreadsheet, Clock } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { AiUsageStats } from '@/components/AiUsageStats';
 import { PrivacySettings } from '@/components/PrivacySettings';
+import { GroupManagementModal } from '@/components/GroupManagementModal';
 import { useState, useRef } from 'react';
 import { userApi } from '@/lib/api';
 import { toast } from '@/lib/toast';
 import { Badge } from '@/components/ui/badge';
 import { UpgradeToPremiumModal } from '@/components/UpgradeToPremiumModal';
+import type { GroupWithTransferEligibility } from '@/types/groupTransfer';
 
 export default function ProfilePage() {
     const { user, logout, loading, refreshUser } = useAuth();
@@ -71,6 +73,15 @@ export default function ProfilePage() {
     const [deletePassword, setDeletePassword] = useState('');
     const [isDeleting, setIsDeleting] = useState(false);
     const [deletePasswordError, setDeletePasswordError] = useState('');
+
+    // Group management state
+    const [showGroupManagementModal, setShowGroupManagementModal] = useState(false);
+    const [createdGroups, setCreatedGroups] = useState<GroupWithTransferEligibility[]>([]);
+    const [isCheckingGroups, setIsCheckingGroups] = useState(false);
+
+    // Deactivate account state
+    const [showDeactivateDialog, setShowDeactivateDialog] = useState(false);
+    const [isDeactivating, setIsDeactivating] = useState(false);
 
     // Upgrade modal state
     const [showUpgradeModal, setShowUpgradeModal] = useState(false);
@@ -295,6 +306,39 @@ export default function ProfilePage() {
         }
     };
 
+    const handleDeleteAccountClick = async () => {
+        setIsCheckingGroups(true);
+        try {
+            // Check if user has created any groups
+            const groups = await userApi.getCreatedGroupsWithEligibility();
+
+            if (groups.length > 0) {
+                // User has groups, show group management modal
+                setCreatedGroups(groups);
+                setShowGroupManagementModal(true);
+            } else {
+                // No groups, proceed directly to password confirmation
+                setShowDeleteDialog(true);
+            }
+        } catch (error: any) {
+            toast.error('Failed to check groups');
+        } finally {
+            setIsCheckingGroups(false);
+        }
+    };
+
+    const handleGroupActionsComplete = async (actions: any[]) => {
+        try {
+            // Send group actions to backend
+            await userApi.manageGroupsBeforeDeletion(actions);
+            toast.success('Groups managed successfully');
+            setShowGroupManagementModal(false);
+            setShowDeleteDialog(true);
+        } catch (error: any) {
+            toast.error(error.response?.data?.message || 'Failed to manage groups');
+        }
+    };
+
     const handleDeleteAccount = async () => {
         // Reset error
         setDeletePasswordError('');
@@ -307,7 +351,7 @@ export default function ProfilePage() {
         setIsDeleting(true);
         try {
             await userApi.deleteAccount({ password: deletePassword });
-            toast.success('Account deleted successfully');
+            toast.success('Account deletion started. You have 30 days to reactivate.');
             logout();
             router.push('/');
         } catch (error: any) {
@@ -316,6 +360,21 @@ export default function ProfilePage() {
             setShowDeleteDialog(false);
             setDeletePassword('');
             setDeletePasswordError('');
+        }
+    };
+
+    const handleDeactivateAccount = async () => {
+        setIsDeactivating(true);
+        try {
+            await userApi.deactivate();
+            toast.success('Account deactivated successfully');
+            logout();
+            router.push('/login');
+        } catch (error: any) {
+            toast.error(error.response?.data?.message || 'Failed to deactivate account');
+        } finally {
+            setIsDeactivating(false);
+            setShowDeactivateDialog(false);
         }
     };
 
@@ -1089,35 +1148,73 @@ export default function ProfilePage() {
                             </CardContent>
                         </Card>
 
+                        {/* Deactivate Account Card */}
+                        <Card>
+                            <CardHeader  className="pt-0">
+                                <div className="flex items-start justify-between gap-4">
+                                    <div className="flex gap-3">
+                                        <Clock className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
+                                        <div className="space-y-1">
+                                            <CardTitle>Deactivate Account</CardTitle>
+                                            <CardDescription>
+                                                Take a break. You can come back anytime and your data will be here.
+                                            </CardDescription>
+                                        </div>
+                                    </div>
+                                    <Button
+                                        variant="outline"
+                                        onClick={() => setShowDeactivateDialog(true)}
+                                        className="flex-shrink-0 w-44"
+                                    >
+                                        Deactivate Account
+                                    </Button>
+                                </div>
+                            </CardHeader>
+                            <CardContent className="pt-0">
+                                <ul className="text-sm text-muted-foreground space-y-1.5 ml-8">
+                                    <li className="flex items-center gap-2">
+                                        <div className="w-1 h-1 rounded-full bg-muted-foreground" />
+                                        You cannot log in
+                                    </li>
+                                    <li className="flex items-center gap-2">
+                                        <div className="w-1 h-1 rounded-full bg-muted-foreground" />
+                                        You appear as inactive in groups
+                                    </li>
+                                    <li className="flex items-center gap-2">
+                                        <div className="w-1 h-1 rounded-full bg-muted-foreground" />
+                                        All your data is preserved and safe
+                                    </li>
+                                    <li className="flex items-center gap-2">
+                                        <div className="w-1 h-1 rounded-full bg-muted-foreground" />
+                                        Reactivate anytime (no time limit)
+                                    </li>
+                                </ul>
+                            </CardContent>
+                        </Card>
+
                         {/* Danger Zone Card */}
-                        <Card className="border-destructive">
-                    <CardHeader>
-                        <div className="flex items-center gap-2">
-                            <Shield className="h-5 w-5 text-destructive" />
-                            <CardTitle className="text-destructive">Danger Zone</CardTitle>
-                        </div>
-                        <CardDescription>
-                            Permanent account deletion
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-4 border border-destructive/50 rounded-lg">
-                            <div>
-                                <h3 className="font-semibold">Delete Account</h3>
-                                <p className="text-sm text-muted-foreground">
-                                    Permanently delete your account and all associated data
-                                </p>
-                            </div>
-                            <Button
-                                variant="destructive"
-                                onClick={() => setShowDeleteDialog(true)}
-                                className="w-full sm:w-auto"
-                            >
-                                <Trash2 className="h-4 w-4 mr-2" />
-                                Delete Account
-                            </Button>
-                        </div>
-                    </CardContent>
+                        <Card className="border-destructive/50">
+                            <CardHeader>
+                                <div className="flex items-start justify-between gap-4">
+                                    <div className="flex gap-3">
+                                        <Trash2 className="h-5 w-5 text-destructive flex-shrink-0 mt-0.5" />
+                                        <div className="space-y-1">
+                                            <CardTitle className="text-destructive">Delete Account</CardTitle>
+                                            <CardDescription>
+                                                Start the deletion process. You'll have 30 days to reactivate before you can no longer access your account.
+                                            </CardDescription>
+                                        </div>
+                                    </div>
+                                    <Button
+                                        variant="destructive"
+                                        onClick={handleDeleteAccountClick}
+                                        disabled={isCheckingGroups}
+                                        className="flex-shrink-0 w-44"
+                                    >
+                                        {isCheckingGroups ? 'Checking...' : 'Delete Account'}
+                                    </Button>
+                                </div>
+                            </CardHeader>
                         </Card>
                     </TabsContent>
                 </Tabs>
@@ -1206,6 +1303,53 @@ export default function ProfilePage() {
                             className="bg-destructive hover:bg-destructive/90"
                         >
                             {isDeleting ? 'Deleting...' : 'Delete Account'}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            {/* Group Management Modal */}
+            <GroupManagementModal
+                open={showGroupManagementModal}
+                onOpenChange={setShowGroupManagementModal}
+                groups={createdGroups}
+                onComplete={handleGroupActionsComplete}
+            />
+
+            {/* Deactivate Account Dialog */}
+            <AlertDialog open={showDeactivateDialog} onOpenChange={setShowDeactivateDialog}>
+                <AlertDialogContent className="max-w-md">
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Deactivate your account?</AlertDialogTitle>
+                        <AlertDialogDescription asChild>
+                            <div className="space-y-4">
+                                <p>
+                                    Deactivating your account is temporary. You can reactivate it anytime by logging back in.
+                                </p>
+
+                                <div className="p-4 border border-primary/50 rounded-lg bg-primary/5">
+                                    <p className="text-sm font-medium mb-2">While deactivated:</p>
+                                    <ul className="text-sm space-y-1">
+                                        <li>• You cannot log in</li>
+                                        <li>• You appear as inactive in groups</li>
+                                        <li>• All your data remains safe and preserved</li>
+                                        <li>• No time limit - reactivate whenever you want</li>
+                                    </ul>
+                                </div>
+
+                                <p className="text-sm">
+                                    This is different from deleting your account, which starts a 30-day countdown before permanent lockout.
+                                </p>
+                            </div>
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={handleDeactivateAccount}
+                            disabled={isDeactivating}
+                        >
+                            {isDeactivating ? 'Deactivating...' : 'Deactivate Account'}
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>

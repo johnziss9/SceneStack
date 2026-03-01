@@ -1,8 +1,27 @@
 import { render, screen } from '@/test-utils'
 import { WatchCard } from '@/components/WatchCard'
 import type { GroupedWatch } from '@/types'
+import { useAuth } from '@/contexts/AuthContext'
+
+// Mock dependencies
+jest.mock('@/contexts/AuthContext')
+
+const mockUseAuth = useAuth as jest.MockedFunction<typeof useAuth>
 
 describe('WatchCard', () => {
+    beforeEach(() => {
+        mockUseAuth.mockReturnValue({
+            user: {
+                id: 1,
+                username: 'testuser',
+                email: 'test@example.com',
+            },
+            loading: false,
+            login: jest.fn(),
+            register: jest.fn(),
+            logout: jest.fn(),
+        })
+    })
     const mockGroupedWatch: GroupedWatch = {
         movieId: 1,
         movie: {

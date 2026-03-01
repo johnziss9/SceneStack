@@ -33,14 +33,27 @@ public class AuthController : ControllerBase
     [HttpPost("login")]
     public async Task<ActionResult<AuthResponse>> Login([FromBody] LoginRequest request)
     {
-        var result = await _authService.LoginAsync(request);
-
-        if (result == null)
+        try
         {
-            return Unauthorized(new { message = "Invalid email or password." });
-        }
+            var result = await _authService.LoginAsync(request);
 
-        return Ok(result);
+            if (result == null)
+            {
+                return Unauthorized(new { message = "Invalid email or password." });
+            }
+
+            return Ok(result);
+        }
+        catch (InvalidOperationException ex) when (ex.Message.Contains("permanently deactivated"))
+        {
+            Console.WriteLine($"Caught permanently deactivated exception: {ex.Message}");
+            return StatusCode(410, new { message = ex.Message }); // 410 Gone - resource permanently deleted
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Unexpected login error: {ex.Message}");
+            throw;
+        }
     }
 
     // POST: api/auth/logout

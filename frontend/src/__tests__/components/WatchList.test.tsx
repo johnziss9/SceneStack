@@ -422,6 +422,9 @@ describe('WatchList', () => {
         // Open filters panel
         await user.click(screen.getByRole('button', { name: /filters/i }))
 
+        // Open advanced filters
+        await user.click(screen.getByRole('button', { name: /show advanced filters/i }))
+
         await waitFor(() => {
             expect(screen.getByText('Group:')).toBeInTheDocument()
         })
@@ -442,6 +445,9 @@ describe('WatchList', () => {
         // Open filters panel
         await user.click(screen.getByRole('button', { name: /filters/i }))
 
+        // Open advanced filters
+        await user.click(screen.getByRole('button', { name: /show advanced filters/i }))
+
         await waitFor(() => {
             expect(screen.getByText('Show:')).toBeInTheDocument()
         })
@@ -454,7 +460,7 @@ describe('WatchList', () => {
         render(<WatchList />)
 
         await waitFor(() => {
-            expect(screen.getByRole('button', { name: /bulk edit/i })).toBeInTheDocument()
+            expect(screen.getAllByRole('button', { name: /select multiple/i }).length).toBeGreaterThan(0)
         })
     })
 
@@ -468,12 +474,12 @@ describe('WatchList', () => {
             expect(screen.getByText('Fight Club')).toBeInTheDocument()
         })
 
-        const bulkEditButton = screen.getByRole('button', { name: /bulk edit/i })
-        await user.click(bulkEditButton)
+        const bulkEditButtons = screen.getAllByRole('button', { name: /select multiple/i })
+        await user.click(bulkEditButtons[0])
 
         await waitFor(() => {
             expect(screen.getByText(/select all/i)).toBeInTheDocument()
-            expect(screen.getByRole('button', { name: /exit bulk mode/i })).toBeInTheDocument()
+            expect(screen.getAllByRole('button', { name: /done/i })[0]).toBeInTheDocument()
         })
     })
 
@@ -488,20 +494,20 @@ describe('WatchList', () => {
         })
 
         // Enter bulk mode
-        const bulkEditButton = screen.getByRole('button', { name: /bulk edit/i })
-        await user.click(bulkEditButton)
+        const bulkEditButtons = screen.getAllByRole('button', { name: /select multiple/i })
+        await user.click(bulkEditButtons[0])
 
         await waitFor(() => {
             expect(screen.getByText(/select all/i)).toBeInTheDocument()
         })
 
         // Exit bulk mode
-        const exitButton = screen.getByRole('button', { name: /exit bulk mode/i })
-        await user.click(exitButton)
+        const exitButtons = screen.getAllByRole('button', { name: /done/i })
+        await user.click(exitButtons[0])
 
         await waitFor(() => {
             expect(screen.queryByText(/select all/i)).not.toBeInTheDocument()
-            expect(screen.getByRole('button', { name: /bulk edit/i })).toBeInTheDocument()
+            expect(screen.getAllByRole('button', { name: /select multiple/i })[0]).toBeInTheDocument()
         })
     })
 
@@ -516,8 +522,8 @@ describe('WatchList', () => {
         })
 
         // Enter bulk mode
-        const bulkEditButton = screen.getByRole('button', { name: /bulk edit/i })
-        await user.click(bulkEditButton)
+        const bulkEditButtons = screen.getAllByRole('button', { name: /select multiple/i })
+        await user.click(bulkEditButtons[0])
 
         await waitFor(() => {
             expect(screen.getByText(/select all/i)).toBeInTheDocument()
@@ -540,8 +546,8 @@ describe('WatchList', () => {
         })
 
         // Enter bulk mode
-        const bulkEditButton = screen.getByRole('button', { name: /bulk edit/i })
-        await user.click(bulkEditButton)
+        const bulkEditButtons = screen.getAllByRole('button', { name: /select multiple/i })
+        await user.click(bulkEditButtons[0])
 
         await waitFor(() => {
             expect(screen.getByText(/select all/i)).toBeInTheDocument()
@@ -569,8 +575,8 @@ describe('WatchList', () => {
         })
 
         // Enter bulk mode
-        const bulkEditButton = screen.getByRole('button', { name: /bulk edit/i })
-        await user.click(bulkEditButton)
+        const bulkEditButtons = screen.getAllByRole('button', { name: /select multiple/i })
+        await user.click(bulkEditButtons[0])
 
         await waitFor(() => {
             expect(screen.getByText(/select all/i)).toBeInTheDocument()
@@ -606,8 +612,8 @@ describe('WatchList', () => {
         })
 
         // Enter bulk mode
-        const bulkEditButton = screen.getByRole('button', { name: /bulk edit/i })
-        await user.click(bulkEditButton)
+        const bulkEditButtons = screen.getAllByRole('button', { name: /select multiple/i })
+        await user.click(bulkEditButtons[0])
 
         await waitFor(() => {
             expect(screen.getByText(/select all/i)).toBeInTheDocument()
@@ -648,8 +654,8 @@ describe('WatchList', () => {
         })
 
         // Enter bulk mode
-        const bulkEditButton = screen.getByRole('button', { name: /bulk edit/i })
-        await user.click(bulkEditButton)
+        const bulkEditButtons = screen.getAllByRole('button', { name: /select multiple/i })
+        await user.click(bulkEditButtons[0])
 
         await waitFor(() => {
             expect(screen.getByText(/select all/i)).toBeInTheDocument()
@@ -674,7 +680,11 @@ describe('WatchList', () => {
             expect(screen.getByRole('heading', { name: /share with groups/i })).toBeInTheDocument()
         })
 
-        // Wait for groups to load in the dialog
+        // Click "Specific Groups" button to open secondary modal with group list
+        const specificGroupsButton = await screen.findByRole('button', { name: /specific groups/i })
+        await user.click(specificGroupsButton)
+
+        // Wait for groups to load in the secondary modal
         await waitFor(() => {
             expect(screen.getByText('Friday Movie Night')).toBeInTheDocument()
         })
@@ -686,7 +696,7 @@ describe('WatchList', () => {
         render(<WatchList />)
 
         await waitFor(() => {
-            expect(screen.getByText(/2 movies/i)).toBeInTheDocument()
+            expect(screen.getAllByText(/2 of 2 movies/i).length).toBeGreaterThan(0)
         })
     })
 
@@ -697,7 +707,7 @@ describe('WatchList', () => {
         render(<WatchList />)
 
         await waitFor(() => {
-            expect(screen.getByText(/1 movie/i)).toBeInTheDocument()
+            expect(screen.getAllByText(/1 of 1 movie/i).length).toBeGreaterThan(0)
         })
     })
 

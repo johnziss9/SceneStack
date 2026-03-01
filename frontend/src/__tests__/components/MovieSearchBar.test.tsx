@@ -175,7 +175,7 @@ describe('MovieSearchBar', () => {
         })
 
         await waitFor(() => {
-            expect(mockOnResultsChange).toHaveBeenCalledWith(mockResults)
+            expect(mockOnResultsChange).toHaveBeenCalledWith(mockResults, 1, 1, 'Fight Club')
         })
     })
 
@@ -238,7 +238,7 @@ describe('MovieSearchBar', () => {
         })
 
         await waitFor(() => {
-            expect(mockOnResultsChange).toHaveBeenCalledWith([])
+            expect(mockOnResultsChange).toHaveBeenCalledWith([], 0, 0, '')
         })
     })
 
@@ -253,7 +253,7 @@ describe('MovieSearchBar', () => {
         await user.click(clearButton)
 
         expect(input).toHaveValue('')
-        expect(mockOnResultsChange).toHaveBeenCalledWith([])
+        expect(mockOnResultsChange).toHaveBeenCalledWith([], 0, 0, '')
     })
 
     it('clears error when clear button is clicked', async () => {
@@ -291,6 +291,6 @@ describe('MovieSearchBar', () => {
         // Clear it
         await user.clear(input)
 
-        expect(mockOnResultsChange).toHaveBeenCalledWith([])
+        expect(mockOnResultsChange).toHaveBeenCalledWith([], 0, 0, '')
     })
 })

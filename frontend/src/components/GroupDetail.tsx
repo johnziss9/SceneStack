@@ -343,6 +343,11 @@ export function GroupDetail({ groupId }: GroupDetailProps) {
                                         <div className="flex items-center gap-2 flex-wrap">
                                             <span className="font-semibold text-base">{member.username || 'Unknown'}</span>
                                             {getRoleBadge(member.role)}
+                                            {member.isDeactivated && (
+                                                <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded">
+                                                    Inactive
+                                                </span>
+                                            )}
                                         </div>
                                         <div className="text-sm text-muted-foreground mt-1">
                                             {member.email || 'No email'}

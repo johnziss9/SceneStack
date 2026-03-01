@@ -131,4 +131,62 @@ public class UsersController : ControllerBase
             return StatusCode(500, new { message = $"Failed to export data: {ex.Message}" });
         }
     }
+
+    // GET: api/users/groups/created
+    [HttpGet("groups/created")]
+    public async Task<IActionResult> GetCreatedGroupsWithEligibility()
+    {
+        var userId = User.GetUserId();
+        var groups = await _userService.GetCreatedGroupsWithTransferEligibilityAsync(userId);
+        return Ok(groups);
+    }
+
+    // POST: api/users/groups/manage
+    [HttpPost("groups/manage")]
+    public async Task<IActionResult> ManageGroupsBeforeDeletion([FromBody] ManageGroupsBeforeDeletionRequest request)
+    {
+        var userId = User.GetUserId();
+
+        try
+        {
+            await _userService.ManageGroupsBeforeDeletionAsync(userId, request.GroupActions);
+            return Ok(new { message = "Groups managed successfully" });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    // POST: api/users/deactivate
+    [HttpPost("deactivate")]
+    public async Task<IActionResult> DeactivateAccount()
+    {
+        var userId = User.GetUserId();
+
+        var success = await _userService.DeactivateAccountAsync(userId);
+
+        if (!success)
+        {
+            return BadRequest(new { message = "Failed to deactivate account" });
+        }
+
+        return Ok(new { message = "Account deactivated successfully. You can reactivate anytime by logging in." });
+    }
+
+    // POST: api/users/reactivate
+    [HttpPost("reactivate")]
+    public async Task<IActionResult> ReactivateAccount()
+    {
+        var userId = User.GetUserId();
+
+        var success = await _userService.ReactivateAccountAsync(userId);
+
+        if (!success)
+        {
+            return BadRequest(new { message = "Failed to reactivate account" });
+        }
+
+        return Ok(new { message = "Account reactivated successfully" });
+    }
 }

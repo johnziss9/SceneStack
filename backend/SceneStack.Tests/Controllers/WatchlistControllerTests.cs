@@ -56,7 +56,7 @@ public class WatchlistControllerTests
                     MovieId = 1,
                     Movie = new MovieBasicInfo { Id = 1, TmdbId = 550, Title = "Fight Club", Year = 1999 },
                     Notes = "Must watch",
-                    Priority = WatchlistItemPriority.High,
+                    Priority = 1,
                     AddedAt = DateTime.UtcNow
                 }
             },
@@ -67,7 +67,7 @@ public class WatchlistControllerTests
             HasMore = false
         };
 
-        watchlistService.GetWatchlistAsync(1, 1, 20, "recent").Returns(paginatedResponse);
+        watchlistService.GetWatchlistAsync(1, 1, 20, "priority-asc").Returns(paginatedResponse);
 
         // Act
         var result = await controller.GetWatchlist();
@@ -136,7 +136,7 @@ public class WatchlistControllerTests
         {
             TmdbId = 550,
             Notes = "Must watch",
-            Priority = WatchlistItemPriority.High
+            Priority = 1
         };
 
         watchlistService.CanAddToWatchlistAsync(1).Returns(true);
@@ -147,12 +147,12 @@ public class WatchlistControllerTests
             UserId = 1,
             MovieId = 1,
             Notes = "Must watch",
-            Priority = WatchlistItemPriority.High,
+            Priority = 1,
             AddedAt = DateTime.UtcNow,
             Movie = new Movie { Id = 1, TmdbId = 550, Title = "Fight Club", Year = 1999 }
         };
 
-        watchlistService.AddToWatchlistAsync(1, 550, "Must watch", WatchlistItemPriority.High)
+        watchlistService.AddToWatchlistAsync(1, 550, "Must watch", 1)
             .Returns(watchlistItem);
 
         // Act
@@ -162,7 +162,7 @@ public class WatchlistControllerTests
         var createdResult = result.Result.Should().BeOfType<CreatedAtActionResult>().Subject;
         var returnedItem = createdResult.Value.Should().BeOfType<WatchlistItemResponse>().Subject;
         returnedItem.Notes.Should().Be("Must watch");
-        returnedItem.Priority.Should().Be(WatchlistItemPriority.High);
+        returnedItem.Priority.Should().Be(1);
     }
 
     [Fact]
@@ -177,7 +177,7 @@ public class WatchlistControllerTests
         {
             TmdbId = 550,
             Notes = null,
-            Priority = WatchlistItemPriority.Normal
+            Priority = 2
         };
 
         watchlistService.CanAddToWatchlistAsync(1).Returns(false);
@@ -203,11 +203,11 @@ public class WatchlistControllerTests
         {
             TmdbId = 550,
             Notes = null,
-            Priority = WatchlistItemPriority.Normal
+            Priority = 2
         };
 
         watchlistService.CanAddToWatchlistAsync(1).Returns(true);
-        watchlistService.AddToWatchlistAsync(1, 550, null, WatchlistItemPriority.Normal)
+        watchlistService.AddToWatchlistAsync(1, 550, null, 2)
             .Returns(Task.FromException<WatchlistItem>(new InvalidOperationException("DUPLICATE")));
 
         // Act
@@ -230,11 +230,11 @@ public class WatchlistControllerTests
         {
             TmdbId = 999,
             Notes = null,
-            Priority = WatchlistItemPriority.Normal
+            Priority = 2
         };
 
         watchlistService.CanAddToWatchlistAsync(1).Returns(true);
-        watchlistService.AddToWatchlistAsync(1, 999, null, WatchlistItemPriority.Normal)
+        watchlistService.AddToWatchlistAsync(1, 999, null, 2)
             .Returns(Task.FromException<WatchlistItem>(new InvalidOperationException("Failed to retrieve movie with TMDb ID 999")));
 
         // Act
@@ -292,7 +292,7 @@ public class WatchlistControllerTests
         var request = new UpdateWatchlistItemRequest
         {
             Notes = "Updated notes",
-            Priority = WatchlistItemPriority.High
+            Priority = 1
         };
 
         var updatedItem = new WatchlistItem
@@ -301,7 +301,7 @@ public class WatchlistControllerTests
             UserId = 1,
             MovieId = 1,
             Notes = "Updated notes",
-            Priority = WatchlistItemPriority.High,
+            Priority = 1,
             AddedAt = DateTime.UtcNow,
             Movie = new Movie { Id = 1, TmdbId = 550, Title = "Fight Club", Year = 1999 }
         };
@@ -315,7 +315,7 @@ public class WatchlistControllerTests
         var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject;
         var returnedItem = okResult.Value.Should().BeOfType<WatchlistItemResponse>().Subject;
         returnedItem.Notes.Should().Be("Updated notes");
-        returnedItem.Priority.Should().Be(WatchlistItemPriority.High);
+        returnedItem.Priority.Should().Be(1);
     }
 
     [Fact]
@@ -329,7 +329,7 @@ public class WatchlistControllerTests
         var request = new UpdateWatchlistItemRequest
         {
             Notes = "Updated notes",
-            Priority = WatchlistItemPriority.High
+            Priority = 1
         };
 
         watchlistService.UpdateWatchlistItemAsync(1, 999, request).Returns((WatchlistItem?)null);

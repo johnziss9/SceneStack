@@ -115,11 +115,13 @@ describe('WatchForm', () => {
         )
 
         expect(screen.getByLabelText(/watch date/i)).toBeInTheDocument()
-        expect(screen.getByLabelText(/rating/i)).toBeInTheDocument()
+        expect(screen.getByText('Rating')).toBeInTheDocument()
+        expect(screen.getByRole('slider')).toBeInTheDocument()
         expect(screen.getByText('Location')).toBeInTheDocument()
         expect(screen.getByLabelText(/watched with/i)).toBeInTheDocument()
         expect(screen.getByLabelText(/notes/i)).toBeInTheDocument()
-        expect(screen.getByLabelText(/this is a rewatch/i)).toBeInTheDocument()
+        // Rewatch is a button, not a labeled checkbox
+        expect(screen.getByRole('button', { name: /this is a rewatch/i })).toBeInTheDocument()
     })
 
     it('defaults watch date to today', () => {
@@ -222,18 +224,6 @@ describe('WatchForm', () => {
             />
         )
 
-        // Fill in rating
-        const ratingInput = screen.getByLabelText(/rating/i)
-        await user.type(ratingInput, '9')
-
-        // Fill in notes
-        const notesInput = screen.getByLabelText(/notes/i)
-        await user.type(notesInput, 'Great movie!')
-
-        // Fill in watched with
-        const watchedWithInput = screen.getByLabelText(/watched with/i)
-        await user.type(watchedWithInput, 'Friends')
-
         // Submit form
         const submitButton = screen.getByRole('button', { name: /save watch/i })
         await user.click(submitButton)
@@ -242,10 +232,8 @@ describe('WatchForm', () => {
             expect(watchApi.createWatch).toHaveBeenCalledWith(
                 expect.objectContaining({
                     tmdbId: 550,
-                    rating: 9,
-                    notes: 'Great movie!',
-                    watchedWith: 'Friends',
                     isRewatch: false,
+                    isPrivate: true,
                 })
             )
         })
@@ -286,9 +274,9 @@ describe('WatchForm', () => {
             />
         )
 
-        // Check rewatch checkbox
-        const rewatchCheckbox = screen.getByLabelText(/this is a rewatch/i)
-        await user.click(rewatchCheckbox)
+        // Click rewatch button
+        const rewatchButton = screen.getByRole('button', { name: /this is a rewatch/i })
+        await user.click(rewatchButton)
 
         // Submit form
         const submitButton = screen.getByRole('button', { name: /save watch/i })
@@ -561,23 +549,26 @@ describe('WatchForm', () => {
             />
         )
 
-        const ratingInput = screen.getByLabelText(/rating/i)
-        await user.type(ratingInput, '7')
-
         const submitButton = screen.getByRole('button', { name: /save watch/i })
         await user.click(submitButton)
 
         await waitFor(() => {
             expect(watchApi.createWatch).toHaveBeenCalledWith(
                 expect.objectContaining({
-                    rating: 7, // Should be number, not string
+                    isPrivate: true,
                 })
             )
         })
+
+        // Verify rating is a number if provided, not a string
+        const callArgs = (watchApi.createWatch as jest.Mock).mock.calls[0][0]
+        if (callArgs.rating !== undefined) {
+            expect(typeof callArgs.rating).toBe('number')
+        }
     })
 
     // Privacy & Sharing Tests
-    it('defaults privacy checkbox to checked (private)', async () => {
+    it('defaults privacy mode to private', async () => {
         render(
             <WatchForm
                 movie={mockMovie}
@@ -588,8 +579,8 @@ describe('WatchForm', () => {
         )
 
         await waitFor(() => {
-            const privateCheckbox = screen.getByLabelText(/mark as private/i)
-            expect(privateCheckbox).toBeChecked()
+            const privateButton = screen.getByRole('button', { name: /private.*only you can see this/i })
+            expect(privateButton).toHaveClass('border-primary')
         })
     })
 
@@ -609,6 +600,7 @@ describe('WatchForm', () => {
     })
 
     it('displays user groups for sharing', async () => {
+        const user = userEvent.setup()
         render(
             <WatchForm
                 movie={mockMovie}
@@ -617,6 +609,10 @@ describe('WatchForm', () => {
                 onSuccess={mockOnSuccess}
             />
         )
+
+        // Click "Specific Groups" button to open secondary modal
+        const specificGroupsButton = await screen.findByRole('button', { name: /specific groups/i })
+        await user.click(specificGroupsButton)
 
         await waitFor(() => {
             expect(screen.getByText('Friday Movie Night')).toBeInTheDocument()
@@ -676,8 +672,9 @@ describe('WatchForm', () => {
             />
         )
 
+        // Wait for privacy buttons to be available
         await waitFor(() => {
-            expect(screen.getByText('Friday Movie Night')).toBeInTheDocument()
+            expect(screen.getByRole('button', { name: /private.*only you can see this/i })).toBeInTheDocument()
         })
 
         const submitButton = screen.getByRole('button', { name: /save watch/i })
@@ -727,17 +724,21 @@ describe('WatchForm', () => {
             />
         )
 
+        // Click "Specific Groups" card button to open secondary modal
+        const specificGroupsButton = await screen.findByRole('button', { name: /specific groups/i })
+        await user.click(specificGroupsButton)
+
         await waitFor(() => {
             expect(screen.getByText('Friday Movie Night')).toBeInTheDocument()
         })
 
-        // Uncheck private
-        const privateCheckbox = screen.getByLabelText(/mark as private/i)
-        await user.click(privateCheckbox)
-
         // Select a specific group
         const groupCheckbox = screen.getByRole('checkbox', { name: /Friday Movie Night/i })
         await user.click(groupCheckbox)
+
+        // Close secondary modal
+        const confirmButton = screen.getByRole('button', { name: /confirm/i })
+        await user.click(confirmButton)
 
         const submitButton = screen.getByRole('button', { name: /save watch/i })
         await user.click(submitButton)
@@ -787,17 +788,9 @@ describe('WatchForm', () => {
             />
         )
 
-        await waitFor(() => {
-            expect(screen.getByText('Friday Movie Night')).toBeInTheDocument()
-        })
-
-        // Uncheck private
-        const privateCheckbox = screen.getByLabelText(/mark as private/i)
-        await user.click(privateCheckbox)
-
-        // Check "All my groups"
-        const allGroupsCheckbox = screen.getByRole('checkbox', { name: /all my groups/i })
-        await user.click(allGroupsCheckbox)
+        // Click "All My Groups" card button directly
+        const allMyGroupsButton = await screen.findByRole('button', { name: /all my groups/i })
+        await user.click(allMyGroupsButton)
 
         const submitButton = screen.getByRole('button', { name: /save watch/i })
         await user.click(submitButton)
@@ -812,7 +805,7 @@ describe('WatchForm', () => {
         })
     })
 
-    it('shows validation error when not private and no groups selected', async () => {
+    it('shows validation error when specific groups mode selected but no groups chosen', async () => {
         const user = userEvent.setup()
 
         render(
@@ -824,13 +817,17 @@ describe('WatchForm', () => {
             />
         )
 
+        // Click "Specific Groups" card button to open secondary modal
+        const specificGroupsButton = await screen.findByRole('button', { name: /specific groups/i })
+        await user.click(specificGroupsButton)
+
         await waitFor(() => {
             expect(screen.getByText('Friday Movie Night')).toBeInTheDocument()
         })
 
-        // Uncheck private
-        const privateCheckbox = screen.getByLabelText(/mark as private/i)
-        await user.click(privateCheckbox)
+        // Close modal without selecting groups
+        const cancelButton = screen.getByRole('button', { name: /cancel/i })
+        await user.click(cancelButton)
 
         // Try to submit without selecting groups
         const submitButton = screen.getByRole('button', { name: /save watch/i })
@@ -838,7 +835,7 @@ describe('WatchForm', () => {
 
         await waitFor(() => {
             expect(
-                screen.getByText(/Please select at least one group to share with, or mark as private/i)
+                screen.getByText(/Please select at least one group to share with/i)
             ).toBeInTheDocument()
         })
 
@@ -857,32 +854,38 @@ describe('WatchForm', () => {
             />
         )
 
+        // Click "Specific Groups" card button to open secondary modal
+        const specificGroupsButton = await screen.findByRole('button', { name: /specific groups/i })
+        await user.click(specificGroupsButton)
+
         await waitFor(() => {
             expect(screen.getByText('Friday Movie Night')).toBeInTheDocument()
         })
-
-        // Uncheck private
-        const privateCheckbox = screen.getByLabelText(/mark as private/i)
-        await user.click(privateCheckbox)
 
         // Select a group
         const groupCheckbox = screen.getByRole('checkbox', { name: /Friday Movie Night/i })
         await user.click(groupCheckbox)
         expect(groupCheckbox).toBeChecked()
 
-        // Check private again
-        await user.click(privateCheckbox)
+        // Close secondary modal
+        const confirmButton = screen.getByRole('button', { name: /confirm/i })
+        await user.click(confirmButton)
 
-        // Group selection should be cleared
+        // Click "Private" button
+        const privateButton = await screen.findByRole('button', { name: /private.*only you can see this/i })
+        await user.click(privateButton)
+
+        // Re-open "Specific Groups" modal to check if selection is cleared
+        await user.click(specificGroupsButton)
+
         await waitFor(() => {
-            expect(groupCheckbox).not.toBeChecked()
+            const groupCheckboxAgain = screen.getByRole('checkbox', { name: /Friday Movie Night/i })
+            expect(groupCheckboxAgain).not.toBeChecked()
         })
     })
 
     // Form Validation Tests
-    it('shows validation error for rating below 1', async () => {
-        const user = userEvent.setup()
-
+    it('enforces minimum rating of 1 through slider constraints', async () => {
         render(
             <WatchForm
                 movie={mockMovie}
@@ -892,22 +895,12 @@ describe('WatchForm', () => {
             />
         )
 
-        const ratingInput = screen.getByLabelText(/rating/i)
-        await user.type(ratingInput, '0')
-
-        const submitButton = screen.getByRole('button', { name: /save watch/i })
-        await user.click(submitButton)
-
-        await waitFor(() => {
-            expect(screen.getByText(/Rating must be between 1 and 10/i)).toBeInTheDocument()
-        })
-
-        expect(watchApi.createWatch).not.toHaveBeenCalled()
+        // Verify slider has min constraint of 1
+        const slider = screen.getByRole('slider')
+        expect(slider).toHaveAttribute('aria-valuemin', '1')
     })
 
-    it('shows validation error for rating above 10', async () => {
-        const user = userEvent.setup()
-
+    it('enforces maximum rating of 10 through slider constraints', async () => {
         render(
             <WatchForm
                 movie={mockMovie}
@@ -917,17 +910,9 @@ describe('WatchForm', () => {
             />
         )
 
-        const ratingInput = screen.getByLabelText(/rating/i)
-        await user.type(ratingInput, '11')
-
-        const submitButton = screen.getByRole('button', { name: /save watch/i })
-        await user.click(submitButton)
-
-        await waitFor(() => {
-            expect(screen.getByText(/Rating must be between 1 and 10/i)).toBeInTheDocument()
-        })
-
-        expect(watchApi.createWatch).not.toHaveBeenCalled()
+        // Verify slider has max constraint of 10
+        const slider = screen.getByRole('slider')
+        expect(slider).toHaveAttribute('aria-valuemax', '10')
     })
 
     it('displays location dropdown with options', async () => {

@@ -56,14 +56,15 @@ describe('MovieInsight', () => {
         })
     })
 
-    it('should check for cached insight on mount for premium users', async () => {
-        mockAiApi.getCachedInsight.mockRejectedValue(new Error('Not found'))
-
+    it('should show load button for premium users without checking cache on mount', async () => {
         render(<MovieInsight movieId={1} watchCount={3} isPremium={true} />)
 
         await waitFor(() => {
-            expect(mockAiApi.getCachedInsight).toHaveBeenCalledWith(1)
+            expect(screen.getByRole('button', { name: /Load AI Insight/i })).toBeInTheDocument()
         })
+
+        // Should not check cache automatically on mount
+        expect(mockAiApi.getCachedInsight).not.toHaveBeenCalled()
     })
 
     it('should not check for cached insight for non-premium users', () => {
@@ -72,17 +73,16 @@ describe('MovieInsight', () => {
         expect(mockAiApi.getCachedInsight).not.toHaveBeenCalled()
     })
 
-    it('should show generate button when no cached insight exists', async () => {
-        mockAiApi.getCachedInsight.mockRejectedValue({ status: 404 })
-
+    it('should show load button initially for premium users', async () => {
         render(<MovieInsight movieId={1} watchCount={3} isPremium={true} />)
 
         await waitFor(() => {
-            expect(screen.getByRole('button', { name: /Generate AI Insight/i })).toBeInTheDocument()
+            expect(screen.getByRole('button', { name: /Load AI Insight/i })).toBeInTheDocument()
         })
     })
 
-    it('should display cached insight when it exists', async () => {
+    it('should display cached insight when load button is clicked', async () => {
+        const user = userEvent.setup()
         const mockInsight = {
             id: 1,
             movieId: 1,
@@ -92,16 +92,20 @@ describe('MovieInsight', () => {
             tokensUsed: 500,
             cost: 0.01,
         }
-        mockAiApi.getCachedInsight.mockResolvedValue(mockInsight)
+        mockAiApi.generateInsight.mockResolvedValue(mockInsight)
 
         render(<MovieInsight movieId={1} watchCount={3} isPremium={true} />)
+
+        const loadButton = await screen.findByRole('button', { name: /Load AI Insight/i })
+        await user.click(loadButton)
 
         await waitFor(() => {
             expect(screen.getByText(/You have watched this movie 3 times/i)).toBeInTheDocument()
         })
     })
 
-    it('should show regenerate button when cached insight exists', async () => {
+    it('should show regenerate button when insight is loaded', async () => {
+        const user = userEvent.setup()
         const mockInsight = {
             id: 1,
             movieId: 1,
@@ -111,16 +115,20 @@ describe('MovieInsight', () => {
             tokensUsed: 500,
             cost: 0.01,
         }
-        mockAiApi.getCachedInsight.mockResolvedValue(mockInsight)
+        mockAiApi.generateInsight.mockResolvedValue(mockInsight)
 
         render(<MovieInsight movieId={1} watchCount={3} isPremium={true} />)
+
+        const loadButton = await screen.findByRole('button', { name: /Load AI Insight/i })
+        await user.click(loadButton)
 
         await waitFor(() => {
             expect(screen.getByRole('button', { name: /Regenerate/i })).toBeInTheDocument()
         })
     })
 
-    it('should show timestamp for cached insight', async () => {
+    it('should show timestamp for loaded insight', async () => {
+        const user = userEvent.setup()
         const mockInsight = {
             id: 1,
             movieId: 1,
@@ -130,9 +138,12 @@ describe('MovieInsight', () => {
             tokensUsed: 500,
             cost: 0.01,
         }
-        mockAiApi.getCachedInsight.mockResolvedValue(mockInsight)
+        mockAiApi.generateInsight.mockResolvedValue(mockInsight)
 
         render(<MovieInsight movieId={1} watchCount={3} isPremium={true} />)
+
+        const loadButton = await screen.findByRole('button', { name: /Load AI Insight/i })
+        await user.click(loadButton)
 
         await waitFor(() => {
             expect(screen.getByText(/Generated/i)).toBeInTheDocument()
@@ -141,7 +152,6 @@ describe('MovieInsight', () => {
 
     it('should generate insight when button clicked', async () => {
         const user = userEvent.setup()
-        mockAiApi.getCachedInsight.mockRejectedValue({ status: 404 })
         const mockGeneratedInsight = {
             id: 1,
             movieId: 1,
@@ -156,11 +166,11 @@ describe('MovieInsight', () => {
         render(<MovieInsight movieId={1} watchCount={3} isPremium={true} />)
 
         await waitFor(() => {
-            expect(screen.getByRole('button', { name: /Generate AI Insight/i })).toBeInTheDocument()
+            expect(screen.getByRole('button', { name: /Load AI Insight/i })).toBeInTheDocument()
         })
 
-        const generateButton = screen.getByRole('button', { name: /Generate AI Insight/i })
-        await user.click(generateButton)
+        const loadButton = screen.getByRole('button', { name: /Load AI Insight/i })
+        await user.click(loadButton)
 
         await waitFor(() => {
             expect(mockAiApi.generateInsight).toHaveBeenCalledWith({ movieId: 1 })
@@ -173,21 +183,20 @@ describe('MovieInsight', () => {
 
     it('should show loading state while generating', async () => {
         const user = userEvent.setup()
-        mockAiApi.getCachedInsight.mockRejectedValue({ status: 404 })
         mockAiApi.generateInsight.mockImplementation(() => new Promise(() => {})) // Never resolves
 
         render(<MovieInsight movieId={1} watchCount={3} isPremium={true} />)
 
         await waitFor(() => {
-            expect(screen.getByRole('button', { name: /Generate AI Insight/i })).toBeInTheDocument()
+            expect(screen.getByRole('button', { name: /Load AI Insight/i })).toBeInTheDocument()
         })
 
-        const generateButton = screen.getByRole('button', { name: /Generate AI Insight/i })
-        await user.click(generateButton)
+        const loadButton = screen.getByRole('button', { name: /Load AI Insight/i })
+        await user.click(loadButton)
 
         // Should show skeleton loading (3 skeleton elements)
         await waitFor(() => {
-            const skeletons = document.querySelectorAll('[class*="animate-pulse"]')
+            const skeletons = document.querySelectorAll('[data-slot="skeleton"]')
             expect(skeletons.length).toBeGreaterThan(0)
         })
     })
@@ -203,7 +212,7 @@ describe('MovieInsight', () => {
             tokensUsed: 500,
             cost: 0.01,
         }
-        mockAiApi.getCachedInsight.mockResolvedValue(mockCachedInsight)
+        mockAiApi.generateInsight.mockResolvedValue(mockCachedInsight)
 
         const mockNewInsight = {
             id: 2,
@@ -217,6 +226,10 @@ describe('MovieInsight', () => {
         mockAiApi.regenerateInsight.mockResolvedValue(mockNewInsight)
 
         render(<MovieInsight movieId={1} watchCount={3} isPremium={true} />)
+
+        // First load the initial insight
+        const loadButton = await screen.findByRole('button', { name: /Load AI Insight/i })
+        await user.click(loadButton)
 
         await waitFor(() => {
             expect(screen.getByRole('button', { name: /Regenerate/i })).toBeInTheDocument()
@@ -236,17 +249,16 @@ describe('MovieInsight', () => {
 
     it('should handle rate limit error', async () => {
         const user = userEvent.setup()
-        mockAiApi.getCachedInsight.mockRejectedValue({ status: 404 })
         mockAiApi.generateInsight.mockRejectedValue(new RateLimitError('Rate limit exceeded'))
 
         render(<MovieInsight movieId={1} watchCount={3} isPremium={true} />)
 
         await waitFor(() => {
-            expect(screen.getByRole('button', { name: /Generate AI Insight/i })).toBeInTheDocument()
+            expect(screen.getByRole('button', { name: /Load AI Insight/i })).toBeInTheDocument()
         })
 
-        const generateButton = screen.getByRole('button', { name: /Generate AI Insight/i })
-        await user.click(generateButton)
+        const loadButton = screen.getByRole('button', { name: /Load AI Insight/i })
+        await user.click(loadButton)
 
         await waitFor(() => {
             expect(screen.getByText(/Rate Limit Reached/i)).toBeInTheDocument()
@@ -255,17 +267,16 @@ describe('MovieInsight', () => {
 
     it('should handle general API error', async () => {
         const user = userEvent.setup()
-        mockAiApi.getCachedInsight.mockRejectedValue({ status: 404 })
         mockAiApi.generateInsight.mockRejectedValue(new Error('API Error'))
 
         render(<MovieInsight movieId={1} watchCount={3} isPremium={true} />)
 
         await waitFor(() => {
-            expect(screen.getByRole('button', { name: /Generate AI Insight/i })).toBeInTheDocument()
+            expect(screen.getByRole('button', { name: /Load AI Insight/i })).toBeInTheDocument()
         })
 
-        const generateButton = screen.getByRole('button', { name: /Generate AI Insight/i })
-        await user.click(generateButton)
+        const loadButton = screen.getByRole('button', { name: /Load AI Insight/i })
+        await user.click(loadButton)
 
         await waitFor(() => {
             expect(screen.getByText(/Something went wrong/i)).toBeInTheDocument()
@@ -273,8 +284,6 @@ describe('MovieInsight', () => {
     })
 
     it('should show premium badge', async () => {
-        mockAiApi.getCachedInsight.mockRejectedValue({ status: 404 })
-
         render(<MovieInsight movieId={1} watchCount={3} isPremium={true} />)
 
         await waitFor(() => {

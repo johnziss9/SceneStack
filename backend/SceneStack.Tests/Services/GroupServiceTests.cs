@@ -546,6 +546,10 @@ public class GroupServiceTests
         var creator = context.Users.First();
         var member = context.Users.Skip(1).First();
 
+        // Make member premium to avoid group membership limits
+        member.IsPremium = true;
+        await context.SaveChangesAsync();
+
         // Create groups and add member to some
         var group1 = await service.CreateAsync(member.Id, new CreateGroupRequest { Name = "My Group" });
         var group2 = await service.CreateAsync(creator.Id, new CreateGroupRequest { Name = "Group 2" });

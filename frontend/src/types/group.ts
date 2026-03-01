@@ -22,6 +22,7 @@ export interface GroupMember {
     email: string;
     role: GroupRole;
     joinedAt: string; // ISO date string
+    isDeactivated: boolean;
 }
 
 // Matches GroupBasicInfo from backend
@@ -77,6 +78,7 @@ export interface GroupFeedItem {
     id: number;
     userId: number;
     username: string;
+    isDeactivated: boolean;
     movieId: number;
     movieTitle: string;
     posterPath?: string;
@@ -114,6 +116,7 @@ export interface GroupMemberStats {
     username: string;
     watchCount: number;
     averageRating: number | null;
+    isDeactivated: boolean;
 }
 
 // Matches SharedMovieStats from backend

@@ -64,13 +64,25 @@ async function fetchApi<T>(
         },
     });
 
-    // Handle 401 Unauthorized - redirect to login
+    // Handle 401 Unauthorized
     if (response.status === 401) {
-        tokenStorage.removeToken();
+        // Try to parse error message from response
+        let errorMessage = 'Unauthorized';
+        try {
+            const errorData = await response.json();
+            errorMessage = errorData.message || 'Unauthorized';
+        } catch {
+            // If JSON parsing fails, use default message
+        }
+
+        // Only redirect and remove token if on a protected page
+        // Don't redirect if already on login page (e.g., failed login attempt)
         if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
+            tokenStorage.removeToken();
             window.location.href = '/login';
         }
-        throw new ApiError(401, 'Unauthorized');
+
+        throw new ApiError(401, errorMessage);
     }
 
     // Handle 403 Forbidden - Premium feature required
@@ -83,6 +95,16 @@ async function fetchApi<T>(
     if (response.status === 429) {
         const errorText = await response.text();
         throw new RateLimitError(errorText || 'Rate limit exceeded. Please try again later.');
+    }
+
+    // Handle 410 Gone - Permanently deleted resource
+    if (response.status === 410) {
+        try {
+            const errorData = await response.json();
+            throw new ApiError(410, errorData.message || 'Resource permanently deleted');
+        } catch (e) {
+            throw new ApiError(410, 'Resource permanently deleted');
+        }
     }
 
     if (!response.ok) {
