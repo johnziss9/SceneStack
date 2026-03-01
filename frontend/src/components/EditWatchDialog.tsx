@@ -29,7 +29,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { Lock, Users, Repeat } from 'lucide-react';
+import { Lock, Users, Repeat, X } from 'lucide-react';
 
 interface EditWatchDialogProps {
     watch: Watch | null;
@@ -44,7 +44,10 @@ export default function EditWatchDialog({
     onOpenChange,
     onSuccess,
 }: EditWatchDialogProps) {
+    const [datePrecision, setDatePrecision] = useState<'full' | 'month' | 'year'>('full');
     const [watchedDate, setWatchedDate] = useState('');
+    const [watchedMonth, setWatchedMonth] = useState('');
+    const [watchedYear, setWatchedYear] = useState('');
     const [rating, setRating] = useState('');
     const [location, setLocation] = useState('');
     const [customLocation, setCustomLocation] = useState('');
@@ -101,7 +104,11 @@ export default function EditWatchDialog({
     // Populate form when watch changes OR when dialog opens
     useEffect(() => {
         if (watch && open) {
-            setWatchedDate(isoToDateString(watch.watchedDate)); // Extract YYYY-MM-DD
+            const dateStr = isoToDateString(watch.watchedDate); // Extract YYYY-MM-DD
+            setWatchedDate(dateStr);
+            setWatchedMonth(dateStr.substring(0, 7)); // YYYY-MM
+            setWatchedYear(dateStr.substring(0, 4)); // YYYY
+            setDatePrecision('full'); // Default to full when editing
             setRating(watch.rating?.toString() || '');
 
             // Handle location
@@ -257,21 +264,50 @@ export default function EditWatchDialog({
         setLocationError(null);
         setPrivacyError(null);
 
-        // Validate watch date (required)
-        if (!watchedDate) {
-            setDateError('Watch date is required');
-            isValid = false;
-            if (!firstErrorRef) firstErrorRef = dateRef;
-        } else {
-            // Validate if date is in the future
-            const selected = new Date(watchedDate);
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-
-            if (selected > today) {
-                setDateError('Watch date cannot be in the future');
+        // Validate watch date based on precision
+        if (datePrecision === 'full') {
+            if (!watchedDate) {
+                setDateError('Watch date is required');
                 isValid = false;
                 if (!firstErrorRef) firstErrorRef = dateRef;
+            } else {
+                const selected = new Date(watchedDate);
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+
+                if (selected > today) {
+                    setDateError('Watch date cannot be in the future');
+                    isValid = false;
+                    if (!firstErrorRef) firstErrorRef = dateRef;
+                }
+            }
+        } else if (datePrecision === 'month') {
+            if (!watchedMonth) {
+                setDateError('Watch month is required');
+                isValid = false;
+                if (!firstErrorRef) firstErrorRef = dateRef;
+            } else {
+                const [year, month] = watchedMonth.split('-').map(Number);
+                const today = new Date();
+                if (year > today.getFullYear() || (year === today.getFullYear() && month > today.getMonth() + 1)) {
+                    setDateError('Watch month cannot be in the future');
+                    isValid = false;
+                    if (!firstErrorRef) firstErrorRef = dateRef;
+                }
+            }
+        } else if (datePrecision === 'year') {
+            if (!watchedYear) {
+                setDateError('Watch year is required');
+                isValid = false;
+                if (!firstErrorRef) firstErrorRef = dateRef;
+            } else {
+                const yearNum = parseInt(watchedYear);
+                const currentYear = new Date().getFullYear();
+                if (yearNum > currentYear) {
+                    setDateError('Watch year cannot be in the future');
+                    isValid = false;
+                    if (!firstErrorRef) firstErrorRef = dateRef;
+                }
             }
         }
 
@@ -327,8 +363,18 @@ export default function EditWatchDialog({
         try {
             const finalLocation = location === 'Other' ? customLocation : location;
 
+            // Construct the final date based on precision
+            let finalDate: string;
+            if (datePrecision === 'full') {
+                finalDate = watchedDate;
+            } else if (datePrecision === 'month') {
+                finalDate = `${watchedMonth}-01`; // First day of the month
+            } else {
+                finalDate = `${watchedYear}-01-01`; // First day of the year
+            }
+
             const updateData: UpdateWatchRequest = {
-                watchedDate: dateStringToISO(watchedDate),
+                watchedDate: dateStringToISO(finalDate),
                 rating: rating ? parseFloat(rating) : undefined,
                 notes: notes || undefined,
                 watchLocation: finalLocation || undefined,
@@ -345,7 +391,10 @@ export default function EditWatchDialog({
             await watchApi.updateWatch(watch.id, updateData);
 
             // Reset form
+            setDatePrecision('full');
             setWatchedDate('');
+            setWatchedMonth('');
+            setWatchedYear('');
             setRating('');
             setLocation('');
             setCustomLocation('');
@@ -394,45 +443,94 @@ export default function EditWatchDialog({
                         <div className="space-y-4">
                     {/* Watch Date */}
                     <div ref={dateRef} className="space-y-2">
-                        <Label htmlFor="watchedDate">Date Watched *</Label>
-                        <Input
-                            ref={dateInputRef}
-                            id="watchedDate"
-                            type="date"
-                            value={watchedDate}
-                            max={new Date().toISOString().split('T')[0]}
-                            onChange={(e) => {
-                                const selectedDate = e.target.value;
-                                setWatchedDate(selectedDate);
-                                setDateError(null);
+                        <Label htmlFor="datePrecision">Date Watched *</Label>
+                        <Select value={datePrecision} onValueChange={(value: 'full' | 'month' | 'year') => {
+                            setDatePrecision(value);
+                            setDateError(null);
+                        }}>
+                            <SelectTrigger id="datePrecision" className="w-full">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="full">Full Date</SelectItem>
+                                <SelectItem value="month">Month & Year</SelectItem>
+                                <SelectItem value="year">Year Only</SelectItem>
+                            </SelectContent>
+                        </Select>
 
-                                // Validate if date is in the future
-                                if (selectedDate) {
-                                    const selected = new Date(selectedDate);
-                                    const today = new Date();
-                                    today.setHours(0, 0, 0, 0);
+                        {datePrecision === 'full' && (
+                            <Input
+                                ref={dateInputRef}
+                                id="watchedDate"
+                                type="date"
+                                value={watchedDate}
+                                max={new Date().toISOString().split('T')[0]}
+                                onChange={(e) => {
+                                    const selectedDate = e.target.value;
+                                    setWatchedDate(selectedDate);
+                                    setDateError(null);
 
-                                    if (selected > today) {
-                                        setDateError('Watch date cannot be in the future');
+                                    if (selectedDate) {
+                                        const selected = new Date(selectedDate);
+                                        const today = new Date();
+                                        today.setHours(0, 0, 0, 0);
+
+                                        if (selected > today) {
+                                            setDateError('Watch date cannot be in the future');
+                                        }
                                     }
-                                }
-                            }}
-                            onBlur={() => {
-                                if (!watchedDate) {
-                                    setDateError('Watch date is required');
-                                } else {
-                                    // Validate if date is in the future
-                                    const selected = new Date(watchedDate);
-                                    const today = new Date();
-                                    today.setHours(0, 0, 0, 0);
-
-                                    if (selected > today) {
-                                        setDateError('Watch date cannot be in the future');
+                                }}
+                                onBlur={() => {
+                                    if (!watchedDate) {
+                                        setDateError('Watch date is required');
                                     }
-                                }
-                            }}
-                            className={dateError ? 'border-destructive' : ''}
-                        />
+                                }}
+                                className={dateError ? 'border-destructive' : ''}
+                            />
+                        )}
+
+                        {datePrecision === 'month' && (
+                            <Input
+                                ref={dateInputRef}
+                                id="watchedMonth"
+                                type="month"
+                                value={watchedMonth}
+                                max={new Date().toISOString().substring(0, 7)}
+                                onChange={(e) => {
+                                    setWatchedMonth(e.target.value);
+                                    setDateError(null);
+                                }}
+                                onBlur={() => {
+                                    if (!watchedMonth) {
+                                        setDateError('Watch month is required');
+                                    }
+                                }}
+                                className={dateError ? 'border-destructive' : ''}
+                            />
+                        )}
+
+                        {datePrecision === 'year' && (
+                            <Input
+                                ref={dateInputRef}
+                                id="watchedYear"
+                                type="number"
+                                min="1900"
+                                max={new Date().getFullYear()}
+                                value={watchedYear}
+                                onChange={(e) => {
+                                    setWatchedYear(e.target.value);
+                                    setDateError(null);
+                                }}
+                                onBlur={() => {
+                                    if (!watchedYear) {
+                                        setDateError('Watch year is required');
+                                    }
+                                }}
+                                placeholder="Enter year (e.g., 2024)"
+                                className={dateError ? 'border-destructive' : ''}
+                            />
+                        )}
+
                         {dateError && (
                             <p className="text-sm text-destructive">{dateError}</p>
                         )}
@@ -441,12 +539,26 @@ export default function EditWatchDialog({
                     {/* Rating */}
                     <div ref={ratingRef} className="space-y-3">
                         <div className="flex items-center justify-between">
-                            <Label>Rating <span className="text-muted-foreground">(Optional)</span></Label>
-                            {rating && (
-                                <div className="text-sm font-semibold text-foreground">
-                                    {rating}/10
-                                </div>
-                            )}
+                            <Label>Rating <span className="text-muted-foreground font-normal">(optional)</span></Label>
+                            <div className="flex items-center gap-2">
+                                {rating ? (
+                                    <>
+                                        <div className="text-sm font-semibold text-primary">
+                                            {rating}/10
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => setRating('')}
+                                            className="p-1 hover:bg-muted rounded-sm transition-colors"
+                                            title="Clear rating"
+                                        >
+                                            <X className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground" />
+                                        </button>
+                                    </>
+                                ) : (
+                                    <div className="text-sm text-muted-foreground">No rating</div>
+                                )}
+                            </div>
                         </div>
                         <Slider
                             value={[rating ? parseFloat(rating) : 5]}
@@ -459,11 +571,6 @@ export default function EditWatchDialog({
                             step={0.5}
                             className="py-4"
                         />
-                        <div className="flex justify-between text-xs text-muted-foreground px-0.5">
-                            <span>1</span>
-                            <span>5</span>
-                            <span>10</span>
-                        </div>
                         {ratingError && (
                             <p className="text-sm text-destructive">{ratingError}</p>
                         )}
@@ -471,17 +578,33 @@ export default function EditWatchDialog({
 
                     {/* Location */}
                     <div ref={locationRef} className="space-y-2">
-                        <Label htmlFor="location">Location</Label>
-                        <Select value={location} onValueChange={setLocation}>
-                            <SelectTrigger>
-                                <SelectValue placeholder="Select location" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="Cinema">Cinema</SelectItem>
-                                <SelectItem value="Home">Home</SelectItem>
-                                <SelectItem value="Other">Other</SelectItem>
-                            </SelectContent>
-                        </Select>
+                        <Label htmlFor="location">Location <span className="text-muted-foreground font-normal">(optional)</span></Label>
+                        <div className="relative">
+                            <Select value={location} onValueChange={setLocation}>
+                                <SelectTrigger className={`w-full ${location ? "[&>svg]:hidden pr-8" : ""}`}>
+                                    <SelectValue placeholder="Select location" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="Cinema">Cinema</SelectItem>
+                                    <SelectItem value="Home">Home</SelectItem>
+                                    <SelectItem value="Other">Other</SelectItem>
+                                </SelectContent>
+                            </Select>
+                            {location && (
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setLocation('');
+                                        setCustomLocation('');
+                                        setLocationError(null);
+                                    }}
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 hover:bg-muted rounded-sm transition-colors"
+                                    title="Clear location"
+                                >
+                                    <X className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground" />
+                                </button>
+                            )}
+                        </div>
 
                         {/* Custom Location (if Other selected) */}
                         {location === 'Other' && (
@@ -534,8 +657,8 @@ export default function EditWatchDialog({
                     </div>
 
                     {/* Watched With */}
-                    <div>
-                        <Label htmlFor="watchedWith">Watched With</Label>
+                    <div className="space-y-2">
+                        <Label htmlFor="watchedWith">Watched With <span className="text-muted-foreground font-normal">(optional)</span></Label>
                         <div className="relative">
                             <Input
                                 id="watchedWith"
@@ -550,8 +673,19 @@ export default function EditWatchDialog({
                                     // Delay to allow clicking on suggestions
                                     setTimeout(() => setShowWatchedWithSuggestions(false), 200);
                                 }}
-                                placeholder="e.g., Sarah, Mike (optional)"
+                                placeholder="e.g., Sarah, Mike"
+                                className={watchedWith ? "pr-8" : ""}
                             />
+                            {watchedWith && (
+                                <button
+                                    type="button"
+                                    onClick={() => setWatchedWith('')}
+                                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-muted rounded-sm transition-colors"
+                                    title="Clear watched with"
+                                >
+                                    <X className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground" />
+                                </button>
+                            )}
                             {showWatchedWithSuggestions && filteredWatchedWithSuggestions.length > 0 && (
                                 <div className="absolute z-50 w-full mt-1 bg-popover border rounded-md shadow-md max-h-60 overflow-y-auto">
                                     {filteredWatchedWithSuggestions.map((suggestion, index) => (
@@ -573,8 +707,8 @@ export default function EditWatchDialog({
                     </div>
 
                     {/* Notes */}
-                    <div>
-                        <Label htmlFor="notes">Notes</Label>
+                    <div className="space-y-2">
+                        <Label htmlFor="notes">Notes <span className="text-muted-foreground font-normal">(optional)</span></Label>
                         <Textarea
                             id="notes"
                             value={notes}
