@@ -109,6 +109,7 @@ export default function WatchDetailPage({ params }: WatchDetailPageProps) {
   const handleWatchlistToggle = async () => {
     if (!user || !movie || !movieId) return;
     setIsTogglingWatchlist(true);
+    setWatchlistHover(false);
     try {
       if (onWatchlist) {
         await watchlistApi.removeFromWatchlist(movieId);
@@ -331,8 +332,9 @@ export default function WatchDetailPage({ params }: WatchDetailPageProps) {
                   size="sm"
                   onClick={handleWatchlistToggle}
                   disabled={isTogglingWatchlist}
-                  onMouseEnter={() => setWatchlistHover(true)}
-                  onMouseLeave={() => setWatchlistHover(false)}
+                  onMouseEnter={() => !isTogglingWatchlist && setWatchlistHover(true)}
+                  onMouseLeave={() => !isTogglingWatchlist && setWatchlistHover(false)}
+                  className="min-w-[160px]"
                 >
                   {onWatchlist ? (
                     watchlistHover ? (

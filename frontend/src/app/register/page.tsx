@@ -9,7 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { LoadingTips } from '@/components/LoadingTips';
 import Link from 'next/link';
 import { toast } from '@/lib/toast';
-import { Check } from 'lucide-react';
+import { Check, Eye, EyeOff } from 'lucide-react';
 
 export default function RegisterPage() {
     const { register, loading: authLoading } = useAuth();
@@ -18,6 +18,8 @@ export default function RegisterPage() {
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
     // Refs for auto-scrolling to errors and focus management
     const usernameRef = useRef<HTMLDivElement>(null);
@@ -323,22 +325,36 @@ export default function RegisterPage() {
                         {/* Password Field */}
                         <div ref={passwordRef} className="space-y-2">
                             <Label htmlFor="password">Password</Label>
-                            <Input
-                                id="password"
-                                type="password"
-                                value={password}
-                                onChange={(e) => {
-                                    setPassword(e.target.value);
-                                    if (passwordError) setPasswordError('');
-                                    // Clear confirm password error if passwords now match
-                                    if (confirmPassword && e.target.value === confirmPassword) {
-                                        setConfirmPasswordError('');
-                                    }
-                                }}
-                                placeholder="Create a strong password"
-                                disabled={isLoading}
-                                className={passwordError ? 'border-destructive' : ''}
-                            />
+                            <div className="relative">
+                                <Input
+                                    id="password"
+                                    type={showPassword ? 'text' : 'password'}
+                                    value={password}
+                                    onChange={(e) => {
+                                        setPassword(e.target.value);
+                                        if (passwordError) setPasswordError('');
+                                        // Clear confirm password error if passwords now match
+                                        if (confirmPassword && e.target.value === confirmPassword) {
+                                            setConfirmPasswordError('');
+                                        }
+                                    }}
+                                    placeholder="Create a strong password"
+                                    disabled={isLoading}
+                                    className={passwordError ? 'border-destructive pr-10' : 'pr-10'}
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                                    tabIndex={-1}
+                                >
+                                    {showPassword ? (
+                                        <EyeOff className="h-4 w-4" />
+                                    ) : (
+                                        <Eye className="h-4 w-4" />
+                                    )}
+                                </button>
+                            </div>
                             {passwordError && (
                                 <p className="text-sm text-destructive mt-1">{passwordError}</p>
                             )}
@@ -478,23 +494,37 @@ export default function RegisterPage() {
                         {/* Confirm Password Field */}
                         <div ref={confirmPasswordRef}>
                             <Label htmlFor="confirmPassword">Confirm Password</Label>
-                            <Input
-                                id="confirmPassword"
-                                type="password"
-                                value={confirmPassword}
-                                onChange={(e) => {
-                                    setConfirmPassword(e.target.value);
-                                    if (confirmPasswordError) setConfirmPasswordError('');
-                                }}
-                                onBlur={() => {
-                                    if (confirmPassword && password !== confirmPassword) {
-                                        setConfirmPasswordError('Passwords do not match');
-                                    }
-                                }}
-                                placeholder="Re-enter your password"
-                                disabled={isLoading}
-                                className={confirmPasswordError ? 'border-destructive' : ''}
-                            />
+                            <div className="relative">
+                                <Input
+                                    id="confirmPassword"
+                                    type={showConfirmPassword ? 'text' : 'password'}
+                                    value={confirmPassword}
+                                    onChange={(e) => {
+                                        setConfirmPassword(e.target.value);
+                                        if (confirmPasswordError) setConfirmPasswordError('');
+                                    }}
+                                    onBlur={() => {
+                                        if (confirmPassword && password !== confirmPassword) {
+                                            setConfirmPasswordError('Passwords do not match');
+                                        }
+                                    }}
+                                    placeholder="Re-enter your password"
+                                    disabled={isLoading}
+                                    className={confirmPasswordError ? 'border-destructive pr-10' : 'pr-10'}
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                                    tabIndex={-1}
+                                >
+                                    {showConfirmPassword ? (
+                                        <EyeOff className="h-4 w-4" />
+                                    ) : (
+                                        <Eye className="h-4 w-4" />
+                                    )}
+                                </button>
+                            </div>
                             {confirmPasswordError && (
                                 <p className="text-sm text-destructive mt-1">{confirmPasswordError}</p>
                             )}

@@ -9,12 +9,14 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { LoadingTips } from '@/components/LoadingTips';
 import Link from 'next/link';
 import { toast } from '@/lib/toast';
+import { Eye, EyeOff } from 'lucide-react';
 
 export default function LoginPage() {
     const { login, loading: authLoading } = useAuth();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
 
     // Refs for auto-scrolling to errors and focus management
     const emailRef = useRef<HTMLDivElement>(null);
@@ -174,18 +176,32 @@ export default function LoginPage() {
                         {/* Password Field */}
                         <div ref={passwordRef}>
                             <Label htmlFor="password">Password</Label>
-                            <Input
-                                id="password"
-                                type="password"
-                                value={password}
-                                onChange={(e) => {
-                                    setPassword(e.target.value);
-                                    if (passwordError) setPasswordError('');
-                                }}
-                                placeholder="Enter your password"
-                                disabled={isLoading}
-                                className={passwordError ? 'border-destructive' : ''}
-                            />
+                            <div className="relative">
+                                <Input
+                                    id="password"
+                                    type={showPassword ? 'text' : 'password'}
+                                    value={password}
+                                    onChange={(e) => {
+                                        setPassword(e.target.value);
+                                        if (passwordError) setPasswordError('');
+                                    }}
+                                    placeholder="Enter your password"
+                                    disabled={isLoading}
+                                    className={passwordError ? 'border-destructive pr-10' : 'pr-10'}
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                                    tabIndex={-1}
+                                >
+                                    {showPassword ? (
+                                        <EyeOff className="h-4 w-4" />
+                                    ) : (
+                                        <Eye className="h-4 w-4" />
+                                    )}
+                                </button>
+                            </div>
                             {passwordError && (
                                 <p className="text-sm text-destructive mt-1">{passwordError}</p>
                             )}
