@@ -99,8 +99,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             email: response.email,
             isPremium: isPremium,
             isDeactivated: response.isDeactivated,
-            deactivatedAt: response.deactivatedAt,
-            daysUntilPermanentDeletion: response.daysUntilPermanentDeletion,
+            deactivatedAt: response.deactivatedAt ?? undefined,
+            daysUntilPermanentDeletion: response.daysUntilPermanentDeletion ?? undefined,
         });
 
         // If account is deactivated, redirect to reactivate page

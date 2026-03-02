@@ -14,12 +14,17 @@ import { Shield, Loader2, Eye, Star, FileText } from "lucide-react";
 
 export function PrivacySettings() {
     const [settings, setSettings] = useState<UserPrivacySettings | null>(null);
+    const [originalSettings, setOriginalSettings] = useState<UserPrivacySettings | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    // Track if settings have changed
-    const [hasChanges, setHasChanges] = useState(false);
+    // Check if current settings differ from original
+    const hasChanges = settings && originalSettings
+        ? settings.shareWatches !== originalSettings.shareWatches ||
+          settings.shareRatings !== originalSettings.shareRatings ||
+          settings.shareNotes !== originalSettings.shareNotes
+        : false;
 
     useEffect(() => {
         fetchSettings();
@@ -31,6 +36,7 @@ export function PrivacySettings() {
             setError(null);
             const data = await privacyApi.getPrivacySettings();
             setSettings(data);
+            setOriginalSettings(data);
         } catch (err) {
             console.error("Failed to fetch privacy settings:", err);
             toast.error("Failed to load privacy settings", {
@@ -49,7 +55,6 @@ export function PrivacySettings() {
             ...settings,
             [field]: !settings[field],
         });
-        setHasChanges(true);
     };
 
     const handleSave = async () => {
@@ -64,7 +69,7 @@ export function PrivacySettings() {
             });
 
             setSettings(updatedSettings);
-            setHasChanges(false);
+            setOriginalSettings(updatedSettings);
             toast.success("Privacy settings updated", {
                 description: "Your changes have been saved",
             });
@@ -79,8 +84,9 @@ export function PrivacySettings() {
     };
 
     const handleReset = () => {
-        fetchSettings();
-        setHasChanges(false);
+        if (originalSettings) {
+            setSettings({ ...originalSettings });
+        }
     };
 
     // Loading state
@@ -218,13 +224,12 @@ export function PrivacySettings() {
                     />
                 </div>
 
-                {/* Save/Reset Buttons */}
+                {/* Save/Cancel Buttons */}
                 {hasChanges && (
                     <div className="flex gap-2 pt-4 border-t">
                         <Button
                             onClick={handleSave}
                             disabled={isSaving}
-                            className="flex-1"
                         >
                             {isSaving ? (
                                 <>
@@ -240,7 +245,7 @@ export function PrivacySettings() {
                             onClick={handleReset}
                             disabled={isSaving}
                         >
-                            Reset
+                            Cancel
                         </Button>
                     </div>
                 )}

@@ -70,7 +70,7 @@ export function WatchForm({ movie, open, onOpenChange, onSuccess }: WatchFormPro
 
     // Privacy & Sharing - Simplified state management
     type SharingMode = 'private' | 'specific' | 'all';
-    const [sharingMode, setSharingMode] = useState<SharingMode>('private'); // Default to private
+    const [sharingMode, setSharingMode] = useState<SharingMode | null>(null); // No default - user must choose
     const [selectedGroups, setSelectedGroups] = useState<number[]>([]);
     const [userGroups, setUserGroups] = useState<GroupBasicInfo[]>([]);
     const [isLoadingGroups, setIsLoadingGroups] = useState(false);
@@ -264,8 +264,12 @@ export function WatchForm({ movie, open, onOpenChange, onSuccess }: WatchFormPro
             if (!firstErrorRef) firstErrorRef = locationRef;
         }
 
-        // Validate privacy + groups combination
-        if (sharingMode === 'specific' && selectedGroups.length === 0) {
+        // Validate privacy selection
+        if (!sharingMode) {
+            setPrivacyError('Please select a privacy option');
+            isValid = false;
+            if (!firstErrorRef) firstErrorRef = privacyRef;
+        } else if (sharingMode === 'specific' && selectedGroups.length === 0) {
             setPrivacyError('Please select at least one group to share with');
             isValid = false;
             if (!firstErrorRef) firstErrorRef = privacyRef;
@@ -358,7 +362,7 @@ export function WatchForm({ movie, open, onOpenChange, onSuccess }: WatchFormPro
         setCustomLocation('');
         setWatchedWith('');
         setIsRewatch(false);
-        setSharingMode('private'); // Reset to default (private)
+        setSharingMode(null); // Reset to no selection - user must choose
         setSelectedGroups([]);
         setError(null);
         setDateError(null);
@@ -715,10 +719,12 @@ export function WatchForm({ movie, open, onOpenChange, onSuccess }: WatchFormPro
 
                     {/* Right Column - Privacy & Sharing */}
                     <div ref={privacyRef} className="space-y-4">
-                        <Label className="text-base">Privacy & Sharing</Label>
+                        <Label className="text-base">Privacy & Sharing *</Label>
 
                         {/* Three Privacy Cards - Horizontal Layout */}
-                        <div className="space-y-3">
+                        <div className={`space-y-3 p-3 rounded-lg border transition-colors ${
+                            privacyError ? 'border-destructive bg-destructive/5' : 'border-transparent'
+                        }`}>
                             {/* Card 1: Private */}
                             <button
                                 type="button"
