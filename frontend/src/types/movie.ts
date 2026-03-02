@@ -31,6 +31,9 @@ export interface MovieDetail {
     tmdbRating?: number | null;
     tmdbVoteCount?: number | null;
     directorName?: string | null;
+    directorProfilePath?: string | null;
+    writerName?: string | null;
+    writerProfilePath?: string | null;
     cast: CastMember[];
 }
 

@@ -18,6 +18,9 @@ public class MovieDetailResponse
     public double? TmdbRating { get; set; }
     public int? TmdbVoteCount { get; set; }
     public string? DirectorName { get; set; }
+    public string? DirectorProfilePath { get; set; }
+    public string? WriterName { get; set; }
+    public string? WriterProfilePath { get; set; }
     public List<CastMemberResponse> Cast { get; set; } = new();
 }
 

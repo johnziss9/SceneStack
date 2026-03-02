@@ -97,7 +97,9 @@ public class MovieService : IMovieService
             // If the movie is missing enriched metadata (created before Phase 6), re-fetch from TMDb
             bool needsEnrichment = existingMovie.Genres.Count == 0
                 && existingMovie.Cast.Count == 0
-                && existingMovie.Runtime == null;
+                && existingMovie.Runtime == null
+                || existingMovie.WriterName == null
+                || existingMovie.DirectorProfilePath == null;
 
             if (!needsEnrichment)
             {
@@ -122,7 +124,19 @@ public class MovieService : IMovieService
                 existingMovie.Genres = enrichedDetail.Genres.Select(g => g.Name).ToList();
                 existingMovie.TmdbRating = enrichedDetail.VoteAverage > 0 ? enrichedDetail.VoteAverage : null;
                 existingMovie.TmdbVoteCount = enrichedDetail.VoteCount > 0 ? enrichedDetail.VoteCount : null;
-                existingMovie.DirectorName = enrichedCredits?.Crew.FirstOrDefault(c => c.Job == "Director")?.Name;
+
+                // Extract director name and profile path
+                var enrichDirectorCrew = enrichedCredits?.Crew.FirstOrDefault(c => c.Job == "Director");
+                existingMovie.DirectorName = enrichDirectorCrew?.Name;
+                existingMovie.DirectorProfilePath = enrichDirectorCrew?.ProfilePath;
+
+                // Extract all writers (Screenplay, Writer, Story)
+                var enrichWriterCrew = enrichedCredits?.Crew
+                    .Where(c => c.Job == "Screenplay" || c.Job == "Writer" || c.Job == "Story")
+                    .ToList();
+                var enrichWriters = enrichWriterCrew?.Select(c => c.Name).Distinct().ToList();
+                existingMovie.WriterName = enrichWriters != null && enrichWriters.Any() ? string.Join(", ", enrichWriters) : null;
+                existingMovie.WriterProfilePath = enrichWriterCrew?.FirstOrDefault()?.ProfilePath;
                 existingMovie.Cast = enrichedCredits?.Cast
                     .OrderBy(c => c.Order)
                     .Take(10)
@@ -149,8 +163,18 @@ public class MovieService : IMovieService
 
         var credits = await creditsTask;
 
-        // Extract director (first crew member with job "Director")
-        var director = credits?.Crew.FirstOrDefault(c => c.Job == "Director")?.Name;
+        // Extract director name and profile path
+        var directorCrew = credits?.Crew.FirstOrDefault(c => c.Job == "Director");
+        var director = directorCrew?.Name;
+        var directorProfilePath = directorCrew?.ProfilePath;
+
+        // Extract all writers (Screenplay, Writer, Story) and combine them
+        var writerCrewList = credits?.Crew
+            .Where(c => c.Job == "Screenplay" || c.Job == "Writer" || c.Job == "Story")
+            .ToList();
+        var writers = writerCrewList?.Select(c => c.Name).Distinct().ToList();
+        var writer = writers != null && writers.Any() ? string.Join(", ", writers) : null;
+        var writerProfilePath = writerCrewList?.FirstOrDefault()?.ProfilePath;
 
         // Extract top 10 billed cast
         var cast = credits?.Cast
@@ -180,6 +204,9 @@ public class MovieService : IMovieService
             TmdbRating = tmdbMovie.VoteAverage > 0 ? tmdbMovie.VoteAverage : null,
             TmdbVoteCount = tmdbMovie.VoteCount > 0 ? tmdbMovie.VoteCount : null,
             DirectorName = director,
+            DirectorProfilePath = directorProfilePath,
+            WriterName = writer,
+            WriterProfilePath = writerProfilePath,
             Cast = cast,
             CreatedAt = DateTime.UtcNow
         };

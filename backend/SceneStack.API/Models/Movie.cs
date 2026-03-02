@@ -18,6 +18,9 @@ public class Movie
     public double? TmdbRating { get; set; }                     // e.g. 7.8
     public int? TmdbVoteCount { get; set; }
     public string? DirectorName { get; set; }
+    public string? DirectorProfilePath { get; set; }
+    public string? WriterName { get; set; }
+    public string? WriterProfilePath { get; set; }
     public List<CastMember> Cast { get; set; } = new();        // JSON column, top 10
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

@@ -93,4 +93,7 @@ public class TmdbCrewMember
 
     [JsonPropertyName("job")]
     public string Job { get; set; } = string.Empty;
+
+    [JsonPropertyName("profile_path")]
+    public string? ProfilePath { get; set; }
 }

@@ -351,17 +351,61 @@ export function MovieDetailClient({ params }: MovieDetailPageProps) {
                     </div>
                 )}
 
-                {/* Director */}
-                {movie.directorName && (
+                {/* Crew (Director & Writer) */}
+                {(movie.directorName || movie.writerName) && (
                     <div className="mt-10">
-                        <h2 className="text-lg font-semibold mb-4">Director</h2>
-                        <div className="flex items-center gap-3">
-                            <div className="w-16 h-16 flex-shrink-0 rounded-full bg-primary/20 border-2 border-primary/40 flex items-center justify-center">
-                                <span className="text-xl font-bold text-primary">
-                                    {movie.directorName.charAt(0)}
-                                </span>
-                            </div>
-                            <p className="font-semibold">{movie.directorName}</p>
+                        <h2 className="text-lg font-semibold mb-4">Crew</h2>
+                        <div className="grid grid-cols-3 sm:grid-cols-5 gap-4">
+                            {movie.directorName && (
+                                <div className="space-y-2">
+                                    <div className="w-16 h-16 rounded-full overflow-hidden bg-muted flex items-center justify-center">
+                                        {movie.directorProfilePath ? (
+                                            <img
+                                                src={`https://image.tmdb.org/t/p/w185${movie.directorProfilePath}`}
+                                                alt={movie.directorName}
+                                                className="w-full h-full object-cover"
+                                            />
+                                        ) : (
+                                            <span className="text-xl font-bold text-muted-foreground">
+                                                {movie.directorName.charAt(0)}
+                                            </span>
+                                        )}
+                                    </div>
+                                    <div>
+                                        <p className="text-xs font-semibold leading-tight line-clamp-2">
+                                            {movie.directorName}
+                                        </p>
+                                        <p className="text-xs text-primary">
+                                            Director
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
+                            {movie.writerName && (
+                                <div className="space-y-2">
+                                    <div className="w-16 h-16 rounded-full overflow-hidden bg-muted flex items-center justify-center">
+                                        {movie.writerProfilePath ? (
+                                            <img
+                                                src={`https://image.tmdb.org/t/p/w185${movie.writerProfilePath}`}
+                                                alt={movie.writerName}
+                                                className="w-full h-full object-cover"
+                                            />
+                                        ) : (
+                                            <span className="text-xl font-bold text-muted-foreground">
+                                                {movie.writerName.charAt(0)}
+                                            </span>
+                                        )}
+                                    </div>
+                                    <div>
+                                        <p className="text-xs font-semibold leading-tight line-clamp-2">
+                                            {movie.writerName}
+                                        </p>
+                                        <p className="text-xs text-primary">
+                                            Writer
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 )}
