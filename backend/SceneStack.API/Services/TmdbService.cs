@@ -102,9 +102,9 @@ public class TmdbService : ITmdbService
         {
             var url = $"{_settings.BaseUrl}/movie/popular?api_key={_settings.ApiKey}&page={page}";
             _logger.LogInformation("Calling TMDb URL: {Url}", url.Replace(_settings.ApiKey, "***"));
-            
+
             var response = await _httpClient.GetAsync(url);
-            
+
             if (!response.IsSuccessStatusCode)
             {
                 _logger.LogError("TMDb API error: {StatusCode}", response.StatusCode);
@@ -117,6 +117,38 @@ public class TmdbService : ITmdbService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting popular movies");
+            return null;
+        }
+    }
+
+    public async Task<TmdbMovieSearchResult?> GetTrendingMoviesAsync(string timeWindow = "week")
+    {
+        try
+        {
+            // Validate timeWindow is either "day" or "week"
+            if (timeWindow != "day" && timeWindow != "week")
+            {
+                _logger.LogWarning("Invalid time window: {TimeWindow}. Defaulting to 'week'", timeWindow);
+                timeWindow = "week";
+            }
+
+            var url = $"{_settings.BaseUrl}/trending/movie/{timeWindow}?api_key={_settings.ApiKey}";
+            _logger.LogInformation("Calling TMDb URL: {Url}", url.Replace(_settings.ApiKey, "***"));
+
+            var response = await _httpClient.GetAsync(url);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogError("TMDb API error: {StatusCode}", response.StatusCode);
+                return null;
+            }
+
+            var content = await response.Content.ReadAsStringAsync();
+            return JsonSerializer.Deserialize<TmdbMovieSearchResult>(content);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting trending movies for time window: {TimeWindow}", timeWindow);
             return null;
         }
     }

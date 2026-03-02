@@ -2,15 +2,15 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useWatchlist } from '@/contexts/WatchlistContext';
+import { useWishlist } from '@/contexts/WatchlistContext';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
-import { Film, User, Users, BarChart2, Menu, X, Eye, LogIn, UserPlus, Bookmark } from 'lucide-react';
+import { Film, User, Users, BarChart2, Menu, X, Eye, LogIn, UserPlus, Bookmark, Search } from 'lucide-react';
 
 export function Navigation() {
     const { user, loading } = useAuth();
-    const { count: watchlistCount } = useWatchlist();
+    const { count: wishlistCount } = useWishlist();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const menuButtonRef = useRef<HTMLButtonElement>(null);
     const mobileMenuRef = useRef<HTMLDivElement>(null);
@@ -115,13 +115,13 @@ export function Navigation() {
                                                 My Watches
                                             </Button>
                                         </Link>
-                                        <Link href="/watchlist">
+                                        <Link href="/wishlist">
                                             <Button variant="ghost" className="gap-2 relative">
                                                 <Bookmark className="h-4 w-4" />
-                                                Watchlist
-                                                {watchlistCount > 0 && (
+                                                My Wishlist
+                                                {wishlistCount > 0 && (
                                                     <Badge variant="default" className="ml-1 px-1.5 py-0 h-5 min-w-[1.25rem] text-[10px]">
-                                                        {watchlistCount}
+                                                        {wishlistCount}
                                                     </Badge>
                                                 )}
                                             </Button>
@@ -138,6 +138,12 @@ export function Navigation() {
                                                 Stats
                                             </Button>
                                         </Link>
+                                        <Link href="/?focus=search">
+                                            <Button variant="ghost" className="gap-2">
+                                                <Search className="h-4 w-4" />
+                                                Search
+                                            </Button>
+                                        </Link>
                                         <Link href="/profile">
                                             <Button variant="ghost" className="gap-2">
                                                 <User className="h-4 w-4" />
@@ -147,6 +153,12 @@ export function Navigation() {
                                     </>
                                 ) : (
                                     <>
+                                        <Link href="/?focus=search">
+                                            <Button variant="ghost" className="gap-2">
+                                                <Search className="h-4 w-4" />
+                                                Search
+                                            </Button>
+                                        </Link>
                                         <Link href="/login">
                                             <Button variant="ghost">Sign In</Button>
                                         </Link>
@@ -210,13 +222,13 @@ export function Navigation() {
                                     My Watches
                                 </Button>
                             </Link>
-                            <Link href="/watchlist" onClick={closeMenu}>
+                            <Link href="/wishlist" onClick={closeMenu}>
                                 <Button variant="ghost" className="w-full justify-start gap-3">
                                     <Bookmark className="h-4 w-4" />
-                                    Watchlist
-                                    {watchlistCount > 0 && (
+                                    My Wishlist
+                                    {wishlistCount > 0 && (
                                         <Badge variant="default" className="ml-auto px-1.5 py-0 h-5 min-w-[1.25rem] text-[10px]">
-                                            {watchlistCount}
+                                            {wishlistCount}
                                         </Badge>
                                     )}
                                 </Button>
@@ -233,6 +245,12 @@ export function Navigation() {
                                     Stats
                                 </Button>
                             </Link>
+                            <Link href="/?focus=search" onClick={closeMenu}>
+                                <Button variant="ghost" className="w-full justify-start gap-3">
+                                    <Search className="h-4 w-4" />
+                                    Search
+                                </Button>
+                            </Link>
                             <Link href="/profile" onClick={closeMenu}>
                                 <Button variant="ghost" className="w-full justify-start gap-3">
                                     <User className="h-4 w-4" />
@@ -242,6 +260,12 @@ export function Navigation() {
                         </>
                     ) : (
                         <>
+                            <Link href="/?focus=search" onClick={closeMenu}>
+                                <Button variant="ghost" className="w-full justify-start gap-3">
+                                    <Search className="h-4 w-4" />
+                                    Search
+                                </Button>
+                            </Link>
                             <Link href="/login" onClick={closeMenu}>
                                 <Button variant="ghost" className="w-full justify-start gap-3">
                                     <LogIn className="h-4 w-4" />

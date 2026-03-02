@@ -5,7 +5,7 @@ import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Calendar, Star, Bookmark, BookmarkCheck, BookmarkX, Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useWatchlist } from '@/contexts/WatchlistContext';
+import { useWishlist } from '@/contexts/WatchlistContext';
 import Link from 'next/link';
 import type { TmdbMovie } from '@/types';
 import { movieApi, watchlistApi } from '@/lib/api';
@@ -15,11 +15,12 @@ import { toast } from '@/lib/toast';
 interface MovieCardProps {
     movie: TmdbMovie;
     onAddToWatched: (movie: TmdbMovie) => void;
+    searchQuery?: string;
 }
 
-export const MovieCard = memo(function MovieCard({ movie, onAddToWatched }: MovieCardProps) {
+export const MovieCard = memo(function MovieCard({ movie, onAddToWatched, searchQuery }: MovieCardProps) {
     const { user } = useAuth();
-    const { incrementCount, decrementCount } = useWatchlist();
+    const { incrementCount, decrementCount } = useWishlist();
     const [onWatchlist, setOnWatchlist] = useState(false);
     const [localMovieId, setLocalMovieId] = useState<number | null>(null);
     const [isSaving, setIsSaving] = useState(false);
@@ -28,6 +29,11 @@ export const MovieCard = memo(function MovieCard({ movie, onAddToWatched }: Movi
     const posterUrl = movie.poster_path
         ? `https://image.tmdb.org/t/p/w342${movie.poster_path}`
         : null;
+
+    // Build movie detail URL with query parameter if present
+    const movieUrl = searchQuery
+        ? `/movies/${movie.id}?from=search&query=${encodeURIComponent(searchQuery)}`
+        : `/movies/${movie.id}?from=search`;
 
     const year = movie.release_date
         ? new Date(movie.release_date).getFullYear()
@@ -59,21 +65,21 @@ export const MovieCard = memo(function MovieCard({ movie, onAddToWatched }: Movi
                 setOnWatchlist(false);
                 setLocalMovieId(null);
                 decrementCount();
-                toast.success('Removed from watchlist');
+                toast.success('Removed from wishlist');
             } else {
                 const result = await watchlistApi.addToWatchlist(movie.id);
                 setOnWatchlist(true);
                 setLocalMovieId(result.movieId);
                 incrementCount();
-                toast.success('Saved to watchlist');
+                toast.success('Saved to wishlist');
             }
         } catch (err) {
             if (err instanceof PremiumRequiredError) {
-                toast.error('Watchlist limit reached. Upgrade to Premium for unlimited saves.');
+                toast.error('Wishlist limit reached. Upgrade to Premium for unlimited saves.');
             } else if (err instanceof ApiError && err.status === 409) {
                 setOnWatchlist(true);
             } else {
-                toast.error(onWatchlist ? 'Failed to remove from watchlist' : 'Failed to save to watchlist');
+                toast.error(onWatchlist ? 'Failed to remove from wishlist' : 'Failed to save to wishlist');
             }
         } finally {
             setIsSaving(false);
@@ -82,7 +88,7 @@ export const MovieCard = memo(function MovieCard({ movie, onAddToWatched }: Movi
 
     return (
         <Card className="overflow-hidden hover:ring-2 hover:ring-primary transition-all flex flex-col h-full">
-            <Link href={`/movies/${movie.id}`} tabIndex={-1}>
+            <Link href={movieUrl} tabIndex={-1}>
                 <div className="aspect-[2/3] relative bg-muted">
                     {posterUrl ? (
                         <img
@@ -96,15 +102,15 @@ export const MovieCard = memo(function MovieCard({ movie, onAddToWatched }: Movi
                         </div>
                     )}
 
-                    {/* Watchlist toggle button (authenticated only) */}
+                    {/* Wishlist toggle button (authenticated only) */}
                     {user && (
                         <button
                             onClick={handleWatchlistToggle}
                             onMouseEnter={() => setIsHoveringBookmark(true)}
                             onMouseLeave={() => setIsHoveringBookmark(false)}
                             disabled={isSaving}
-                            aria-label={onWatchlist ? 'Remove from watchlist' : 'Save to watchlist'}
-                            title={onWatchlist ? 'Remove from watchlist' : 'Save to watchlist'}
+                            aria-label={onWatchlist ? 'Remove from wishlist' : 'Save to wishlist'}
+                            title={onWatchlist ? 'Remove from wishlist' : 'Save to wishlist'}
                             className="absolute top-2 right-2 w-8 h-8 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center shadow hover:bg-background transition-colors"
                         >
                             {isSaving ? (
@@ -122,7 +128,7 @@ export const MovieCard = memo(function MovieCard({ movie, onAddToWatched }: Movi
             </Link>
 
             <CardContent className="p-4 space-y-2 flex-grow">
-                <Link href={`/movies/${movie.id}`} className="hover:underline">
+                <Link href={movieUrl} className="hover:underline">
                     <h3 className="font-semibold line-clamp-2 leading-tight">
                         {movie.title}
                     </h3>

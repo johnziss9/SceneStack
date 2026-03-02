@@ -1,12 +1,12 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { movieApi, watchlistApi } from '@/lib/api';
 import type { MovieDetail, MovieUserStatus, TmdbMovie } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
-import { useWatchlist } from '@/contexts/WatchlistContext';
+import { useWishlist } from '@/contexts/WatchlistContext';
 import { WatchForm } from '@/components/WatchForm';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -36,8 +36,13 @@ function formatRuntime(minutes: number): string {
 
 export function MovieDetailClient({ params }: MovieDetailPageProps) {
     const router = useRouter();
+    const searchParams = useSearchParams();
     const { user } = useAuth();
-    const { incrementCount, decrementCount } = useWatchlist();
+    const { incrementCount, decrementCount } = useWishlist();
+
+    // Get referrer from URL params to determine back button text
+    const referrer = searchParams.get('from') || 'search';
+    const searchQuery = searchParams.get('query') || '';
 
     const [tmdbId, setTmdbId] = useState<number | null>(null);
     const [movie, setMovie] = useState<MovieDetail | null>(null);
@@ -48,6 +53,25 @@ export function MovieDetailClient({ params }: MovieDetailPageProps) {
     const [isWatchFormOpen, setIsWatchFormOpen] = useState(false);
     const [isTogglingWatchlist, setIsTogglingWatchlist] = useState(false);
     const [watchlistHover, setWatchlistHover] = useState(false);
+
+    // Helper to get back button text and navigation based on referrer
+    const getBackButtonInfo = () => {
+        switch (referrer) {
+            case 'wishlist':
+                return { text: 'Back to My Wishlist', url: '/wishlist' };
+            case 'watches':
+                return { text: 'Back to My Watches', url: '/watched' };
+            case 'search':
+            default:
+                // Preserve search query if present
+                const searchUrl = searchQuery
+                    ? `/?query=${encodeURIComponent(searchQuery)}&focus=search`
+                    : '/?focus=search';
+                return { text: 'Back to Search', url: searchUrl };
+        }
+    };
+
+    const backButtonInfo = getBackButtonInfo();
 
     useEffect(() => {
         async function load() {
@@ -171,9 +195,11 @@ export function MovieDetailClient({ params }: MovieDetailPageProps) {
             <div className="max-w-2xl mx-auto px-4 py-24 text-center space-y-4">
                 <AlertCircle className="h-12 w-12 text-destructive mx-auto" />
                 <h1 className="text-2xl font-bold">{error ?? 'Movie not found'}</h1>
-                <Button variant="outline" onClick={() => router.back()}>
-                    <ArrowLeft className="h-4 w-4 mr-2" /> Go back
-                </Button>
+                <Link href={backButtonInfo.url}>
+                    <Button variant="outline">
+                        <ArrowLeft className="h-4 w-4 mr-2" /> {backButtonInfo.text}
+                    </Button>
+                </Link>
             </div>
         );
     }
@@ -198,14 +224,15 @@ export function MovieDetailClient({ params }: MovieDetailPageProps) {
                 {/* Back button */}
                 <div className="absolute top-4 left-0 right-0">
                     <div className="max-w-5xl mx-auto px-4 sm:px-6">
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => router.back()}
-                            className="!bg-muted !text-primary !border-primary shadow-sm hover:!bg-primary hover:!text-primary-foreground"
-                        >
-                            <ArrowLeft className="h-4 w-4 mr-2" /> Back to Watchlist
-                        </Button>
+                        <Link href={backButtonInfo.url}>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                className="!bg-muted !text-primary !border-primary shadow-sm hover:!bg-primary hover:!text-primary-foreground"
+                            >
+                                <ArrowLeft className="h-4 w-4 mr-2" /> {backButtonInfo.text}
+                            </Button>
+                        </Link>
                     </div>
                 </div>
             </div>

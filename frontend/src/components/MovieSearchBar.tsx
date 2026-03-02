@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, memo } from 'react';
+import { useState, useEffect, memo, forwardRef, useImperativeHandle, useRef } from 'react';
 import { Search, X, Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -10,12 +10,33 @@ import type { TmdbMovie, TmdbSearchResponse } from '@/types';
 interface MovieSearchBarProps {
     onResultsChange: (results: TmdbMovie[], totalResults?: number, totalPages?: number, query?: string) => void;
     onLoadingChange?: (isLoading: boolean) => void;
+    initialQuery?: string;
 }
 
-export const MovieSearchBar = memo(function MovieSearchBar({ onResultsChange, onLoadingChange }: MovieSearchBarProps) {
-    const [query, setQuery] = useState('');
+export interface MovieSearchBarRef {
+    focus: () => void;
+}
+
+export const MovieSearchBar = memo(forwardRef<MovieSearchBarRef, MovieSearchBarProps>(function MovieSearchBar({ onResultsChange, onLoadingChange, initialQuery = '' }, ref) {
+    const [query, setQuery] = useState(initialQuery);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const inputRef = useRef<HTMLInputElement>(null);
+    const isInitialMount = useRef(true);
+
+    // Set initial query if provided
+    useEffect(() => {
+        if (initialQuery && isInitialMount.current) {
+            setQuery(initialQuery);
+            isInitialMount.current = false;
+        }
+    }, [initialQuery]);
+
+    useImperativeHandle(ref, () => ({
+        focus: () => {
+            inputRef.current?.focus();
+        }
+    }));
 
     // Debounced search effect
     useEffect(() => {
@@ -62,6 +83,7 @@ export const MovieSearchBar = memo(function MovieSearchBar({ onResultsChange, on
             <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
+                    ref={inputRef}
                     type="text"
                     placeholder="Search for a movie..."
                     value={query}
@@ -93,4 +115,4 @@ export const MovieSearchBar = memo(function MovieSearchBar({ onResultsChange, on
             )}
         </div>
     );
-});
+}));

@@ -1,14 +1,14 @@
 "use client";
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Skeleton } from "@/components/ui/skeleton";
 import { LoadingTips } from "@/components/LoadingTips";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Film, TrendingUp, Eye, Users, ArrowRight, Sparkles, Crown, Zap, Loader2, Search } from 'lucide-react';
-import { MovieSearchBar } from "@/components/MovieSearchBar";
+import { Film, TrendingUp, Eye, Users, ArrowRight, Sparkles, Crown, Zap, Loader2, Search, BarChart2 } from 'lucide-react';
+import { MovieSearchBar, type MovieSearchBarRef } from "@/components/MovieSearchBar";
 import { MovieCard } from "@/components/MovieCard";
 import { WatchCard } from "@/components/WatchCard";
 import { WatchForm } from "@/components/WatchForm";
@@ -20,6 +20,8 @@ import type { TmdbMovie, GroupedWatch } from '@/types';
 export default function Home() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const searchBarRef = useRef<MovieSearchBarRef>(null);
   const [searchResults, setSearchResults] = useState<TmdbMovie[]>([]);
   const [totalSearchResults, setTotalSearchResults] = useState<number>(0);
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -31,15 +33,33 @@ export default function Home() {
   const [isSearching, setIsSearching] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
+  // Get initial query from URL
+  const initialQuery = searchParams.get('query') || '';
+
   // Logged-in user data
   const [recentWatches, setRecentWatches] = useState<GroupedWatch[]>([]);
   const [totalWatchCount, setTotalWatchCount] = useState(0);
   const [isLoadingRecent, setIsLoadingRecent] = useState(false);
 
+  // Trending movies
+  const [trendingMovies, setTrendingMovies] = useState<TmdbMovie[]>([]);
+  const [isLoadingTrending, setIsLoadingTrending] = useState(false);
+
+  // Focus search bar if URL parameter is present
+  useEffect(() => {
+    if (searchParams.get('focus') === 'search') {
+      // Small delay to ensure component is mounted
+      setTimeout(() => {
+        searchBarRef.current?.focus();
+      }, 100);
+    }
+  }, [searchParams]);
+
   // Fetch recent watches and stats for logged-in users
   useEffect(() => {
     if (user) {
       fetchRecentWatches();
+      fetchTrendingMovies();
     }
   }, [user]);
 
@@ -57,6 +77,18 @@ export default function Home() {
       console.error('Failed to fetch recent watches:', err);
     } finally {
       setIsLoadingRecent(false);
+    }
+  };
+
+  const fetchTrendingMovies = async () => {
+    try {
+      setIsLoadingTrending(true);
+      const data = await movieApi.getTrending('week');
+      setTrendingMovies(data.results.slice(0, 5)); // Get first 5
+    } catch (err) {
+      console.error('Failed to fetch trending movies:', err);
+    } finally {
+      setIsLoadingTrending(false);
     }
   };
 
@@ -83,6 +115,16 @@ export default function Home() {
     setTotalPages(totalPages);
     setCurrentPage(1);
     setCurrentQuery(query);
+
+    // Update URL with search query
+    const params = new URLSearchParams(window.location.search);
+    if (query) {
+      params.set('query', query);
+    } else {
+      params.delete('query');
+    }
+    const newUrl = params.toString() ? `/?${params.toString()}` : '/';
+    window.history.replaceState({}, '', newUrl);
   }, []);
 
   const handleLoadingChange = useCallback((loading: boolean) => {
@@ -355,6 +397,8 @@ export default function Home() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <MovieSearchBar
+                  ref={searchBarRef}
+                  initialQuery={initialQuery}
                   onResultsChange={handleSearchChange}
                   onLoadingChange={handleLoadingChange}
                 />
@@ -407,6 +451,7 @@ export default function Home() {
                       key={movie.id}
                       movie={movie}
                       onAddToWatched={handleAddToWatched}
+                      searchQuery={currentQuery}
                     />
                   ))}
                 </div>
@@ -488,7 +533,7 @@ export default function Home() {
               <Card className="h-full cursor-pointer hover:border-primary">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Your Stats</CardTitle>
-                  <TrendingUp className="h-4 w-4 text-primary" />
+                  <BarChart2 className="h-4 w-4 text-primary" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">View Stats</div>
@@ -498,6 +543,46 @@ export default function Home() {
                 </CardContent>
               </Card>
             </Link>
+          </div>
+        )}
+
+        {/* Trending This Week for Logged-In Users */}
+        {user && searchResults.length === 0 && trendingMovies.length > 0 && (
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-2xl font-semibold flex items-center gap-2">
+                <TrendingUp className="h-6 w-6 text-primary" />
+                Trending This Week
+              </h2>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+              {trendingMovies.map((movie) => (
+                <MovieCard
+                  key={movie.id}
+                  movie={movie}
+                  onAddToWatched={handleAddToWatched}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Loading Trending Movies */}
+        {user && searchResults.length === 0 && isLoadingTrending && trendingMovies.length === 0 && (
+          <div className="space-y-6">
+            <h2 className="text-2xl font-semibold mb-4 flex items-center gap-2">
+              <TrendingUp className="h-6 w-6 text-primary" />
+              Trending This Week
+            </h2>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="space-y-3">
+                  <Skeleton variant="poster" className="w-full rounded-lg" />
+                  <Skeleton variant="branded" className="h-4 w-3/4" />
+                  <Skeleton variant="branded" className="h-4 w-1/2" />
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
@@ -565,6 +650,8 @@ export default function Home() {
             <Card>
               <CardContent className="pt-6 space-y-4">
                 <MovieSearchBar
+                  ref={searchBarRef}
+                  initialQuery={initialQuery}
                   onResultsChange={handleSearchChange}
                   onLoadingChange={handleLoadingChange}
                 />
@@ -620,6 +707,7 @@ export default function Home() {
                     key={movie.id}
                     movie={movie}
                     onAddToWatched={handleAddToWatched}
+                    searchQuery={currentQuery}
                   />
                 ))}
               </div>

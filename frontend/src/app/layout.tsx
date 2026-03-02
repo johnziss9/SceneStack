@@ -3,7 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "sonner";
 import { AuthProvider } from "@/contexts/AuthContext";
-import { WatchlistProvider } from "@/contexts/WatchlistContext";
+import { WishlistProvider } from "@/contexts/WatchlistContext";
 import { Navigation } from "@/components/Navigation";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 
@@ -33,7 +33,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <AuthProvider>
-          <WatchlistProvider>
+          <WishlistProvider>
             <Navigation />
             <ErrorBoundary>
               {children}
@@ -52,7 +52,7 @@ export default function RootLayout({
                 className: 'custom-toast',
               }}
             />
-          </WatchlistProvider>
+          </WishlistProvider>
         </AuthProvider>
       </body>
     </html>

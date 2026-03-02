@@ -4,7 +4,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { useAuth } from './AuthContext';
 import { watchlistApi } from '@/lib/api';
 
-interface WatchlistContextType {
+interface WishlistContextType {
     count: number;
     isLoading: boolean;
     incrementCount: () => void;
@@ -12,9 +12,9 @@ interface WatchlistContextType {
     refreshCount: () => Promise<void>;
 }
 
-const WatchlistContext = createContext<WatchlistContextType | undefined>(undefined);
+const WishlistContext = createContext<WishlistContextType | undefined>(undefined);
 
-export function WatchlistProvider({ children }: { children: ReactNode }) {
+export function WishlistProvider({ children }: { children: ReactNode }) {
     const { user } = useAuth();
     const [count, setCount] = useState(0);
     const [isLoading, setIsLoading] = useState(false);
@@ -53,7 +53,7 @@ export function WatchlistProvider({ children }: { children: ReactNode }) {
     };
 
     return (
-        <WatchlistContext.Provider
+        <WishlistContext.Provider
             value={{
                 count,
                 isLoading,
@@ -63,14 +63,14 @@ export function WatchlistProvider({ children }: { children: ReactNode }) {
             }}
         >
             {children}
-        </WatchlistContext.Provider>
+        </WishlistContext.Provider>
     );
 }
 
-export function useWatchlist() {
-    const context = useContext(WatchlistContext);
+export function useWishlist() {
+    const context = useContext(WishlistContext);
     if (context === undefined) {
-        throw new Error('useWatchlist must be used within a WatchlistProvider');
+        throw new Error('useWishlist must be used within a WishlistProvider');
     }
     return context;
 }

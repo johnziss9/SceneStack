@@ -46,6 +46,19 @@ public class MoviesController : ControllerBase
         return Ok(result);
     }
 
+    // GET: api/movies/trending/week
+    [HttpGet("trending/{timeWindow}")]
+    [AllowAnonymous]
+    public async Task<ActionResult<TmdbMovieSearchResult>> GetTrendingMovies(string timeWindow = "week")
+    {
+        var result = await _tmdbService.GetTrendingMoviesAsync(timeWindow);
+
+        if (result == null)
+            return StatusCode(500, "Error fetching trending movies");
+
+        return Ok(result);
+    }
+
     // GET: api/movies/tmdb/550
     // Serves enriched movie detail from the DB (creating it on first access)
     [HttpGet("tmdb/{tmdbId}")]

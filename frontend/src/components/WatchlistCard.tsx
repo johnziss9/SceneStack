@@ -20,7 +20,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { WatchForm } from '@/components/WatchForm';
 import { watchlistApi } from '@/lib/api';
-import { useWatchlist } from '@/contexts/WatchlistContext';
+import { useWishlist } from '@/contexts/WatchlistContext';
 import type { WatchlistItem, TmdbMovie } from '@/types';
 import { toast } from '@/lib/toast';
 
@@ -32,7 +32,7 @@ interface WatchlistCardProps {
 
 export function WatchlistCard({ item, onRemoved, isDragDisabled = false }: WatchlistCardProps) {
     const router = useRouter();
-    const { decrementCount } = useWatchlist();
+    const { decrementCount } = useWishlist();
     const [isRemoving, setIsRemoving] = useState(false);
     const [isWatchFormOpen, setIsWatchFormOpen] = useState(false);
     const [isRemoveDialogOpen, setIsRemoveDialogOpen] = useState(false);
@@ -148,7 +148,7 @@ export function WatchlistCard({ item, onRemoved, isDragDisabled = false }: Watch
                     )}
 
                     {/* Poster */}
-                    <Link href={`/movies/${item.movie.tmdbId}`} className="flex-shrink-0">
+                    <Link href={`/movies/${item.movie.tmdbId}?from=wishlist`} className="flex-shrink-0">
                         <div className="w-20 aspect-[2/3] bg-muted relative">
                             {posterUrl ? (
                                 <img
@@ -168,7 +168,7 @@ export function WatchlistCard({ item, onRemoved, isDragDisabled = false }: Watch
                     <CardContent className="flex-1 p-3 min-w-0">
                         <div className="flex items-start justify-between gap-2">
                             <div className="min-w-0">
-                                <Link href={`/movies/${item.movie.tmdbId}`} className="hover:underline">
+                                <Link href={`/movies/${item.movie.tmdbId}?from=wishlist`} className="hover:underline">
                                     <h3 className="font-semibold line-clamp-2 leading-tight">
                                         {item.movie.title}
                                     </h3>

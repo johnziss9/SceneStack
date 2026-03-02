@@ -8,4 +8,5 @@ public interface ITmdbService
     Task<TmdbMovie?> GetMovieDetailsAsync(int tmdbId);
     Task<TmdbCreditsResult?> GetMovieCreditsAsync(int tmdbId);
     Task<TmdbMovieSearchResult?> GetPopularMoviesAsync(int page = 1);
+    Task<TmdbMovieSearchResult?> GetTrendingMoviesAsync(string timeWindow = "week");
 }

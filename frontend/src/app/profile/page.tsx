@@ -1,7 +1,7 @@
 'use client';
 
 import { useAuth } from '@/contexts/AuthContext';
-import { useWatchlist } from '@/contexts/WatchlistContext';
+import { useWishlist } from '@/contexts/WatchlistContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -34,7 +34,7 @@ import type { GroupWithTransferEligibility } from '@/types/groupTransfer';
 
 export default function ProfilePage() {
     const { user, logout, loading, refreshUser } = useAuth();
-    const { count: watchlistCount } = useWatchlist();
+    const { count: wishlistCount } = useWishlist();
     const router = useRouter();
 
     // Edit mode state
@@ -746,10 +746,10 @@ export default function ProfilePage() {
 
                                 {!(user as any)?.isPremium && (
                                     <div className="space-y-2">
-                                        <Label className="text-muted-foreground">Watchlist Usage</Label>
+                                        <Label className="text-muted-foreground">Wishlist Usage</Label>
                                         <p className="text-base">
-                                            {watchlistCount} / 50 saved
-                                            {watchlistCount >= 50 && (
+                                            {wishlistCount} / 50 saved
+                                            {wishlistCount >= 50 && (
                                                 <span className="text-destructive ml-2">(Limit reached)</span>
                                             )}
                                         </p>
@@ -810,7 +810,7 @@ export default function ProfilePage() {
                                                 </div>
                                                 <div className="flex items-center gap-2 text-sm">
                                                     <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                                                    <span>Unlimited watchlist</span>
+                                                    <span>Unlimited wishlist</span>
                                                 </div>
                                                 <div className="flex items-center gap-2 text-sm">
                                                     <div className="w-1.5 h-1.5 rounded-full bg-primary" />
@@ -867,7 +867,7 @@ export default function ProfilePage() {
                                                 <div className="flex items-start gap-3 text-sm">
                                                     <Crown className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
                                                     <div>
-                                                        <p className="font-medium">Unlimited Watchlist</p>
+                                                        <p className="font-medium">Unlimited Wishlist</p>
                                                         <p className="text-muted-foreground text-xs">
                                                             Save as many movies as you want
                                                         </p>
@@ -1121,7 +1121,7 @@ export default function ProfilePage() {
                                     <CardTitle>Your Data</CardTitle>
                                 </div>
                                 <CardDescription>
-                                    Export your complete watch history, groups, watchlist, and account data
+                                    Export your complete watch history, groups, wishlist, and account data
                                 </CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-4">
@@ -1149,7 +1149,7 @@ export default function ProfilePage() {
                                     </Button>
                                 </div>
                                 <div className="text-xs text-muted-foreground space-y-1">
-                                    <p>• <strong>CSV (ZIP):</strong> Multiple files (watches, watchlist, groups, account) - compatible with Excel/Google Sheets</p>
+                                    <p>• <strong>CSV (ZIP):</strong> Multiple files (watches, wishlist, groups, account) - compatible with Excel/Google Sheets</p>
                                     <p>• <strong>JSON:</strong> Single file with all data - for developers/technical users</p>
                                 </div>
                             </CardContent>
@@ -1241,7 +1241,7 @@ export default function ProfilePage() {
                                 <ul className="list-disc list-inside mt-2 space-y-1">
                                     <li>All your watch history</li>
                                     <li>Groups you created or joined</li>
-                                    <li>Your watchlist</li>
+                                    <li>Your wishlist</li>
                                     <li>AI insights and searches</li>
                                 </ul>
                             </div>
@@ -1277,7 +1277,7 @@ export default function ProfilePage() {
                             </Button>
                         </div>
                         <p className="text-xs text-muted-foreground mt-2">
-                            CSV contains multiple files (watches, watchlist, groups, account)
+                            CSV contains multiple files (watches, wishlist, groups, account)
                         </p>
                     </div>
 

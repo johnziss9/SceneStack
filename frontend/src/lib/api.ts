@@ -62,6 +62,10 @@ export const movieApi = {
     searchMovies: (query: string, page: number = 1) =>
         api.get<TmdbSearchResponse>(`/api/movies/search?query=${encodeURIComponent(query)}&page=${page}`),
 
+    // GET: api/movies/trending/{timeWindow} - Get trending movies (day or week)
+    getTrending: (timeWindow: 'day' | 'week' = 'week') =>
+        api.get<TmdbSearchResponse>(`/api/movies/trending/${timeWindow}`),
+
     // GET: api/movies/tmdb/{tmdbId} — enriched detail from DB
     getDetail: (tmdbId: number) =>
         api.get<MovieDetail>(`/api/movies/tmdb/${tmdbId}`),

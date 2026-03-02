@@ -184,10 +184,32 @@ public class MovieService : IMovieService
             CreatedAt = DateTime.UtcNow
         };
 
-        var createdMovie = await CreateAsync(movie);
-        _logger.LogInformation("Successfully created enriched movie in database with ID: {MovieId}", createdMovie.Id);
+        try
+        {
+            var createdMovie = await CreateAsync(movie);
+            _logger.LogInformation("Successfully created enriched movie in database with ID: {MovieId}", createdMovie.Id);
+            return createdMovie;
+        }
+        catch (DbUpdateException ex) when (ex.InnerException?.Message.Contains("unique", StringComparison.OrdinalIgnoreCase) == true ||
+                                            ex.InnerException?.Message.Contains("duplicate", StringComparison.OrdinalIgnoreCase) == true)
+        {
+            // Race condition: another request created this movie concurrently
+            _logger.LogWarning("Race condition detected for TMDb ID {TmdbId}, fetching existing movie", tmdbId);
 
-        return createdMovie;
+            // Fetch the movie that was created by the other request
+            var concurrentlyCreatedMovie = await _context.Movies
+                .IgnoreQueryFilters()
+                .FirstOrDefaultAsync(m => m.TmdbId == tmdbId);
+
+            if (concurrentlyCreatedMovie != null && concurrentlyCreatedMovie.IsDeleted)
+            {
+                concurrentlyCreatedMovie.IsDeleted = false;
+                concurrentlyCreatedMovie.DeletedAt = null;
+                await _context.SaveChangesAsync();
+            }
+
+            return concurrentlyCreatedMovie;
+        }
     }
 
     public async Task<MovieUserStatus> GetMyStatusAsync(int userId, int tmdbId)

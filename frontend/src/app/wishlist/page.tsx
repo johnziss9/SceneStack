@@ -31,7 +31,7 @@ type SortBy = 'priority-asc' | 'recent';
 
 const PAGE_SIZE = 20;
 
-export default function WatchlistPage() {
+export default function WishlistPage() {
     const [items, setItems] = useState<WatchlistItem[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -49,14 +49,14 @@ export default function WatchlistPage() {
         })
     );
 
-    const loadWatchlist = useCallback(async (newPage: number, newSort: SortBy, append: boolean) => {
+    const loadWishlist = useCallback(async (newPage: number, newSort: SortBy, append: boolean) => {
         try {
             const data = await watchlistApi.getWatchlist(newPage, PAGE_SIZE, newSort);
             setItems(prev => append ? [...prev, ...data.items] : data.items);
             setHasMore(data.hasMore);
             setTotalCount(data.totalCount);
         } catch {
-            setError('Failed to load watchlist. Please try again.');
+            setError('Failed to load wishlist. Please try again.');
         }
     }, []);
 
@@ -64,13 +64,13 @@ export default function WatchlistPage() {
     useEffect(() => {
         setIsLoading(true);
         setError(null);
-        loadWatchlist(1, sortBy, false).finally(() => setIsLoading(false));
-    }, [sortBy, loadWatchlist]);
+        loadWishlist(1, sortBy, false).finally(() => setIsLoading(false));
+    }, [sortBy, loadWishlist]);
 
     const handleLoadMore = async () => {
         const nextPage = page + 1;
         setIsLoadingMore(true);
-        await loadWatchlist(nextPage, sortBy, true);
+        await loadWishlist(nextPage, sortBy, true);
         setPage(nextPage);
         setIsLoadingMore(false);
     };
@@ -91,7 +91,7 @@ export default function WatchlistPage() {
             setTotalCount(data.totalCount);
             setPage(1);
         } catch (error) {
-            setError('Failed to refresh watchlist. Please reload the page.');
+            setError('Failed to refresh wishlist. Please reload the page.');
         }
     };
 
@@ -127,7 +127,7 @@ export default function WatchlistPage() {
             await watchlistApi.updatePriority(movieId, newPriority);
             // Backend handles renumbering all items
             // Refresh to get updated priorities from server
-            await loadWatchlist(1, sortBy, false);
+            await loadWishlist(1, sortBy, false);
         } catch (error) {
             // Revert on error
             setItems(items);
@@ -142,7 +142,7 @@ export default function WatchlistPage() {
                 <div>
                     <h1 className="text-2xl font-bold flex items-center gap-2">
                         <Bookmark className="h-6 w-6 text-primary" />
-                        Watchlist
+                        My Wishlist
                     </h1>
                     {!isLoading && (
                         <p className="text-sm text-muted-foreground mt-1">
@@ -210,7 +210,7 @@ export default function WatchlistPage() {
                         onClick={() => {
                             setError(null);
                             setIsLoading(true);
-                            loadWatchlist(1, sortBy, false).finally(() => setIsLoading(false));
+                            loadWishlist(1, sortBy, false).finally(() => setIsLoading(false));
                         }}
                     >
                         Try again
@@ -222,9 +222,9 @@ export default function WatchlistPage() {
             {!isLoading && !error && items.length === 0 && (
                 <div className="flex flex-col items-center justify-center py-12 space-y-4">
                     <Bookmark className="h-16 w-16 text-muted-foreground" />
-                    <p className="text-xl text-muted-foreground">No movies in your watchlist yet</p>
+                    <p className="text-xl text-muted-foreground">No movies in your wishlist yet</p>
                     <p className="text-sm text-muted-foreground">
-                        Browse movies and add them to your watchlist to keep track of what you want to watch
+                        Browse movies and add them to your wishlist to keep track of what you want to watch
                     </p>
                     <a href="/" className="px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90">
                         Search Movies
@@ -250,7 +250,7 @@ export default function WatchlistPage() {
                             {sortBy === 'priority-asc' && (
                                 <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/50 p-3 rounded-lg">
                                     <Info className="h-4 w-4 flex-shrink-0" />
-                                    <span>Drag and drop movies to reorder your watchlist</span>
+                                    <span>Drag and drop movies to reorder your wishlist</span>
                                 </div>
                             )}
                             {sortBy === 'recent' && (

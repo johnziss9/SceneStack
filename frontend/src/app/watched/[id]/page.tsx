@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { watchApi } from '@/lib';
 import { movieApi, watchlistApi } from '@/lib/api';
-import { useWatchlist } from '@/contexts/WatchlistContext';
+import { useWishlist } from '@/contexts/WatchlistContext';
 import type { Watch, Movie, MovieDetail } from '@/types';
 import { ApiError, PremiumRequiredError } from '@/lib/api-client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -43,7 +43,7 @@ function formatRuntime(minutes: number): string {
 export default function WatchDetailPage({ params }: WatchDetailPageProps) {
   const router = useRouter();
   const { user } = useAuth();
-  const { incrementCount, decrementCount } = useWatchlist();
+  const { incrementCount, decrementCount } = useWishlist();
   const [movieId, setMovieId] = useState<number | null>(null);
   const [watches, setWatches] = useState<Watch[]>([]);
   const [movie, setMovie] = useState<Movie | null>(null);
@@ -115,16 +115,16 @@ export default function WatchDetailPage({ params }: WatchDetailPageProps) {
         await watchlistApi.removeFromWatchlist(movieId);
         setOnWatchlist(false);
         decrementCount();
-        toast.success('Removed from watchlist');
+        toast.success('Removed from wishlist');
       } else {
         await watchlistApi.addToWatchlist(movie.tmdbId);
         setOnWatchlist(true);
         incrementCount();
-        toast.success('Saved to watchlist');
+        toast.success('Saved to wishlist');
       }
     } catch (err) {
       if (err instanceof PremiumRequiredError) {
-        toast.error('Watchlist limit reached. Upgrade to Premium for unlimited saves.');
+        toast.error('Wishlist limit reached. Upgrade to Premium for unlimited saves.');
       } else {
         toast.error('Something went wrong. Please try again.');
       }
@@ -215,7 +215,7 @@ export default function WatchDetailPage({ params }: WatchDetailPageProps) {
             className="mb-4"
           >
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Watched List
+            Back to My Watches
           </Button>
           <Card>
             <CardContent className="pt-12 pb-12">
@@ -257,7 +257,7 @@ export default function WatchDetailPage({ params }: WatchDetailPageProps) {
               }}
               className="!bg-muted !text-primary !border-primary shadow-sm hover:!bg-primary hover:!text-primary-foreground"
             >
-              <ArrowLeft className="h-4 w-4 mr-2" /> Back to Watched
+              <ArrowLeft className="h-4 w-4 mr-2" /> Back to My Watches
             </Button>
           </div>
         </div>
@@ -340,10 +340,10 @@ export default function WatchDetailPage({ params }: WatchDetailPageProps) {
                     watchlistHover ? (
                       <><BookmarkPlus className="h-4 w-4 mr-2 text-destructive" />Remove</>
                     ) : (
-                      <><BookmarkCheck className="h-4 w-4 mr-2" />On Watchlist</>
+                      <><BookmarkCheck className="h-4 w-4 mr-2" />On Wishlist</>
                     )
                   ) : (
-                    <><BookmarkPlus className="h-4 w-4 mr-2" />Save to Watchlist</>
+                    <><BookmarkPlus className="h-4 w-4 mr-2" />Save to Wishlist</>
                   )}
                 </Button>
               )}
