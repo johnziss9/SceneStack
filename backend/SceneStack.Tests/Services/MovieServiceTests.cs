@@ -576,9 +576,13 @@ public class MovieServiceTests
             Genres = new List<string> { "Action" }, // Has genres
             Cast = new List<CastMember>
             {
-                new CastMember { Name = "Actor", Character = "Role" }
+                new CastMember { Name = "Actor", Character = "Role", ProfilePath = "/actor.jpg" }
             }, // Has cast
             Runtime = 100, // Has runtime
+            DirectorName = "Director Name", // Has director
+            DirectorProfilePath = "/director.jpg", // Has director profile
+            WriterName = "Writer Name", // Has writer
+            WriterProfilePath = "/writer.jpg", // Has writer profile
             CreatedAt = DateTime.UtcNow
         };
         context.Movies.Add(enrichedMovie);

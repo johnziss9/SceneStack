@@ -1,5 +1,6 @@
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using SceneStack.API.DTOs;
@@ -11,6 +12,13 @@ namespace SceneStack.Tests.Services;
 
 public class GroupRecommendationsServiceTests
 {
+    private readonly IMemoryCache _cache;
+
+    public GroupRecommendationsServiceTests()
+    {
+        _cache = new MemoryCache(new MemoryCacheOptions());
+    }
+
     [Fact]
     public async Task GetGroupRecommendationsAsync_UserIsMember_ReturnsRecommendations()
     {
@@ -18,7 +26,7 @@ public class GroupRecommendationsServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var tmdbService = Substitute.For<ITmdbService>();
         var logger = Substitute.For<ILogger<GroupRecommendationsService>>();
-        var service = new GroupRecommendationsService(context, tmdbService, logger);
+        var service = new GroupRecommendationsService(context, tmdbService, logger, _cache);
 
         var user = context.Users.First();
 
@@ -67,7 +75,7 @@ public class GroupRecommendationsServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var tmdbService = Substitute.For<ITmdbService>();
         var logger = Substitute.For<ILogger<GroupRecommendationsService>>();
-        var service = new GroupRecommendationsService(context, tmdbService, logger);
+        var service = new GroupRecommendationsService(context, tmdbService, logger, _cache);
 
         var user1 = context.Users.First();
         var user2 = context.Users.Skip(1).First();
@@ -102,7 +110,7 @@ public class GroupRecommendationsServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var tmdbService = Substitute.For<ITmdbService>();
         var logger = Substitute.For<ILogger<GroupRecommendationsService>>();
-        var service = new GroupRecommendationsService(context, tmdbService, logger);
+        var service = new GroupRecommendationsService(context, tmdbService, logger, _cache);
 
         var user = context.Users.First();
 
@@ -154,7 +162,7 @@ public class GroupRecommendationsServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var tmdbService = Substitute.For<ITmdbService>();
         var logger = Substitute.For<ILogger<GroupRecommendationsService>>();
-        var service = new GroupRecommendationsService(context, tmdbService, logger);
+        var service = new GroupRecommendationsService(context, tmdbService, logger, _cache);
 
         var user = context.Users.First();
 
@@ -202,7 +210,7 @@ public class GroupRecommendationsServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var tmdbService = Substitute.For<ITmdbService>();
         var logger = Substitute.For<ILogger<GroupRecommendationsService>>();
-        var service = new GroupRecommendationsService(context, tmdbService, logger);
+        var service = new GroupRecommendationsService(context, tmdbService, logger, _cache);
 
         var user = context.Users.First();
 
@@ -239,7 +247,7 @@ public class GroupRecommendationsServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var tmdbService = Substitute.For<ITmdbService>();
         var logger = Substitute.For<ILogger<GroupRecommendationsService>>();
-        var service = new GroupRecommendationsService(context, tmdbService, logger);
+        var service = new GroupRecommendationsService(context, tmdbService, logger, _cache);
 
         var user1 = context.Users.First();
         var user2 = context.Users.Skip(1).First();
@@ -282,6 +290,13 @@ public class GroupRecommendationsServiceTests
         context.Watches.AddRange(watches);
         await context.SaveChangesAsync();
 
+        // Link watches to group
+        foreach (var watch in watches)
+        {
+            context.WatchGroups.Add(new WatchGroup { WatchId = watch.Id, GroupId = group.Id, SharedAt = DateTime.UtcNow });
+        }
+        await context.SaveChangesAsync();
+
         // Mock TMDb recommendations
         var popularMovies = new TmdbMovieSearchResult
         {
@@ -312,7 +327,7 @@ public class GroupRecommendationsServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var tmdbService = Substitute.For<ITmdbService>();
         var logger = Substitute.For<ILogger<GroupRecommendationsService>>();
-        var service = new GroupRecommendationsService(context, tmdbService, logger);
+        var service = new GroupRecommendationsService(context, tmdbService, logger, _cache);
 
         var user1 = context.Users.First();
         var user2 = context.Users.Skip(1).First();
@@ -349,7 +364,7 @@ public class GroupRecommendationsServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var tmdbService = Substitute.For<ITmdbService>();
         var logger = Substitute.For<ILogger<GroupRecommendationsService>>();
-        var service = new GroupRecommendationsService(context, tmdbService, logger);
+        var service = new GroupRecommendationsService(context, tmdbService, logger, _cache);
 
         // Create a new user with no watches
         var newUser = new User
@@ -407,7 +422,7 @@ public class GroupRecommendationsServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var tmdbService = Substitute.For<ITmdbService>();
         var logger = Substitute.For<ILogger<GroupRecommendationsService>>();
-        var service = new GroupRecommendationsService(context, tmdbService, logger);
+        var service = new GroupRecommendationsService(context, tmdbService, logger, _cache);
 
         var user = context.Users.First();
 

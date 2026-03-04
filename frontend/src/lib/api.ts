@@ -28,7 +28,9 @@ import type {
     UpdateMemberRoleRequest,
     GroupMember,
     GroupFeedItem,
+    PaginatedGroupFeedResponse,
     GroupRecommendationStats,
+    PaginatedRecommendationsResponse,
     GroupStats,
     UserPrivacySettings,
     UpdatePrivacySettingsRequest,
@@ -149,6 +151,10 @@ export const watchApi = {
     // PUT: api/watches/bulk
     bulkUpdate: (data: BulkUpdateWatchesRequest) =>
         api.put<BulkUpdateResult>('/api/watches/bulk', data),
+
+    // GET: api/watches/recommendations?page={page}&pageSize={pageSize}
+    getRecommendations: (page: number = 1, pageSize: number = 20) =>
+        api.get<PaginatedRecommendationsResponse>(`/api/watches/recommendations?page=${page}&pageSize=${pageSize}`),
 };
 
 // AI endpoints
@@ -214,11 +220,21 @@ export const groupApi = {
 
     // GET: api/groups/{id}/feed?skip={skip}&take={take}
     getFeed: (groupId: number, skip: number = 0, take: number = 20) =>
-        api.get<GroupFeedItem[]>(`/api/groups/${groupId}/feed?skip=${skip}&take=${take}`),
+        api.get<PaginatedGroupFeedResponse>(`/api/groups/${groupId}/feed?skip=${skip}&take=${take}`),
 
     // GET: api/groups/{id}/recommendations?count={count}
     getRecommendations: (groupId: number, count: number = 10) =>
         api.get<GroupRecommendationStats>(`/api/groups/${groupId}/recommendations?count=${count}`),
+
+    // GET: api/groups/{id}/recommendations?page={page}&pageSize={pageSize}
+    getRecommendationsPaginated: (
+        groupId: number,
+        page: number = 1,
+        pageSize: number = 20
+    ) =>
+        api.get<PaginatedRecommendationsResponse>(
+            `/api/groups/${groupId}/recommendations?page=${page}&pageSize=${pageSize}`
+        ),
 
     // GET: api/groups/{id}/recommendations/stats
     getRecommendationStats: (groupId: number) =>

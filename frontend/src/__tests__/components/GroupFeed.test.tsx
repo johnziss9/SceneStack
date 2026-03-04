@@ -33,6 +33,7 @@ describe('GroupFeed', () => {
             id: 1,
             userId: 1,
             username: 'johndoe',
+            isDeactivated: false,
             movieId: 1,
             movieTitle: 'Fight Club',
             posterPath: '/path1.jpg',
@@ -47,6 +48,7 @@ describe('GroupFeed', () => {
             id: 2,
             userId: 2,
             username: 'janedoe',
+            isDeactivated: false,
             movieId: 2,
             movieTitle: 'The Matrix',
             posterPath: '/path2.jpg',
@@ -76,7 +78,14 @@ describe('GroupFeed', () => {
     })
 
     it('fetches and displays feed items', async () => {
-        ; (groupApi.getFeed as jest.Mock).mockResolvedValue(mockFeedItems)
+        ; (groupApi.getFeed as jest.Mock).mockResolvedValue({
+            items: mockFeedItems,
+            skip: 0,
+            take: 20,
+            hasMore: false,
+            totalCount: 2,
+            nextSkip: 2
+        })
 
         render(<GroupFeed groupId={1} />)
 
@@ -130,7 +139,14 @@ describe('GroupFeed', () => {
         })
 
             // Second call succeeds
-            ; (groupApi.getFeed as jest.Mock).mockResolvedValueOnce(mockFeedItems)
+            ; (groupApi.getFeed as jest.Mock).mockResolvedValueOnce({
+                items: mockFeedItems,
+                skip: 0,
+                take: 20,
+                hasMore: false,
+                totalCount: 2,
+                nextSkip: 2
+            })
 
         const retryButton = screen.getByRole('button', { name: /try again/i })
         await user.click(retryButton)
@@ -144,7 +160,14 @@ describe('GroupFeed', () => {
     })
 
     it('displays empty state when no feed items', async () => {
-        ; (groupApi.getFeed as jest.Mock).mockResolvedValue([])
+        ; (groupApi.getFeed as jest.Mock).mockResolvedValue({
+            items: [],
+            skip: 0,
+            take: 20,
+            hasMore: false,
+            totalCount: 0,
+            nextSkip: 0
+        })
 
         render(<GroupFeed groupId={1} />)
 
@@ -157,7 +180,14 @@ describe('GroupFeed', () => {
     })
 
     it('displays user name for each feed item', async () => {
-        ; (groupApi.getFeed as jest.Mock).mockResolvedValue(mockFeedItems)
+        ; (groupApi.getFeed as jest.Mock).mockResolvedValue({
+            items: mockFeedItems,
+            skip: 0,
+            take: 20,
+            hasMore: false,
+            totalCount: 2,
+            nextSkip: 2
+        })
 
         render(<GroupFeed groupId={1} />)
 
@@ -168,7 +198,14 @@ describe('GroupFeed', () => {
     })
 
     it('displays movie titles for each feed item', async () => {
-        ; (groupApi.getFeed as jest.Mock).mockResolvedValue(mockFeedItems)
+        ; (groupApi.getFeed as jest.Mock).mockResolvedValue({
+            items: mockFeedItems,
+            skip: 0,
+            take: 20,
+            hasMore: false,
+            totalCount: 2,
+            nextSkip: 2
+        })
 
         render(<GroupFeed groupId={1} />)
 
@@ -179,7 +216,14 @@ describe('GroupFeed', () => {
     })
 
     it('displays ratings when available', async () => {
-        ; (groupApi.getFeed as jest.Mock).mockResolvedValue(mockFeedItems)
+        ; (groupApi.getFeed as jest.Mock).mockResolvedValue({
+            items: mockFeedItems,
+            skip: 0,
+            take: 20,
+            hasMore: false,
+            totalCount: 2,
+            nextSkip: 2
+        })
 
         render(<GroupFeed groupId={1} />)
 
@@ -190,7 +234,14 @@ describe('GroupFeed', () => {
     })
 
     it('displays watch location when available', async () => {
-        ; (groupApi.getFeed as jest.Mock).mockResolvedValue(mockFeedItems)
+        ; (groupApi.getFeed as jest.Mock).mockResolvedValue({
+            items: mockFeedItems,
+            skip: 0,
+            take: 20,
+            hasMore: false,
+            totalCount: 2,
+            nextSkip: 2
+        })
 
         render(<GroupFeed groupId={1} />)
 
@@ -200,7 +251,14 @@ describe('GroupFeed', () => {
     })
 
     it('displays watched with when available', async () => {
-        ; (groupApi.getFeed as jest.Mock).mockResolvedValue(mockFeedItems)
+        ; (groupApi.getFeed as jest.Mock).mockResolvedValue({
+            items: mockFeedItems,
+            skip: 0,
+            take: 20,
+            hasMore: false,
+            totalCount: 2,
+            nextSkip: 2
+        })
 
         render(<GroupFeed groupId={1} />)
 
@@ -210,7 +268,14 @@ describe('GroupFeed', () => {
     })
 
     it('displays notes when available', async () => {
-        ; (groupApi.getFeed as jest.Mock).mockResolvedValue(mockFeedItems)
+        ; (groupApi.getFeed as jest.Mock).mockResolvedValue({
+            items: mockFeedItems,
+            skip: 0,
+            take: 20,
+            hasMore: false,
+            totalCount: 2,
+            nextSkip: 2
+        })
 
         render(<GroupFeed groupId={1} />)
 
@@ -220,7 +285,14 @@ describe('GroupFeed', () => {
     })
 
     it('displays rewatch badge when isRewatch is true', async () => {
-        ; (groupApi.getFeed as jest.Mock).mockResolvedValue(mockFeedItems)
+        ; (groupApi.getFeed as jest.Mock).mockResolvedValue({
+            items: mockFeedItems,
+            skip: 0,
+            take: 20,
+            hasMore: false,
+            totalCount: 2,
+            nextSkip: 2
+        })
 
         render(<GroupFeed groupId={1} />)
 
@@ -237,7 +309,14 @@ describe('GroupFeed', () => {
             },
         ]
 
-            ; (groupApi.getFeed as jest.Mock).mockResolvedValue(itemsWithoutRewatch)
+            ; (groupApi.getFeed as jest.Mock).mockResolvedValue({
+                items: itemsWithoutRewatch,
+                skip: 0,
+                take: 20,
+                hasMore: false,
+                totalCount: 1,
+                nextSkip: 1
+            })
 
         render(<GroupFeed groupId={1} />)
 
@@ -251,7 +330,14 @@ describe('GroupFeed', () => {
     })
 
     it('displays formatted watch date', async () => {
-        ; (groupApi.getFeed as jest.Mock).mockResolvedValue(mockFeedItems)
+        ; (groupApi.getFeed as jest.Mock).mockResolvedValue({
+            items: mockFeedItems,
+            skip: 0,
+            take: 20,
+            hasMore: false,
+            totalCount: 2,
+            nextSkip: 2
+        })
 
         render(<GroupFeed groupId={1} />)
 
@@ -262,7 +348,14 @@ describe('GroupFeed', () => {
     })
 
     it('displays movie poster when posterPath is available', async () => {
-        ; (groupApi.getFeed as jest.Mock).mockResolvedValue(mockFeedItems)
+        ; (groupApi.getFeed as jest.Mock).mockResolvedValue({
+            items: mockFeedItems,
+            skip: 0,
+            take: 20,
+            hasMore: false,
+            totalCount: 2,
+            nextSkip: 2
+        })
 
         render(<GroupFeed groupId={1} />)
 
@@ -281,7 +374,14 @@ describe('GroupFeed', () => {
             },
         ]
 
-            ; (groupApi.getFeed as jest.Mock).mockResolvedValue(itemsWithoutPoster)
+            ; (groupApi.getFeed as jest.Mock).mockResolvedValue({
+            items: itemsWithoutPoster,
+            skip: 0,
+            take: 20,
+            hasMore: false,
+            totalCount: 1,
+            nextSkip: 1
+        })
 
         render(<GroupFeed groupId={1} />)
 
@@ -296,18 +396,26 @@ describe('GroupFeed', () => {
             id: i + 1,
             userId: 1,
             username: 'testuser',
+            isDeactivated: false,
             movieId: i + 1,
             movieTitle: `Movie ${i + 1}`,
             posterPath: '/path.jpg',
             watchedDate: '2024-12-30T00:00:00Z',
             rating: 8,
-            notes: null,
-            watchLocation: null,
-            watchedWith: null,
+            notes: undefined,
+            watchLocation: undefined,
+            watchedWith: undefined,
             isRewatch: false,
         }))
 
-            ; (groupApi.getFeed as jest.Mock).mockResolvedValue(twentyItems)
+            ; (groupApi.getFeed as jest.Mock).mockResolvedValue({
+                items: twentyItems,
+                skip: 0,
+                take: 20,
+                hasMore: true,
+                totalCount: 40,
+                nextSkip: 20
+            })
 
         render(<GroupFeed groupId={1} />)
 
@@ -320,7 +428,14 @@ describe('GroupFeed', () => {
 
     it('does not show load more button when hasMore is false', async () => {
         // Return less than 20 items
-        ; (groupApi.getFeed as jest.Mock).mockResolvedValue(mockFeedItems)
+        ; (groupApi.getFeed as jest.Mock).mockResolvedValue({
+            items: mockFeedItems,
+            skip: 0,
+            take: 20,
+            hasMore: false,
+            totalCount: 2,
+            nextSkip: 2
+        })
 
         render(<GroupFeed groupId={1} />)
 
@@ -339,14 +454,15 @@ describe('GroupFeed', () => {
             id: i + 1,
             userId: 1,
             username: 'testuser',
+            isDeactivated: false,
             movieId: i + 1,
             movieTitle: `Movie ${i + 1}`,
             posterPath: '/path.jpg',
             watchedDate: '2024-12-30T00:00:00Z',
             rating: 8,
-            notes: null,
-            watchLocation: null,
-            watchedWith: null,
+            notes: undefined,
+            watchLocation: undefined,
+            watchedWith: undefined,
             isRewatch: false,
         }))
 
@@ -355,19 +471,34 @@ describe('GroupFeed', () => {
             id: i + 21,
             userId: 1,
             username: 'testuser',
+            isDeactivated: false,
             movieId: i + 21,
             movieTitle: `Movie ${i + 21}`,
             posterPath: '/path.jpg',
             watchedDate: '2024-12-30T00:00:00Z',
             rating: 8,
-            notes: null,
-            watchLocation: null,
-            watchedWith: null,
+            notes: undefined,
+            watchLocation: undefined,
+            watchedWith: undefined,
             isRewatch: false,
         }))
 
-            ; (groupApi.getFeed as jest.Mock).mockResolvedValueOnce(twentyItems)
-            ; (groupApi.getFeed as jest.Mock).mockResolvedValueOnce(moreItems)
+            ; (groupApi.getFeed as jest.Mock).mockResolvedValueOnce({
+                items: twentyItems,
+                skip: 0,
+                take: 20,
+                hasMore: true,
+                totalCount: 25,
+                nextSkip: 20
+            })
+            ; (groupApi.getFeed as jest.Mock).mockResolvedValueOnce({
+                items: moreItems,
+                skip: 20,
+                take: 20,
+                hasMore: false,
+                totalCount: 25,
+                nextSkip: 25
+            })
 
         render(<GroupFeed groupId={1} />)
 
@@ -461,7 +592,14 @@ describe('GroupFeed', () => {
     })
 
     it('renders links to movie details', async () => {
-        ; (groupApi.getFeed as jest.Mock).mockResolvedValue(mockFeedItems)
+        ; (groupApi.getFeed as jest.Mock).mockResolvedValue({
+            items: mockFeedItems,
+            skip: 0,
+            take: 20,
+            hasMore: false,
+            totalCount: 2,
+            nextSkip: 2
+        })
 
         render(<GroupFeed groupId={1} />)
 
@@ -475,7 +613,14 @@ describe('GroupFeed', () => {
     })
 
     it('refetches feed when groupId changes', async () => {
-        ; (groupApi.getFeed as jest.Mock).mockResolvedValue(mockFeedItems)
+        ; (groupApi.getFeed as jest.Mock).mockResolvedValue({
+            items: mockFeedItems,
+            skip: 0,
+            take: 20,
+            hasMore: false,
+            totalCount: 2,
+            nextSkip: 2
+        })
 
         const { rerender } = render(<GroupFeed groupId={1} />)
 

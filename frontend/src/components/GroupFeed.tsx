@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { GroupFeedItem } from "@/types";
+import { GroupFeedItem, PaginatedGroupFeedResponse } from "@/types";
 import { groupApi } from "@/lib/api";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -43,16 +43,15 @@ export function GroupFeed({ groupId }: GroupFeedProps) {
             const data = await groupApi.getFeed(groupId, skipCount, TAKE);
 
             if (skipCount === 0) {
-                setFeedItems(data);
+                setFeedItems(data.items);
             } else {
-                setFeedItems((prev) => [...prev, ...data]);
+                setFeedItems((prev) => [...prev, ...data.items]);
             }
 
-            // If we got less than TAKE items, there's no more
-            setHasMore(data.length === TAKE);
-            setSkip(skipCount + data.length);
+            // Use hasMore and nextSkip from backend response
+            setHasMore(data.hasMore);
+            setSkip(data.nextSkip);
         } catch (err) {
-            console.error("Failed to fetch group feed:", err);
             toast.error("Failed to load group feed", {
                 description: "Please try again later",
             });

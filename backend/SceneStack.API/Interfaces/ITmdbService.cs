@@ -9,4 +9,10 @@ public interface ITmdbService
     Task<TmdbCreditsResult?> GetMovieCreditsAsync(int tmdbId);
     Task<TmdbMovieSearchResult?> GetPopularMoviesAsync(int page = 1);
     Task<TmdbMovieSearchResult?> GetTrendingMoviesAsync(string timeWindow = "week");
+    Task<TmdbMovieSearchResult?> DiscoverMoviesAsync(
+        List<int>? withGenres = null,
+        double? voteAverageMin = null,
+        int? voteCountMin = null,
+        string sortBy = "popularity.desc",
+        int page = 1);
 }

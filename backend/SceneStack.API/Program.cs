@@ -99,6 +99,9 @@ builder.Services.Configure<TmdbSettings>(
 builder.Services.Configure<ClaudeApiSettings>(
     builder.Configuration.GetSection("ClaudeApi"));
 
+// Add Memory Cache for group recommendations
+builder.Services.AddMemoryCache();
+
 builder.Services.AddScoped<IMovieService, MovieService>();
 builder.Services.AddScoped<IWatchService, WatchService>();
 builder.Services.AddHttpClient<ITmdbService, TmdbService>();

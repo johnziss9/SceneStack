@@ -90,6 +90,16 @@ export interface GroupFeedItem {
     isRewatch: boolean;
 }
 
+// Matches PaginatedGroupFeedResponse from backend
+export interface PaginatedGroupFeedResponse {
+    items: GroupFeedItem[];
+    skip: number;
+    take: number;
+    hasMore: boolean;
+    totalCount: number;
+    nextSkip: number; // The skip value to use for the next request
+}
+
 // Matches GroupRecommendationResponse from backend (uses TMDb structure)
 export interface GroupRecommendation {
     id: number; // TMDb uses 'id' not 'tmdbId'
@@ -108,6 +118,26 @@ export interface GroupRecommendationStats {
     uniqueViewers: number;
     mostWatchedGenre?: string;
     recommendations: GroupRecommendation[];
+}
+
+// Matches PaginatedRecommendationsResponse from backend
+export interface PaginatedRecommendationsResponse {
+    items: RecommendedMovie[];
+    page: number;
+    pageSize: number;
+    hasMore: boolean;
+    currentTier: string; // "Elite", "Strong", "Broad", "Popular"
+}
+
+// Matches RecommendedMovie from backend
+export interface RecommendedMovie {
+    movie: GroupRecommendation;
+    score: number;
+    reason: string;
+    matchedGenres: string[];
+    matchedDirector?: string;
+    matchedCast: string[];
+    matchedWriter?: string;
 }
 
 // Matches GroupMemberStats from backend

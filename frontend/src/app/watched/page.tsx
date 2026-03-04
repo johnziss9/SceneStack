@@ -1,13 +1,14 @@
 'use client';
 
-import { useState, Suspense } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { WatchList } from '@/components/WatchList';
+import { UserRecommendations } from '@/components/UserRecommendations';
 import { AiSearchBar } from '@/components/AiSearchBar';
 import { AiSearchResults } from '@/components/AiSearchResults';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Lock, Users, Sparkles, Search, Zap, ChevronDown, ChevronUp } from 'lucide-react';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Lock, Users, Sparkles, Search, Zap, ChevronDown, ChevronUp, History, Heart } from 'lucide-react';
 import { UpgradeToPremiumModal } from '@/components/UpgradeToPremiumModal';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -18,6 +19,17 @@ function WatchedListContent() {
   const { user } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
+
+  // Initialize tab from URL params
+  const initialTab = searchParams.get('tab') || 'history';
+  const [activeTab, setActiveTab] = useState(initialTab);
+
+  // Sync activeTab with URL params when they change (e.g., browser back/forward)
+  useEffect(() => {
+    const urlTab = searchParams.get('tab') || 'history';
+    setActiveTab(urlTab);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   // Initialise from URL params
   // Free users can see ai-search but in demo mode
@@ -56,6 +68,14 @@ function WatchedListContent() {
     setSearchResults(results);
   };
 
+  // Handle tab change and update URL
+  const handleTabChange = (newTab: string) => {
+    // Don't set activeTab here - let the useEffect handle it after URL changes
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('tab', newTab);
+    router.push(`/watched?${params.toString()}`, { scroll: false });
+  };
+
   return (
     <main className="min-h-screen p-4 sm:p-8">
       <div className="max-w-7xl mx-auto">
@@ -81,22 +101,6 @@ function WatchedListContent() {
               </TabsTrigger>
             </TabsList>
           </Tabs>
-        </div>
-
-        {/* Privacy Icon Legend */}
-        <div className="flex items-center gap-4 text-sm text-muted-foreground mb-8">
-          <div className="flex items-center gap-1.5">
-            <div className="bg-primary text-primary-foreground p-1 rounded-full">
-              <Lock className="w-3 h-3" strokeWidth={2.5} />
-            </div>
-            <span>Private</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <div className="bg-primary text-primary-foreground p-1 rounded-full">
-              <Users className="w-3 h-3" strokeWidth={2.5} />
-            </div>
-            <span>Shared with groups</span>
-          </div>
         </div>
 
         {/* AI Features Showcase (Free users only) */}
@@ -209,8 +213,45 @@ function WatchedListContent() {
           </Card>
         )}
 
-        {/* Regular mode: show normal watch list */}
-        {mode === 'regular' && <WatchList />}
+        {/* Regular mode: show tabs with History and For You */}
+        {mode === 'regular' && (
+          <Tabs value={activeTab} onValueChange={handleTabChange}>
+            <TabsList className="mb-6">
+              <TabsTrigger value="history">
+                <History className="w-4 h-4 mr-2" />
+                History
+              </TabsTrigger>
+              <TabsTrigger value="for-you">
+                <Heart className="w-4 h-4 mr-2" />
+                For You
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="history">
+              {/* Privacy Icon Legend */}
+              <div className="flex items-center gap-4 text-sm text-muted-foreground mb-8">
+                <div className="flex items-center gap-1.5">
+                  <div className="bg-primary text-primary-foreground p-1 rounded-full">
+                    <Lock className="w-3 h-3" strokeWidth={2.5} />
+                  </div>
+                  <span>Private</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="bg-primary text-primary-foreground p-1 rounded-full">
+                    <Users className="w-3 h-3" strokeWidth={2.5} />
+                  </div>
+                  <span>Shared with groups</span>
+                </div>
+              </div>
+
+              <WatchList />
+            </TabsContent>
+
+            <TabsContent value="for-you">
+              <UserRecommendations />
+            </TabsContent>
+          </Tabs>
+        )}
 
         {/* AI Search mode (premium users only) */}
         {mode === 'ai-search' && (

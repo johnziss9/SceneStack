@@ -23,6 +23,18 @@ jest.mock('@/lib/api', () => ({
 // Mock AuthContext
 jest.mock('@/contexts/AuthContext')
 
+// Mock WatchlistContext
+jest.mock('@/contexts/WatchlistContext', () => ({
+    useWishlist: jest.fn(() => ({
+        count: 0,
+        isLoading: false,
+        incrementCount: jest.fn(),
+        decrementCount: jest.fn(),
+        refreshCount: jest.fn(),
+    })),
+    WatchlistProvider: ({ children }: any) => children,
+}))
+
 // Mock sonner toast
 jest.mock('sonner', () => ({
     toast: {
@@ -130,8 +142,13 @@ describe('EditWatchDialog', () => {
             />
         )
 
-        const dateInput = screen.getByLabelText(/date watched/i) as HTMLInputElement
-        expect(dateInput.value).toBe('2024-12-30')
+        // Wait for the date input to be populated by useEffect
+        // Use querySelector since the date input doesn't have a label - it's part of a date precision group
+        await waitFor(() => {
+            const dateInput = document.querySelector('#watchedDate') as HTMLInputElement
+            expect(dateInput).toBeInTheDocument()
+            expect(dateInput.value).toBe('2024-12-30')
+        })
 
         // Rating is now a slider - check the ARIA value
         await waitFor(() => {
@@ -758,9 +775,9 @@ describe('EditWatchDialog', () => {
             expect(screen.getByRole('button', { name: /specific groups/i })).toBeInTheDocument()
         })
 
-        // Select "Other" location
-        const locationTrigger = screen.getByRole('combobox')
-        await user.click(locationTrigger)
+        // Select "Other" location - use the label to find the location combobox specifically
+        const locationCombobox = screen.getAllByRole('combobox')[1] // Second combobox is location
+        await user.click(locationCombobox)
         const otherOption = screen.getByRole('option', { name: 'Other' })
         await user.click(otherOption)
 
@@ -797,9 +814,9 @@ describe('EditWatchDialog', () => {
             expect(screen.getByRole('button', { name: /specific groups/i })).toBeInTheDocument()
         })
 
-        // Select "Other" location
-        const locationTrigger = screen.getByRole('combobox')
-        await user.click(locationTrigger)
+        // Select "Other" location - use the second combobox (location)
+        const locationCombobox = screen.getAllByRole('combobox')[1] // Second combobox is location
+        await user.click(locationCombobox)
         const otherOption = screen.getByRole('option', { name: 'Other' })
         await user.click(otherOption)
 

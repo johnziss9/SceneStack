@@ -30,6 +30,8 @@ export type {
     GroupFeedItem,
     GroupRecommendation,
     GroupRecommendationStats,
+    PaginatedRecommendationsResponse,
+    RecommendedMovie,
     GroupStats,
     GroupMemberStats,
     SharedMovieStats

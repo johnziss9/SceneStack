@@ -2,9 +2,14 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Navigation } from '../../components/Navigation';
 import { useAuth } from '@/contexts/AuthContext';
+import { useWishlist } from '@/contexts/WatchlistContext';
 
 // Mock dependencies
 jest.mock('@/contexts/AuthContext');
+jest.mock('@/contexts/WatchlistContext', () => ({
+    useWishlist: jest.fn(),
+    WatchlistProvider: ({ children }: any) => children,
+}));
 jest.mock('next/navigation', () => ({
     useRouter: () => ({
         push: jest.fn(),
@@ -12,10 +17,20 @@ jest.mock('next/navigation', () => ({
 }));
 
 const mockUseAuth = useAuth as jest.MockedFunction<typeof useAuth>;
+const mockUseWishlist = useWishlist as jest.MockedFunction<typeof useWishlist>;
 
 describe('Navigation', () => {
     beforeEach(() => {
         jest.clearAllMocks();
+
+        // Set up default WatchlistContext mock
+        mockUseWishlist.mockReturnValue({
+            count: 0,
+            isLoading: false,
+            incrementCount: jest.fn(),
+            decrementCount: jest.fn(),
+            refreshCount: jest.fn(),
+        });
     });
 
     describe('Loading State', () => {

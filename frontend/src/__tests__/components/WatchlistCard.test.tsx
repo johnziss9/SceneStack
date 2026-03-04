@@ -24,6 +24,16 @@ jest.mock('sonner', () => ({
 jest.mock('@/components/WatchForm', () => ({
     WatchForm: jest.fn(() => null),
 }))
+jest.mock('@/contexts/WatchlistContext', () => ({
+    useWishlist: jest.fn(() => ({
+        count: 0,
+        isLoading: false,
+        incrementCount: jest.fn(),
+        decrementCount: jest.fn(),
+        refreshCount: jest.fn(),
+    })),
+    WatchlistProvider: ({ children }: any) => children,
+}))
 
 const mockUseRouter = useRouter as jest.MockedFunction<typeof useRouter>
 const mockRemoveFromWatchlist = watchlistApi.removeFromWatchlist as jest.MockedFunction<typeof watchlistApi.removeFromWatchlist>
@@ -204,7 +214,7 @@ describe('WatchlistCard', () => {
         const links = screen.getAllByRole('link')
         expect(links).toHaveLength(2) // Poster and title links
         links.forEach(link => {
-            expect(link).toHaveAttribute('href', '/movies/550')
+            expect(link).toHaveAttribute('href', '/movies/550?from=wishlist')
         })
     })
 

@@ -1,30 +1,26 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { GroupRecommendationStats, RecommendedMovie, TmdbMovie } from "@/types";
-import { groupApi, movieApi, watchlistApi } from "@/lib/api";
+import { RecommendedMovie, TmdbMovie } from "@/types";
+import { watchApi, movieApi, watchlistApi } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/lib/toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { LoadingTips } from "@/components/LoadingTips";
-import { Film, Users, Eye, TrendingUp, Calendar, Star, Bookmark, BookmarkCheck, BookmarkX, Loader2 } from "lucide-react";
+import { Film, Calendar, Star, Bookmark, BookmarkCheck, BookmarkX, Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWishlist } from "@/contexts/WatchlistContext";
 import { ApiError, PremiumRequiredError } from "@/lib/api-client";
 import { WatchForm } from "@/components/WatchForm";
 import Link from "next/link";
 
-interface GroupRecommendationsProps {
-    groupId: number;
-}
-
-export function GroupRecommendations({ groupId }: GroupRecommendationsProps) {
+export function UserRecommendations() {
     const { user } = useAuth();
     const [recommendations, setRecommendations] = useState<RecommendedMovie[]>([]);
-    const [stats, setStats] = useState<GroupRecommendationStats | null>(null);
     const [currentPage, setCurrentPage] = useState(1);
+    const [currentTier, setCurrentTier] = useState<string>("");
     const [hasMore, setHasMore] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -36,22 +32,19 @@ export function GroupRecommendations({ groupId }: GroupRecommendationsProps) {
 
     useEffect(() => {
         fetchInitialData();
-    }, [groupId]);
+    }, []);
 
     const fetchInitialData = async () => {
         try {
             setIsLoading(true);
             setError(null);
 
-            // Fetch stats (for group stats section)
-            const statsData = await groupApi.getRecommendationStats(groupId);
-            setStats(statsData);
-
-            // Fetch first page of new recommendations
-            const recoData = await groupApi.getRecommendationsPaginated(groupId, 1, PAGE_SIZE);
-            setRecommendations(recoData.items);
+            // Fetch first page of recommendations
+            const data = await watchApi.getRecommendations(1, PAGE_SIZE);
+            setRecommendations(data.items);
             setCurrentPage(1);
-            setHasMore(recoData.hasMore);
+            setHasMore(data.hasMore);
+            setCurrentTier(data.currentTier);
         } catch (err) {
             toast.error("Failed to load recommendations", {
                 description: "Please try again later",
@@ -69,11 +62,12 @@ export function GroupRecommendations({ groupId }: GroupRecommendationsProps) {
             setIsLoadingMore(true);
             const nextPage = currentPage + 1;
 
-            const data = await groupApi.getRecommendationsPaginated(groupId, nextPage, PAGE_SIZE);
+            const data = await watchApi.getRecommendations(nextPage, PAGE_SIZE);
 
             setRecommendations(prev => [...prev, ...data.items]);
             setCurrentPage(nextPage);
             setHasMore(data.hasMore);
+            setCurrentTier(data.currentTier);
         } catch (err) {
             toast.error("Failed to load more recommendations");
         } finally {
@@ -95,39 +89,15 @@ export function GroupRecommendations({ groupId }: GroupRecommendationsProps) {
         return (
             <div className="space-y-6">
                 <LoadingTips />
-                {/* Stats Skeleton */}
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Group Stats</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                            {[...Array(4)].map((_, i) => (
-                                <div key={i} className="space-y-2">
-                                    <Skeleton variant="branded" className="h-4 w-20" />
-                                    <Skeleton variant="branded" className="h-8 w-16" />
-                                </div>
-                            ))}
-                        </div>
-                    </CardContent>
-                </Card>
-
                 {/* Recommendations Skeleton */}
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Recommended Movies</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                            {[...Array(5)].map((_, i) => (
-                                <div key={i} className="space-y-3">
-                                    <Skeleton variant="poster" className="w-full rounded" />
-                                    <Skeleton variant="branded" className="h-4 w-3/4" />
-                                </div>
-                            ))}
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                    {[...Array(10)].map((_, i) => (
+                        <div key={i} className="space-y-3">
+                            <Skeleton variant="poster" className="w-full rounded" />
+                            <Skeleton variant="branded" className="h-4 w-3/4" />
                         </div>
-                    </CardContent>
-                </Card>
+                    ))}
+                </div>
             </div>
         );
     }
@@ -142,8 +112,8 @@ export function GroupRecommendations({ groupId }: GroupRecommendationsProps) {
         );
     }
 
-    // Empty state (new group with no watches)
-    if (!stats || stats.totalWatches === 0) {
+    // Empty state
+    if (recommendations.length === 0) {
         return (
             <Card>
                 <CardContent className="pt-12 pb-12">
@@ -151,7 +121,7 @@ export function GroupRecommendations({ groupId }: GroupRecommendationsProps) {
                         <Film className="h-12 w-12 text-muted-foreground/50" />
                         <p className="text-xl text-muted-foreground">No recommendations yet</p>
                         <p className="text-sm text-muted-foreground text-center max-w-md">
-                            Start watching movies and sharing them with your group to get personalized recommendations!
+                            Start watching and rating movies to get personalized recommendations!
                         </p>
                     </div>
                 </CardContent>
@@ -161,100 +131,37 @@ export function GroupRecommendations({ groupId }: GroupRecommendationsProps) {
 
     return (
         <div className="space-y-6">
-            {/* Group Stats */}
-            <Card>
-                <CardHeader>
-                    <CardTitle>Group Stats</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <div className="flex flex-col">
-                            <div className="flex items-center gap-2 text-muted-foreground text-sm mb-1">
-                                <Eye size={16} />
-                                <span>Total Watches</span>
-                            </div>
-                            <span className="text-2xl font-bold text-primary">
-                                {stats.totalWatches}
-                            </span>
-                        </div>
+            {/* Header */}
+            <div>
+                <h2 className="text-2xl font-bold">Recommended for You</h2>
+                <p className="text-muted-foreground">
+                    Based on {recommendations.length > 0 ? "your watch history" : "popular movies"}
+                </p>
+            </div>
 
-                        <div className="flex flex-col">
-                            <div className="flex items-center gap-2 text-muted-foreground text-sm mb-1">
-                                <Film size={16} />
-                                <span>Unique Movies</span>
-                            </div>
-                            <span className="text-2xl font-bold text-primary">
-                                {stats.uniqueMovies}
-                            </span>
-                        </div>
+            {/* Recommendations Grid */}
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                {recommendations.map((rec) => (
+                    <RecommendationCard
+                        key={rec.movie.id}
+                        recommendation={rec}
+                        onAddToWatched={handleAddToWatched}
+                    />
+                ))}
+            </div>
 
-                        <div className="flex flex-col">
-                            <div className="flex items-center gap-2 text-muted-foreground text-sm mb-1">
-                                <Users size={16} />
-                                <span>Active Viewers</span>
-                            </div>
-                            <span className="text-2xl font-bold text-primary">
-                                {stats.uniqueViewers}
-                            </span>
-                        </div>
-
-                        {stats.mostWatchedGenre && (
-                            <div className="flex flex-col">
-                                <div className="flex items-center gap-2 text-muted-foreground text-sm mb-1">
-                                    <TrendingUp size={16} />
-                                    <span>Top Genre</span>
-                                </div>
-                                <span className="text-lg font-semibold text-primary truncate">
-                                    {stats.mostWatchedGenre}
-                                </span>
-                            </div>
-                        )}
-                    </div>
-                </CardContent>
-            </Card>
-
-            {/* Recommended Movies */}
-            <Card>
-                <CardHeader>
-                    <CardTitle>Recommended Movies</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    {recommendations.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center py-8 space-y-4">
-                            <Film className="h-12 w-12 text-muted-foreground/50" />
-                            <p className="text-muted-foreground">
-                                All movies have been watched by the group!
-                            </p>
-                        </div>
-                    ) : (
-                        <>
-                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                                {recommendations.map((rec) => (
-                                    <RecommendationCard
-                                        key={rec.movie.id}
-                                        recommendation={rec}
-                                        onAddToWatched={handleAddToWatched}
-                                        groupId={groupId}
-                                    />
-                                ))}
-                            </div>
-
-                            {/* Load More Button */}
-                            {hasMore && (
-                                <div className="flex justify-center pt-6">
-                                    <Button
-                                        variant="outline"
-                                        onClick={loadMore}
-                                        disabled={isLoadingMore}
-                                    >
-                                        {isLoadingMore ? "Loading..." : "Load More"}
-                                    </Button>
-                                </div>
-                            )}
-                        </>
-                    )}
-                </CardContent>
-            </Card>
+            {/* Load More Button */}
+            {hasMore && (
+                <div className="flex justify-center pt-6">
+                    <Button
+                        variant="outline"
+                        onClick={loadMore}
+                        disabled={isLoadingMore}
+                    >
+                        {isLoadingMore ? "Loading..." : "Load More"}
+                    </Button>
+                </div>
+            )}
 
             {/* Watch Form Dialog */}
             <WatchForm
@@ -262,22 +169,23 @@ export function GroupRecommendations({ groupId }: GroupRecommendationsProps) {
                 open={isFormOpen}
                 onOpenChange={setIsFormOpen}
                 onSuccess={() => {
-                    // Optionally refresh recommendations or show success message
                     toast.success("Watch logged successfully!");
+                    // Refresh recommendations after adding a watch
+                    fetchInitialData();
                 }}
             />
         </div>
     );
 }
 
+
 // Individual recommendation card component
 interface RecommendationCardProps {
     recommendation: RecommendedMovie;
     onAddToWatched: (movie: TmdbMovie) => void;
-    groupId: number;
 }
 
-function RecommendationCard({ recommendation, onAddToWatched, groupId }: RecommendationCardProps) {
+function RecommendationCard({ recommendation, onAddToWatched }: RecommendationCardProps) {
     const { user } = useAuth();
     const { incrementCount, decrementCount } = useWishlist();
     const { movie, reason, matchedGenres } = recommendation;
@@ -290,7 +198,7 @@ function RecommendationCard({ recommendation, onAddToWatched, groupId }: Recomme
         ? `https://image.tmdb.org/t/p/w342${movie.poster_path}`
         : null;
 
-    const movieUrl = `/movies/${movie.id}?from=group&groupId=${groupId}`;
+    const movieUrl = `/movies/${movie.id}?from=watches`;
 
     const year = movie.release_date
         ? new Date(movie.release_date).getFullYear()

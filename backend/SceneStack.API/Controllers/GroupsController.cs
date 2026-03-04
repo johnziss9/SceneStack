@@ -291,27 +291,30 @@ public class GroupsController : ControllerBase
     /// <returns>List of watch activities</returns>
     // GET: api/groups/5/feed
     [HttpGet("{id}/feed")]
-    public async Task<ActionResult<IEnumerable<GroupFeedItemResponse>>> GetGroupFeed(
-        int id, 
-        [FromQuery] int skip = 0, 
+    public async Task<ActionResult<PaginatedGroupFeedResponse>> GetGroupFeed(
+        int id,
+        [FromQuery] int skip = 0,
         [FromQuery] int take = 20)
     {
         var userId = User.GetUserId();
-        _logger.LogInformation("User {UserId} getting feed for group {GroupId} (skip: {Skip}, take: {Take})", 
+        _logger.LogInformation("User {UserId} getting feed for group {GroupId} (skip: {Skip}, take: {Take})",
             userId, id, skip, take);
 
         try
         {
-            var feedItems = await _groupFeedService.GetGroupFeedAsync(id, userId, skip, take);
+            var paginatedFeed = await _groupFeedService.GetPaginatedGroupFeedAsync(id, userId, skip, take);
 
-            if (!feedItems.Any())
+            if (!paginatedFeed.Items.Any())
             {
                 _logger.LogInformation("No feed items found for group {GroupId}", id);
-                return Ok(new List<GroupFeedItemResponse>());
+            }
+            else
+            {
+                _logger.LogInformation("Returning {Count} feed items for group {GroupId} (hasMore: {HasMore})",
+                    paginatedFeed.Items.Count, id, paginatedFeed.HasMore);
             }
 
-            _logger.LogInformation("Returning {Count} feed items for group {GroupId}", feedItems.Count, id);
-            return Ok(feedItems);
+            return Ok(paginatedFeed);
         }
         catch (UnauthorizedAccessException)
         {
@@ -449,29 +452,31 @@ public class GroupsController : ControllerBase
     }
 
     /// <summary>
-    /// Get movie recommendations for a group
+    /// Get paginated movie recommendations for a group with intelligent tier-based ranking
     /// </summary>
     /// <param name="id">Group ID</param>
-    /// <param name="count">Number of recommendations to return (default: 10)</param>
-    /// <returns>List of recommended movies</returns>
-    // GET: api/groups/5/recommendations
+    /// <param name="page">Page number (default: 1)</param>
+    /// <param name="pageSize">Items per page (default: 20)</param>
+    /// <returns>Paginated list of recommended movies with scores and reasons</returns>
+    // GET: api/groups/5/recommendations?page=1&pageSize=20
     [HttpGet("{id}/recommendations")]
-    public async Task<ActionResult<IEnumerable<TmdbMovie>>> GetGroupRecommendations(int id, [FromQuery] int count = 10)
+    public async Task<ActionResult<PaginatedRecommendationsResponse>> GetGroupRecommendations(
+        int id,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20)
     {
         var userId = User.GetUserId();
-        _logger.LogInformation("User {UserId} getting recommendations for group {GroupId}", userId, id);
+        _logger.LogInformation("User {UserId} getting recommendations page {Page} for group {GroupId}",
+            userId, page, id);
 
         try
         {
-            var recommendations = await _groupRecommendationsService.GetGroupRecommendationsAsync(id, userId, count);
+            var recommendations = await _groupRecommendationsService
+                .GetPaginatedRecommendationsAsync(id, userId, page, pageSize);
 
-            if (!recommendations.Any())
-            {
-                _logger.LogInformation("No recommendations found for group {GroupId}", id);
-                return Ok(new List<TmdbMovie>());
-            }
+            _logger.LogInformation("Returning {Count} recommendations (tier: {Tier}) for group {GroupId}",
+                recommendations.Items.Count, recommendations.CurrentTier, id);
 
-            _logger.LogInformation("Returning {Count} recommendations for group {GroupId}", recommendations.Count, id);
             return Ok(recommendations);
         }
         catch (Exception ex)

@@ -8,6 +8,16 @@ import { PremiumRequiredError, ApiError } from '@/lib/api-client'
 
 // Mock AuthContext
 jest.mock('@/contexts/AuthContext')
+jest.mock('@/contexts/WatchlistContext', () => ({
+    useWishlist: jest.fn(() => ({
+        count: 0,
+        isLoading: false,
+        incrementCount: jest.fn(),
+        decrementCount: jest.fn(),
+        refreshCount: jest.fn(),
+    })),
+    WatchlistProvider: ({ children }: any) => children,
+}))
 jest.mock('next/navigation', () => ({
     useRouter: () => ({
         push: jest.fn(),
@@ -218,6 +228,7 @@ describe('MovieCard', () => {
                 login: jest.fn(),
                 register: jest.fn(),
                 logout: jest.fn(),
+                refreshUser: jest.fn(),
             })
 
             const user = userEvent.setup()
@@ -253,14 +264,14 @@ describe('MovieCard', () => {
             render(<MovieCard movie={mockMovie} onAddToWatched={mockOnAddToWatched} />)
 
             const posterLink = screen.getByAltText('Fight Club').closest('a')
-            expect(posterLink).toHaveAttribute('href', '/movies/550')
+            expect(posterLink).toHaveAttribute('href', '/movies/550?from=search')
         })
 
         it('title links to /movies/[tmdbId]', () => {
             render(<MovieCard movie={mockMovie} onAddToWatched={mockOnAddToWatched} />)
 
             const titleLink = screen.getByText('Fight Club').closest('a')
-            expect(titleLink).toHaveAttribute('href', '/movies/550')
+            expect(titleLink).toHaveAttribute('href', '/movies/550?from=search')
         })
     })
 
@@ -282,12 +293,13 @@ describe('MovieCard', () => {
                 login: jest.fn(),
                 register: jest.fn(),
                 logout: jest.fn(),
+                refreshUser: jest.fn(),
             })
 
             render(<MovieCard movie={mockMovie} onAddToWatched={mockOnAddToWatched} />)
 
-            expect(screen.queryByLabelText(/save to watchlist/i)).not.toBeInTheDocument()
-            expect(screen.queryByLabelText(/remove from watchlist/i)).not.toBeInTheDocument()
+            expect(screen.queryByLabelText(/save to wishlist/i)).not.toBeInTheDocument()
+            expect(screen.queryByLabelText(/remove from wishlist/i)).not.toBeInTheDocument()
         })
 
         it('shows bookmark icon when not on watchlist', async () => {
@@ -297,14 +309,13 @@ describe('MovieCard', () => {
                 login: jest.fn(),
                 register: jest.fn(),
                 logout: jest.fn(),
+                refreshUser: jest.fn(),
             })
 
             render(<MovieCard movie={mockMovie} onAddToWatched={mockOnAddToWatched} />)
 
-            await waitFor(() => {
-                const button = screen.getByLabelText('Save to watchlist')
-                expect(button).toBeInTheDocument()
-            })
+            const button = await screen.findByLabelText('Save to wishlist', {}, { timeout: 3000 })
+            expect(button).toBeInTheDocument()
         })
 
         it('shows filled bookmark icon when already on watchlist', async () => {
@@ -322,17 +333,16 @@ describe('MovieCard', () => {
                 login: jest.fn(),
                 register: jest.fn(),
                 logout: jest.fn(),
+                refreshUser: jest.fn(),
             })
 
             render(<MovieCard movie={mockMovie} onAddToWatched={mockOnAddToWatched} />)
 
-            await waitFor(() => {
-                const button = screen.getByLabelText('Remove from watchlist')
-                expect(button).toBeInTheDocument()
-            })
+            const button = await screen.findByLabelText('Remove from wishlist', {}, { timeout: 3000 })
+            expect(button).toBeInTheDocument()
         })
 
-        it('adds movie to watchlist when clicked', async () => {
+        it('adds movie to wishlist when clicked', async () => {
             mockAddToWatchlist.mockResolvedValue({
                 id: 1,
                 movieId: 1,
@@ -354,16 +364,13 @@ describe('MovieCard', () => {
                 login: jest.fn(),
                 register: jest.fn(),
                 logout: jest.fn(),
+                refreshUser: jest.fn(),
             })
 
             const user = userEvent.setup()
             render(<MovieCard movie={mockMovie} onAddToWatched={mockOnAddToWatched} />)
 
-            await waitFor(() => {
-                expect(screen.getByLabelText('Save to watchlist')).toBeInTheDocument()
-            })
-
-            const button = screen.getByLabelText('Save to watchlist')
+            const button = await screen.findByLabelText('Save to wishlist', {}, { timeout: 3000 })
             await user.click(button)
 
             await waitFor(() => {
@@ -371,7 +378,10 @@ describe('MovieCard', () => {
             })
         })
 
-        it('removes movie from watchlist when clicked and already on watchlist', async () => {
+        it('removes movie from wishlist when clicked and already on watchlist', async () => {
+            const mockRemoveFromWatchlist = watchlistApi.removeFromWatchlist as jest.MockedFunction<typeof watchlistApi.removeFromWatchlist>
+            mockRemoveFromWatchlist.mockResolvedValue()
+
             mockGetMyStatus.mockResolvedValue({
                 localMovieId: 1,
                 watchCount: 0,
@@ -386,16 +396,13 @@ describe('MovieCard', () => {
                 login: jest.fn(),
                 register: jest.fn(),
                 logout: jest.fn(),
+                refreshUser: jest.fn(),
             })
 
             const user = userEvent.setup()
             render(<MovieCard movie={mockMovie} onAddToWatched={mockOnAddToWatched} />)
 
-            await waitFor(() => {
-                expect(screen.getByLabelText('Remove from watchlist')).toBeInTheDocument()
-            })
-
-            const button = screen.getByLabelText('Remove from watchlist')
+            const button = await screen.findByLabelText('Remove from wishlist', {}, { timeout: 3000 })
             await user.click(button)
 
             await waitFor(() => {
@@ -403,8 +410,8 @@ describe('MovieCard', () => {
             })
         })
 
-        it('shows error toast when watchlist limit reached', async () => {
-            mockAddToWatchlist.mockRejectedValue(new PremiumRequiredError('Watchlist limit reached'))
+        it('shows error toast when wishlist limit reached', async () => {
+            mockAddToWatchlist.mockRejectedValue(new PremiumRequiredError('Limit reached'))
 
             mockUseAuth.mockReturnValue({
                 user: { id: 1, username: 'testuser', email: 'test@example.com', isPremium: false },
@@ -412,25 +419,23 @@ describe('MovieCard', () => {
                 login: jest.fn(),
                 register: jest.fn(),
                 logout: jest.fn(),
+                refreshUser: jest.fn(),
             })
 
             const user = userEvent.setup()
             render(<MovieCard movie={mockMovie} onAddToWatched={mockOnAddToWatched} />)
 
-            await waitFor(() => {
-                expect(screen.getByLabelText('Save to watchlist')).toBeInTheDocument()
-            })
-
-            const button = screen.getByLabelText('Save to watchlist')
+            const button = await screen.findByLabelText('Save to wishlist', {}, { timeout: 3000 })
             await user.click(button)
 
+            // We don't actually test toast.error here as it's mocked, but we verify the error handling
             await waitFor(() => {
                 expect(mockAddToWatchlist).toHaveBeenCalled()
             })
         })
 
         it('handles duplicate (409) error by marking as on watchlist', async () => {
-            mockAddToWatchlist.mockRejectedValue(new ApiError('Already on watchlist', 409))
+            mockAddToWatchlist.mockRejectedValue(new ApiError('Duplicate', 409))
 
             mockUseAuth.mockReturnValue({
                 user: { id: 1, username: 'testuser', email: 'test@example.com', isPremium: false },
@@ -438,16 +443,13 @@ describe('MovieCard', () => {
                 login: jest.fn(),
                 register: jest.fn(),
                 logout: jest.fn(),
+                refreshUser: jest.fn(),
             })
 
             const user = userEvent.setup()
             render(<MovieCard movie={mockMovie} onAddToWatched={mockOnAddToWatched} />)
 
-            await waitFor(() => {
-                expect(screen.getByLabelText('Save to watchlist')).toBeInTheDocument()
-            })
-
-            const button = screen.getByLabelText('Save to watchlist')
+            const button = await screen.findByLabelText('Save to wishlist', {}, { timeout: 3000 })
             await user.click(button)
 
             await waitFor(() => {

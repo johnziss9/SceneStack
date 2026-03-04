@@ -23,6 +23,18 @@ jest.mock('@/lib/api', () => ({
 // Mock AuthContext
 jest.mock('@/contexts/AuthContext')
 
+// Mock WatchlistContext
+jest.mock('@/contexts/WatchlistContext', () => ({
+    useWishlist: jest.fn(() => ({
+        count: 0,
+        isLoading: false,
+        incrementCount: jest.fn(),
+        decrementCount: jest.fn(),
+        refreshCount: jest.fn(),
+    })),
+    WatchlistProvider: ({ children }: any) => children,
+}))
+
 // Mock sonner toast
 jest.mock('sonner', () => ({
     toast: {
@@ -134,7 +146,9 @@ describe('WatchForm', () => {
             />
         )
 
-        const dateInput = screen.getByLabelText(/watch date/i) as HTMLInputElement
+        // Query the actual date input by id, not the datePrecision selector
+        const dateInput = document.querySelector('#watchedDate') as HTMLInputElement
+        expect(dateInput).toBeInTheDocument()
         const today = new Date().toISOString().split('T')[0]
         expect(dateInput.value).toBe(today)
     })
@@ -174,7 +188,11 @@ describe('WatchForm', () => {
             />
         )
 
-        // Just submit with default date
+        // Select privacy mode (required)
+        const privateButton = screen.getByRole('button', { name: /private.*only you can see this/i })
+        await user.click(privateButton)
+
+        // Submit with default date and privacy
         const submitButton = screen.getByRole('button', { name: /save watch/i })
         await user.click(submitButton)
 
@@ -223,6 +241,10 @@ describe('WatchForm', () => {
                 onSuccess={mockOnSuccess}
             />
         )
+
+        // Select privacy mode (required)
+        const privateButton = screen.getByRole('button', { name: /private.*only you can see this/i })
+        await user.click(privateButton)
 
         // Submit form
         const submitButton = screen.getByRole('button', { name: /save watch/i })
@@ -278,6 +300,10 @@ describe('WatchForm', () => {
         const rewatchButton = screen.getByRole('button', { name: /this is a rewatch/i })
         await user.click(rewatchButton)
 
+        // Select privacy mode (required)
+        const privateButton = screen.getByRole('button', { name: /private.*only you can see this/i })
+        await user.click(privateButton)
+
         // Submit form
         const submitButton = screen.getByRole('button', { name: /save watch/i })
         await user.click(submitButton)
@@ -326,10 +352,15 @@ describe('WatchForm', () => {
             />
         )
 
-        // Change date
-        const dateInput = screen.getByLabelText(/watch date/i)
+        // Change date - query the actual date input by id
+        const dateInput = document.querySelector('#watchedDate') as HTMLInputElement
+        expect(dateInput).toBeInTheDocument()
         await user.clear(dateInput)
         await user.type(dateInput, '2024-12-25')
+
+        // Select privacy mode (required)
+        const privateButton = screen.getByRole('button', { name: /private.*only you can see this/i })
+        await user.click(privateButton)
 
         // Submit form
         const submitButton = screen.getByRole('button', { name: /save watch/i })
@@ -379,6 +410,10 @@ describe('WatchForm', () => {
             />
         )
 
+        // Select privacy mode (required)
+        const privateButton = screen.getByRole('button', { name: /private.*only you can see this/i })
+        await user.click(privateButton)
+
         const submitButton = screen.getByRole('button', { name: /save watch/i })
         await user.click(submitButton)
 
@@ -400,6 +435,10 @@ describe('WatchForm', () => {
                 onSuccess={mockOnSuccess}
             />
         )
+
+        // Select privacy mode (required)
+        const privateButton = screen.getByRole('button', { name: /private.*only you can see this/i })
+        await user.click(privateButton)
 
         const submitButton = screen.getByRole('button', { name: /save watch/i })
         await user.click(submitButton)
@@ -428,6 +467,10 @@ describe('WatchForm', () => {
             />
         )
 
+        // Select privacy mode (required)
+        const privateButton = screen.getByRole('button', { name: /private.*only you can see this/i })
+        await user.click(privateButton)
+
         const submitButton = screen.getByRole('button', { name: /save watch/i })
         await user.click(submitButton)
 
@@ -451,6 +494,10 @@ describe('WatchForm', () => {
                 onSuccess={mockOnSuccess}
             />
         )
+
+        // Select privacy mode (required)
+        const privateButton = screen.getByRole('button', { name: /private.*only you can see this/i })
+        await user.click(privateButton)
 
         const submitButton = screen.getByRole('button', { name: /save watch/i })
         const cancelButton = screen.getByRole('button', { name: /cancel/i })
@@ -549,6 +596,10 @@ describe('WatchForm', () => {
             />
         )
 
+        // Select privacy mode (required)
+        const privateButton = screen.getByRole('button', { name: /private.*only you can see this/i })
+        await user.click(privateButton)
+
         const submitButton = screen.getByRole('button', { name: /save watch/i })
         await user.click(submitButton)
 
@@ -568,7 +619,7 @@ describe('WatchForm', () => {
     })
 
     // Privacy & Sharing Tests
-    it('defaults privacy mode to private', async () => {
+    it('requires explicit privacy selection (no default)', async () => {
         render(
             <WatchForm
                 movie={mockMovie}
@@ -578,10 +629,9 @@ describe('WatchForm', () => {
             />
         )
 
-        await waitFor(() => {
-            const privateButton = screen.getByRole('button', { name: /private.*only you can see this/i })
-            expect(privateButton).toHaveClass('border-primary')
-        })
+        // No privacy option should be selected by default
+        const privateButton = screen.getByRole('button', { name: /private.*only you can see this/i })
+        expect(privateButton).not.toHaveClass('border-primary')
     })
 
     it('fetches user groups when dialog opens', async () => {
@@ -637,7 +687,7 @@ describe('WatchForm', () => {
         })
     })
 
-    it('submits with isPrivate=true by default', async () => {
+    it('submits with isPrivate=true when private mode selected', async () => {
         const user = userEvent.setup()
         const mockResponse: Watch = {
             id: 1,
@@ -672,10 +722,9 @@ describe('WatchForm', () => {
             />
         )
 
-        // Wait for privacy buttons to be available
-        await waitFor(() => {
-            expect(screen.getByRole('button', { name: /private.*only you can see this/i })).toBeInTheDocument()
-        })
+        // Select private mode
+        const privateButton = await screen.findByRole('button', { name: /private.*only you can see this/i })
+        await user.click(privateButton)
 
         const submitButton = screen.getByRole('button', { name: /save watch/i })
         await user.click(submitButton)
@@ -1039,6 +1088,10 @@ describe('WatchForm', () => {
         const customLocationInput = screen.getByPlaceholderText(/Enter location/i)
         await user.type(customLocationInput, "Friend's house")
 
+        // Select privacy mode (required)
+        const privateButton = screen.getByRole('button', { name: /private.*only you can see this/i })
+        await user.click(privateButton)
+
         const submitButton = screen.getByRole('button', { name: /save watch/i })
         await user.click(submitButton)
 
@@ -1091,6 +1144,10 @@ describe('WatchForm', () => {
         await user.click(locationTrigger)
         const cinemaOption = screen.getByRole('option', { name: 'Cinema' })
         await user.click(cinemaOption)
+
+        // Select privacy mode (required)
+        const privateButton = screen.getByRole('button', { name: /private.*only you can see this/i })
+        await user.click(privateButton)
 
         const submitButton = screen.getByRole('button', { name: /save watch/i })
         await user.click(submitButton)

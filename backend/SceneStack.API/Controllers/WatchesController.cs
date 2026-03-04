@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Caching.Memory;
 using SceneStack.API.DTOs;
 using SceneStack.API.Extensions;
 using SceneStack.API.Interfaces;
@@ -15,13 +16,48 @@ public class WatchesController : ControllerBase
 {
     private readonly IWatchService _watchService;
     private readonly IMovieService _movieService;
+    private readonly IGroupRecommendationsService _recommendationsService;
     private readonly ILogger<WatchesController> _logger;
+    private readonly IMemoryCache _cache;
 
-    public WatchesController(IWatchService watchService, IMovieService movieService, ILogger<WatchesController> logger)
+    public WatchesController(
+        IWatchService watchService,
+        IMovieService movieService,
+        IGroupRecommendationsService recommendationsService,
+        ILogger<WatchesController> logger,
+        IMemoryCache cache)
     {
         _watchService = watchService;
         _movieService = movieService;
+        _recommendationsService = recommendationsService;
         _logger = logger;
+        _cache = cache;
+    }
+
+    /// <summary>
+    /// Invalidates the recommendations cache for a given user
+    /// </summary>
+    private void InvalidateUserRecommendationsCache(int userId)
+    {
+        var cacheKey = $"user:{userId}:reco:prefs";
+        _cache.Remove(cacheKey);
+        _logger.LogInformation("Invalidated recommendations cache for user {UserId}", userId);
+    }
+
+    /// <summary>
+    /// Invalidates the recommendations cache for multiple groups
+    /// </summary>
+    private void InvalidateGroupRecommendationsCache(List<int> groupIds)
+    {
+        if (groupIds == null || !groupIds.Any())
+            return;
+
+        foreach (var groupId in groupIds)
+        {
+            var cacheKey = $"group:{groupId}:reco:prefs";
+            _cache.Remove(cacheKey);
+            _logger.LogInformation("Invalidated recommendations cache for group {GroupId}", groupId);
+        }
     }
 
     // GET: api/watches
@@ -140,6 +176,12 @@ public class WatchesController : ControllerBase
             var createdWatch = await _watchService.CreateAsync(watch, request.GroupIds);
             _logger.LogInformation("Successfully created watch with ID: {WatchId}", createdWatch.Id);
 
+            // Invalidate recommendations cache for this user
+            InvalidateUserRecommendationsCache(userId);
+
+            // Invalidate recommendations cache for all affected groups
+            InvalidateGroupRecommendationsCache(request.GroupIds);
+
             return CreatedAtAction(nameof(GetWatch), new { id = createdWatch.Id }, WatchMapper.ToResponse(createdWatch));
         }
         catch (Exception ex)
@@ -153,6 +195,15 @@ public class WatchesController : ControllerBase
     [HttpPut("{id}")]
     public async Task<ActionResult<WatchResponse>> UpdateWatch(int id, UpdateWatchRequest request)
     {
+        var userId = User.GetUserId();
+
+        // Fetch the existing watch to get old group IDs before updating
+        var existingWatch = await _watchService.GetByIdAsync(id);
+        if (existingWatch == null)
+            return NotFound();
+
+        var oldGroupIds = existingWatch.WatchGroups.Select(wg => wg.GroupId).ToList();
+
         var watch = new Watch
         {
             WatchedDate = DateTime.SpecifyKind(request.WatchedDate, DateTimeKind.Utc),
@@ -169,6 +220,18 @@ public class WatchesController : ControllerBase
         if (updatedWatch == null)
             return NotFound();
 
+        // Invalidate recommendations cache for this user
+        InvalidateUserRecommendationsCache(userId);
+
+        // Invalidate cache for old groups (in case watch was removed from them)
+        InvalidateGroupRecommendationsCache(oldGroupIds);
+
+        // Invalidate cache for new groups (in case watch was added to them)
+        if (request.GroupIds != null)
+        {
+            InvalidateGroupRecommendationsCache(request.GroupIds);
+        }
+
         return Ok(WatchMapper.ToResponse(updatedWatch));
     }
 
@@ -176,10 +239,25 @@ public class WatchesController : ControllerBase
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteWatch(int id)
     {
+        var userId = User.GetUserId();
+
+        // Fetch the watch to get group IDs before deleting
+        var existingWatch = await _watchService.GetByIdAsync(id);
+        if (existingWatch == null)
+            return NotFound();
+
+        var groupIds = existingWatch.WatchGroups.Select(wg => wg.GroupId).ToList();
+
         var result = await _watchService.DeleteAsync(id);
 
         if (!result)
             return NotFound();
+
+        // Invalidate recommendations cache for this user
+        InvalidateUserRecommendationsCache(userId);
+
+        // Invalidate cache for all groups this watch was shared with
+        InvalidateGroupRecommendationsCache(groupIds);
 
         return NoContent();
     }
@@ -260,6 +338,22 @@ public class WatchesController : ControllerBase
 
         try
         {
+            // Fetch all watches to get their old group IDs before updating
+            var existingWatches = new List<Watch>();
+            foreach (var watchId in request.WatchIds)
+            {
+                var watch = await _watchService.GetByIdAsync(watchId);
+                if (watch != null)
+                {
+                    existingWatches.Add(watch);
+                }
+            }
+
+            var oldGroupIds = existingWatches
+                .SelectMany(w => w.WatchGroups.Select(wg => wg.GroupId))
+                .Distinct()
+                .ToList();
+
             var result = await _watchService.BulkUpdateAsync(
                 userId,
                 request.WatchIds,
@@ -274,6 +368,22 @@ public class WatchesController : ControllerBase
                     userId,
                     result.Updated,
                     result.Failed);
+
+                // Invalidate cache even for partial updates, as some watches were modified
+                if (result.Updated > 0)
+                {
+                    InvalidateUserRecommendationsCache(userId);
+
+                    // Invalidate old groups
+                    InvalidateGroupRecommendationsCache(oldGroupIds);
+
+                    // Invalidate new groups
+                    if (request.GroupIds != null)
+                    {
+                        InvalidateGroupRecommendationsCache(request.GroupIds);
+                    }
+                }
+
                 return BadRequest(result);
             }
 
@@ -281,6 +391,18 @@ public class WatchesController : ControllerBase
                 "Successfully bulk updated {Count} watches for user {UserId}",
                 result.Updated,
                 userId);
+
+            // Invalidate recommendations cache for this user
+            InvalidateUserRecommendationsCache(userId);
+
+            // Invalidate cache for old groups (in case watches were removed from them)
+            InvalidateGroupRecommendationsCache(oldGroupIds);
+
+            // Invalidate cache for new groups (in case watches were added to them)
+            if (request.GroupIds != null)
+            {
+                InvalidateGroupRecommendationsCache(request.GroupIds);
+            }
 
             return Ok(result);
         }
@@ -294,6 +416,38 @@ public class WatchesController : ControllerBase
                 Failed = request.WatchIds.Count,
                 Errors = new List<string> { $"Internal server error: {ex.Message}" }
             });
+        }
+    }
+
+    /// <summary>
+    /// Get personalized movie recommendations for the current user
+    /// </summary>
+    /// <param name="page">Page number (default: 1)</param>
+    /// <param name="pageSize">Items per page (default: 20)</param>
+    /// <returns>Paginated list of recommended movies with scores and reasons</returns>
+    // GET: api/watches/recommendations?page=1&pageSize=20
+    [HttpGet("recommendations")]
+    public async Task<ActionResult<PaginatedRecommendationsResponse>> GetUserRecommendations(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20)
+    {
+        var userId = User.GetUserId();
+        _logger.LogInformation("User {UserId} getting personal recommendations page {Page}", userId, page);
+
+        try
+        {
+            var recommendations = await _recommendationsService
+                .GetUserRecommendationsAsync(userId, page, pageSize);
+
+            _logger.LogInformation("Returning {Count} recommendations (tier: {Tier}) for user {UserId}",
+                recommendations.Items.Count, recommendations.CurrentTier, userId);
+
+            return Ok(recommendations);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting recommendations for user {UserId}", userId);
+            return StatusCode(500, $"Error getting recommendations: {ex.Message}");
         }
     }
 }

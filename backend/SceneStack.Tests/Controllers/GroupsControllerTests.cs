@@ -486,141 +486,6 @@ public class GroupsControllerTests
     }
 
     [Fact]
-    public async Task GetGroupRecommendations_ValidGroup_ReturnsOkWithRecommendations()
-    {
-        // Arrange
-        var groupService = Substitute.For<IGroupService>();
-        var recommendationsService = Substitute.For<IGroupRecommendationsService>();
-        var logger = Substitute.For<ILogger<GroupsController>>();
-        var feedService = Substitute.For<IGroupFeedService>();
-        var controller = new GroupsController(groupService, feedService, recommendationsService, logger);
-
-        // Mock HttpContext and User claims
-        var user = new ClaimsPrincipal(new ClaimsIdentity(new[]
-        {
-            new Claim(ClaimTypes.NameIdentifier, "1")
-        }));
-        controller.ControllerContext = new ControllerContext
-        {
-            HttpContext = new DefaultHttpContext { User = user }
-        };
-
-        var recommendations = new List<TmdbMovie>
-        {
-            new TmdbMovie { Id = 551, Title = "The Matrix", ReleaseDate = "1999-03-31" },
-            new TmdbMovie { Id = 552, Title = "Inception", ReleaseDate = "2010-07-16" }
-        };
-
-        recommendationsService.GetGroupRecommendationsAsync(1, 1, 10).Returns(recommendations);
-
-        // Act
-        var result = await controller.GetGroupRecommendations(1);
-
-        // Assert
-        var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject;
-        var returnedMovies = okResult.Value.Should().BeAssignableTo<IEnumerable<TmdbMovie>>().Subject;
-        returnedMovies.Should().HaveCount(2);
-        returnedMovies.First().Title.Should().Be("The Matrix");
-    }
-
-    [Fact]
-    public async Task GetGroupRecommendations_WithCustomCount_ReturnsSpecifiedNumber()
-    {
-        // Arrange
-        var groupService = Substitute.For<IGroupService>();
-        var recommendationsService = Substitute.For<IGroupRecommendationsService>();
-        var logger = Substitute.For<ILogger<GroupsController>>();
-        var feedService = Substitute.For<IGroupFeedService>();
-        var controller = new GroupsController(groupService, feedService, recommendationsService, logger);
-
-        var user = new ClaimsPrincipal(new ClaimsIdentity(new[]
-        {
-            new Claim(ClaimTypes.NameIdentifier, "1")
-        }));
-        controller.ControllerContext = new ControllerContext
-        {
-            HttpContext = new DefaultHttpContext { User = user }
-        };
-
-        var recommendations = new List<TmdbMovie>
-        {
-            new TmdbMovie { Id = 551, Title = "Movie 1" },
-            new TmdbMovie { Id = 552, Title = "Movie 2" },
-            new TmdbMovie { Id = 553, Title = "Movie 3" }
-        };
-
-        recommendationsService.GetGroupRecommendationsAsync(1, 1, 3).Returns(recommendations);
-
-        // Act
-        var result = await controller.GetGroupRecommendations(1, count: 3);
-
-        // Assert
-        var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject;
-        var returnedMovies = okResult.Value.Should().BeAssignableTo<IEnumerable<TmdbMovie>>().Subject;
-        returnedMovies.Should().HaveCount(3);
-    }
-
-    [Fact]
-    public async Task GetGroupRecommendations_NoRecommendations_ReturnsEmptyList()
-    {
-        // Arrange
-        var groupService = Substitute.For<IGroupService>();
-        var recommendationsService = Substitute.For<IGroupRecommendationsService>();
-        var logger = Substitute.For<ILogger<GroupsController>>();
-        var feedService = Substitute.For<IGroupFeedService>();
-        var controller = new GroupsController(groupService, feedService, recommendationsService, logger);
-
-        var user = new ClaimsPrincipal(new ClaimsIdentity(new[]
-        {
-            new Claim(ClaimTypes.NameIdentifier, "1")
-        }));
-        controller.ControllerContext = new ControllerContext
-        {
-            HttpContext = new DefaultHttpContext { User = user }
-        };
-
-        recommendationsService.GetGroupRecommendationsAsync(1, 1, 10).Returns(new List<TmdbMovie>());
-
-        // Act
-        var result = await controller.GetGroupRecommendations(1);
-
-        // Assert
-        var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject;
-        var returnedMovies = okResult.Value.Should().BeAssignableTo<IEnumerable<TmdbMovie>>().Subject;
-        returnedMovies.Should().BeEmpty();
-    }
-
-    [Fact]
-    public async Task GetGroupRecommendations_ServiceThrowsException_ReturnsInternalServerError()
-    {
-        // Arrange
-        var groupService = Substitute.For<IGroupService>();
-        var recommendationsService = Substitute.For<IGroupRecommendationsService>();
-        var logger = Substitute.For<ILogger<GroupsController>>();
-        var feedService = Substitute.For<IGroupFeedService>();
-        var controller = new GroupsController(groupService, feedService, recommendationsService, logger);
-
-        var user = new ClaimsPrincipal(new ClaimsIdentity(new[]
-        {
-            new Claim(ClaimTypes.NameIdentifier, "1")
-        }));
-        controller.ControllerContext = new ControllerContext
-        {
-            HttpContext = new DefaultHttpContext { User = user }
-        };
-
-        recommendationsService.GetGroupRecommendationsAsync(1, 1, 10)
-            .Returns<List<TmdbMovie>>(_ => throw new Exception("TMDb API error"));
-
-        // Act
-        var result = await controller.GetGroupRecommendations(1);
-
-        // Assert
-        var objectResult = result.Result.Should().BeOfType<ObjectResult>().Subject;
-        objectResult.StatusCode.Should().Be(500);
-    }
-
-    [Fact]
     public async Task GetGroupRecommendationStats_ValidGroup_ReturnsOkWithStats()
     {
         // Arrange
@@ -828,5 +693,242 @@ public class GroupsControllerTests
         // Assert
         var objectResult = result.Result.Should().BeOfType<ObjectResult>().Subject;
         objectResult.StatusCode.Should().Be(500);
+    }
+
+    // Paginated Recommendations Tests
+    [Fact]
+    public async Task GetGroupRecommendations_WithPagination_ReturnsOkWithPaginatedResponse()
+    {
+        // Arrange
+        var groupService = Substitute.For<IGroupService>();
+        var recommendationsService = Substitute.For<IGroupRecommendationsService>();
+        var logger = Substitute.For<ILogger<GroupsController>>();
+        var feedService = Substitute.For<IGroupFeedService>();
+        var controller = new GroupsController(groupService, feedService, recommendationsService, logger);
+
+        var user = new ClaimsPrincipal(new ClaimsIdentity(new[]
+        {
+            new Claim(ClaimTypes.NameIdentifier, "1")
+        }));
+        controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext { User = user }
+        };
+
+        var paginatedResponse = new PaginatedRecommendationsResponse
+        {
+            Items = new List<RecommendedMovie>
+            {
+                new RecommendedMovie
+                {
+                    Movie = new TmdbMovie { Id = 551, Title = "The Matrix" },
+                    Score = 0.85,
+                    Reason = "Matches Action, Sci-Fi genres from your 9+ rated movies",
+                    MatchedGenres = new List<string> { "Action", "Sci-Fi" },
+                    MatchedDirector = "Wachowski Brothers",
+                    MatchedCast = new List<string> { "Keanu Reeves" },
+                    MatchedWriter = "Wachowski Brothers"
+                }
+            },
+            Page = 1,
+            PageSize = 20,
+            HasMore = true,
+            CurrentTier = "Elite"
+        };
+
+        recommendationsService.GetPaginatedRecommendationsAsync(1, 1, 1, 20).Returns(paginatedResponse);
+
+        // Act
+        var result = await controller.GetGroupRecommendations(1, page: 1, pageSize: 20);
+
+        // Assert
+        var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject;
+        var response = okResult.Value.Should().BeAssignableTo<PaginatedRecommendationsResponse>().Subject;
+        response.Items.Should().HaveCount(1);
+        response.Page.Should().Be(1);
+        response.PageSize.Should().Be(20);
+        response.HasMore.Should().BeTrue();
+        response.CurrentTier.Should().Be("Elite");
+        response.Items.First().Movie.Title.Should().Be("The Matrix");
+    }
+
+    [Fact]
+    public async Task GetGroupRecommendations_PageProgression_ReturnsDifferentTiers()
+    {
+        // Arrange
+        var groupService = Substitute.For<IGroupService>();
+        var recommendationsService = Substitute.For<IGroupRecommendationsService>();
+        var logger = Substitute.For<ILogger<GroupsController>>();
+        var feedService = Substitute.For<IGroupFeedService>();
+        var controller = new GroupsController(groupService, feedService, recommendationsService, logger);
+
+        var user = new ClaimsPrincipal(new ClaimsIdentity(new[]
+        {
+            new Claim(ClaimTypes.NameIdentifier, "1")
+        }));
+        controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext { User = user }
+        };
+
+        // Mock page 1 (Elite tier)
+        var page1Response = new PaginatedRecommendationsResponse
+        {
+            Items = new List<RecommendedMovie>(),
+            Page = 1,
+            PageSize = 20,
+            HasMore = true,
+            CurrentTier = "Elite"
+        };
+        recommendationsService.GetPaginatedRecommendationsAsync(1, 1, 1, 20).Returns(page1Response);
+
+        // Mock page 3 (Strong tier)
+        var page3Response = new PaginatedRecommendationsResponse
+        {
+            Items = new List<RecommendedMovie>(),
+            Page = 3,
+            PageSize = 20,
+            HasMore = true,
+            CurrentTier = "Strong"
+        };
+        recommendationsService.GetPaginatedRecommendationsAsync(1, 1, 3, 20).Returns(page3Response);
+
+        // Act
+        var result1 = await controller.GetGroupRecommendations(1, page: 1, pageSize: 20);
+        var result3 = await controller.GetGroupRecommendations(1, page: 3, pageSize: 20);
+
+        // Assert
+        var response1 = ((OkObjectResult)result1.Result!).Value.Should().BeAssignableTo<PaginatedRecommendationsResponse>().Subject;
+        var response3 = ((OkObjectResult)result3.Result!).Value.Should().BeAssignableTo<PaginatedRecommendationsResponse>().Subject;
+
+        response1.CurrentTier.Should().Be("Elite");
+        response3.CurrentTier.Should().Be("Strong");
+    }
+
+    [Fact]
+    public async Task GetGroupRecommendations_ServiceThrowsException_Returns500()
+    {
+        // Arrange
+        var groupService = Substitute.For<IGroupService>();
+        var recommendationsService = Substitute.For<IGroupRecommendationsService>();
+        var logger = Substitute.For<ILogger<GroupsController>>();
+        var feedService = Substitute.For<IGroupFeedService>();
+        var controller = new GroupsController(groupService, feedService, recommendationsService, logger);
+
+        var user = new ClaimsPrincipal(new ClaimsIdentity(new[]
+        {
+            new Claim(ClaimTypes.NameIdentifier, "1")
+        }));
+        controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext { User = user }
+        };
+
+        recommendationsService.GetPaginatedRecommendationsAsync(Arg.Any<int>(), Arg.Any<int>(), Arg.Any<int>(), Arg.Any<int>())
+            .Returns<PaginatedRecommendationsResponse>(_ => throw new Exception("Service error"));
+
+        // Act
+        var result = await controller.GetGroupRecommendations(1, page: 1, pageSize: 20);
+
+        // Assert
+        var objectResult = result.Result.Should().BeOfType<ObjectResult>().Subject;
+        objectResult.StatusCode.Should().Be(500);
+    }
+
+    [Fact]
+    public async Task GetGroupRecommendations_EmptyResult_ReturnsOkWithEmptyList()
+    {
+        // Arrange
+        var groupService = Substitute.For<IGroupService>();
+        var recommendationsService = Substitute.For<IGroupRecommendationsService>();
+        var logger = Substitute.For<ILogger<GroupsController>>();
+        var feedService = Substitute.For<IGroupFeedService>();
+        var controller = new GroupsController(groupService, feedService, recommendationsService, logger);
+
+        var user = new ClaimsPrincipal(new ClaimsIdentity(new[]
+        {
+            new Claim(ClaimTypes.NameIdentifier, "1")
+        }));
+        controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext { User = user }
+        };
+
+        var emptyResponse = new PaginatedRecommendationsResponse
+        {
+            Items = new List<RecommendedMovie>(),
+            Page = 1,
+            PageSize = 20,
+            HasMore = false,
+            CurrentTier = "Elite"
+        };
+
+        recommendationsService.GetPaginatedRecommendationsAsync(1, 1, 1, 20).Returns(emptyResponse);
+
+        // Act
+        var result = await controller.GetGroupRecommendations(1, page: 1, pageSize: 20);
+
+        // Assert
+        var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject;
+        var response = okResult.Value.Should().BeAssignableTo<PaginatedRecommendationsResponse>().Subject;
+        response.Items.Should().BeEmpty();
+        response.HasMore.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task GetGroupRecommendations_WithWriterMatch_ReturnsWriterInformation()
+    {
+        // Arrange
+        var groupService = Substitute.For<IGroupService>();
+        var recommendationsService = Substitute.For<IGroupRecommendationsService>();
+        var logger = Substitute.For<ILogger<GroupsController>>();
+        var feedService = Substitute.For<IGroupFeedService>();
+        var controller = new GroupsController(groupService, feedService, recommendationsService, logger);
+
+        var user = new ClaimsPrincipal(new ClaimsIdentity(new[]
+        {
+            new Claim(ClaimTypes.NameIdentifier, "1")
+        }));
+        controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext { User = user }
+        };
+
+        var paginatedResponse = new PaginatedRecommendationsResponse
+        {
+            Items = new List<RecommendedMovie>
+            {
+                new RecommendedMovie
+                {
+                    Movie = new TmdbMovie { Id = 680, Title = "Pulp Fiction" },
+                    Score = 0.92,
+                    Reason = "Matches Crime, Drama • directed by Quentin Tarantino • written by Quentin Tarantino from your 8+ rated movies",
+                    MatchedGenres = new List<string> { "Crime", "Drama" },
+                    MatchedDirector = "Quentin Tarantino",
+                    MatchedCast = new List<string> { "John Travolta", "Samuel L. Jackson" },
+                    MatchedWriter = "Quentin Tarantino"
+                }
+            },
+            Page = 1,
+            PageSize = 20,
+            HasMore = false,
+            CurrentTier = "Elite"
+        };
+
+        recommendationsService.GetPaginatedRecommendationsAsync(1, 1, 1, 20).Returns(paginatedResponse);
+
+        // Act
+        var result = await controller.GetGroupRecommendations(1, page: 1, pageSize: 20);
+
+        // Assert
+        var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject;
+        var response = okResult.Value.Should().BeAssignableTo<PaginatedRecommendationsResponse>().Subject;
+        response.Items.Should().HaveCount(1);
+
+        var recommendation = response.Items[0];
+        recommendation.MatchedWriter.Should().Be("Quentin Tarantino");
+        recommendation.MatchedDirector.Should().Be("Quentin Tarantino");
+        recommendation.Reason.Should().Contain("written by Quentin Tarantino");
+        recommendation.Reason.Should().Contain("directed by Quentin Tarantino");
     }
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { GroupDetail } from "@/components/GroupDetail";
 import { GroupFeed } from "@/components/GroupFeed";
 import { GroupRecommendations } from "@/components/GroupRecommendations";
@@ -13,7 +14,12 @@ interface GroupDetailPageProps {
 }
 
 export default function GroupDetailPage({ params }: GroupDetailPageProps) {
+    const searchParams = useSearchParams();
     const [groupId, setGroupId] = useState<number | null>(null);
+
+    // Read initial tab from URL parameters
+    const initialTab = searchParams.get('tab') || 'feed';
+    const [activeTab, setActiveTab] = useState(initialTab);
 
     useEffect(() => {
         async function loadParams() {
@@ -22,6 +28,14 @@ export default function GroupDetailPage({ params }: GroupDetailPageProps) {
         }
         loadParams();
     }, [params]);
+
+    // Update active tab when URL changes
+    useEffect(() => {
+        const tab = searchParams.get('tab');
+        if (tab) {
+            setActiveTab(tab);
+        }
+    }, [searchParams]);
 
     if (groupId === null) {
         return null; // Or a loading state
@@ -35,7 +49,7 @@ export default function GroupDetailPage({ params }: GroupDetailPageProps) {
 
                 {/* Tabs for Feed and Recommendations */}
                 <div className="mt-8">
-                    <Tabs defaultValue="feed" className="w-full">
+                    <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                         <TabsList className="grid w-full max-w-2xl grid-cols-3 h-12">
                             <TabsTrigger value="feed" className="text-sm sm:text-base">
                                 <Eye className="h-4 w-4 mr-2" />

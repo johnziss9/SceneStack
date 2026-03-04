@@ -20,6 +20,18 @@ jest.mock('sonner', () => ({
     },
 }))
 
+// Mock WatchlistContext
+jest.mock('@/contexts/WatchlistContext', () => ({
+    useWishlist: jest.fn(() => ({
+        count: 0,
+        isLoading: false,
+        incrementCount: jest.fn(),
+        decrementCount: jest.fn(),
+        refreshCount: jest.fn(),
+    })),
+    WatchlistProvider: ({ children }: any) => children,
+}))
+
 // Suppress console.error for cleaner test output
 const originalError = console.error
 beforeAll(() => {
@@ -167,7 +179,7 @@ describe('PrivacySettings', () => {
 
         // Save/Reset buttons should appear
         expect(screen.getByRole('button', { name: /save changes/i })).toBeInTheDocument()
-        expect(screen.getByRole('button', { name: /reset/i })).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: /cancel/i })).toBeInTheDocument()
     })
 
     it('toggles shareWatches switch', async () => {
@@ -393,7 +405,7 @@ describe('PrivacySettings', () => {
         await user.click(shareNotesSwitch)
 
         const saveButton = screen.getByRole('button', { name: /save changes/i })
-        const resetButton = screen.getByRole('button', { name: /reset/i })
+        const resetButton = screen.getByRole('button', { name: /cancel/i })
 
         await user.click(saveButton)
 
@@ -418,18 +430,21 @@ describe('PrivacySettings', () => {
         await user.click(shareNotesSwitch)
         expect(shareNotesSwitch).toBeChecked()
 
-        // Click reset
-        const resetButton = screen.getByRole('button', { name: /reset/i })
+        // Click cancel (reset)
+        const resetButton = screen.getByRole('button', { name: /cancel/i })
         await user.click(resetButton)
 
-        // Should fetch settings again and reset state
+        // Should reset state to original without fetching again
         await waitFor(() => {
-            expect(privacyApi.getPrivacySettings).toHaveBeenCalledTimes(2)
+            expect(shareNotesSwitch).not.toBeChecked()
         })
 
-        // Save/Reset buttons should disappear
+        // Save/Cancel buttons should disappear
         expect(screen.queryByRole('button', { name: /save changes/i })).not.toBeInTheDocument()
-        expect(screen.queryByRole('button', { name: /reset/i })).not.toBeInTheDocument()
+        expect(screen.queryByRole('button', { name: /cancel/i })).not.toBeInTheDocument()
+
+        // Should only have called getPrivacySettings once (initial load)
+        expect(privacyApi.getPrivacySettings).toHaveBeenCalledTimes(1)
     })
 
     it('handles multiple toggle changes before saving', async () => {

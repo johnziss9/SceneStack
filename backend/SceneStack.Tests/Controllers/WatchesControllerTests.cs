@@ -2,6 +2,7 @@ using System.Security.Claims;
 using FluentAssertions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using SceneStack.API.Controllers;
@@ -19,7 +20,9 @@ public class WatchesControllerTests
         ILogger<WatchesController> logger,
         int userId = 1)
     {
-        var controller = new WatchesController(watchService, movieService, logger);
+        var recommendationsService = Substitute.For<IGroupRecommendationsService>();
+        var cache = Substitute.For<IMemoryCache>();
+        var controller = new WatchesController(watchService, movieService, recommendationsService, logger, cache);
 
         // Mock the authenticated user
         var claims = new List<Claim>
@@ -305,6 +308,23 @@ public class WatchesControllerTests
         var logger = Substitute.For<ILogger<WatchesController>>();
         var controller = CreateControllerWithAuthenticatedUser(watchService, movieService, logger);
 
+        var existingWatch = new Watch
+        {
+            Id = 1,
+            UserId = 1,
+            MovieId = 1,
+            WatchedDate = DateTime.UtcNow.AddDays(-7),
+            Rating = 9,
+            Notes = "Great movie",
+            IsRewatch = false,
+            Movie = new Movie { Id = 1, TmdbId = 550, Title = "Fight Club", Year = 1999 },
+            User = new User { Id = 1, Username = "testuser", Email = "test@test.com" },
+            WatchGroups = new List<WatchGroup>
+            {
+                new WatchGroup { WatchId = 1, GroupId = 1, SharedAt = DateTime.UtcNow }
+            }
+        };
+
         var updatedWatch = new Watch
         {
             Id = 1,
@@ -318,6 +338,7 @@ public class WatchesControllerTests
             User = new User { Id = 1, Username = "testuser", Email = "test@test.com" }
         };
 
+        watchService.GetByIdAsync(1).Returns(existingWatch);
         watchService.UpdateAsync(1, Arg.Any<Watch>()).Returns(updatedWatch);
 
         var request = new UpdateWatchRequest
@@ -347,6 +368,7 @@ public class WatchesControllerTests
         var logger = Substitute.For<ILogger<WatchesController>>();
         var controller = CreateControllerWithAuthenticatedUser(watchService, movieService, logger);
 
+        watchService.GetByIdAsync(999).Returns((Watch?)null);
         watchService.UpdateAsync(999, Arg.Any<Watch>()).Returns((Watch?)null);
 
         var request = new UpdateWatchRequest
@@ -372,6 +394,24 @@ public class WatchesControllerTests
         var logger = Substitute.For<ILogger<WatchesController>>();
         var controller = CreateControllerWithAuthenticatedUser(watchService, movieService, logger);
 
+        var existingWatch = new Watch
+        {
+            Id = 1,
+            UserId = 1,
+            MovieId = 1,
+            WatchedDate = DateTime.UtcNow,
+            Rating = 9,
+            IsRewatch = false,
+            Movie = new Movie { Id = 1, TmdbId = 550, Title = "Fight Club", Year = 1999 },
+            User = new User { Id = 1, Username = "testuser", Email = "test@test.com" },
+            WatchGroups = new List<WatchGroup>
+            {
+                new WatchGroup { WatchId = 1, GroupId = 1, SharedAt = DateTime.UtcNow },
+                new WatchGroup { WatchId = 1, GroupId = 2, SharedAt = DateTime.UtcNow }
+            }
+        };
+
+        watchService.GetByIdAsync(1).Returns(existingWatch);
         watchService.DeleteAsync(1).Returns(true);
 
         // Act
@@ -390,6 +430,7 @@ public class WatchesControllerTests
         var logger = Substitute.For<ILogger<WatchesController>>();
         var controller = CreateControllerWithAuthenticatedUser(watchService, movieService, logger);
 
+        watchService.GetByIdAsync(999).Returns((Watch?)null);
         watchService.DeleteAsync(999).Returns(false);
 
         // Act
@@ -579,5 +620,172 @@ public class WatchesControllerTests
 
         // Verify service was called with groupId
         await watchService.Received(1).GetAllAsync(1, 5);
+    }
+
+    [Fact]
+    public async Task GetUserRecommendations_ReturnsOkWithRecommendations()
+    {
+        // Arrange
+        var watchService = Substitute.For<IWatchService>();
+        var movieService = Substitute.For<IMovieService>();
+        var logger = Substitute.For<ILogger<WatchesController>>();
+        var recommendationsService = Substitute.For<IGroupRecommendationsService>();
+        var cache = Substitute.For<IMemoryCache>();
+
+        var controller = new WatchesController(watchService, movieService, recommendationsService, logger, cache);
+
+        // Mock the authenticated user
+        var claims = new List<Claim>
+        {
+            new Claim(ClaimTypes.NameIdentifier, "1"),
+            new Claim(ClaimTypes.Name, "testuser"),
+            new Claim(ClaimTypes.Email, "test@example.com")
+        };
+        var identity = new ClaimsIdentity(claims, "TestAuth");
+        var claimsPrincipal = new ClaimsPrincipal(identity);
+
+        controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext { User = claimsPrincipal }
+        };
+
+        var mockResponse = new PaginatedRecommendationsResponse
+        {
+            Items = new List<RecommendedMovie>
+            {
+                new RecommendedMovie
+                {
+                    Movie = new TmdbMovie
+                    {
+                        Id = 550,
+                        Title = "Fight Club",
+                        PosterPath = "/poster.jpg",
+                        ReleaseDate = "1999-10-15",
+                        VoteAverage = 8.4,
+                        VoteCount = 20000
+                    },
+                    Score = 0.85,
+                    Reason = "Matches Action, Drama from your 8+ rated movies",
+                    MatchedGenres = new List<string> { "Action", "Drama" }
+                }
+            },
+            Page = 1,
+            PageSize = 20,
+            HasMore = true,
+            CurrentTier = "Elite"
+        };
+
+        recommendationsService.GetUserRecommendationsAsync(1, 1, 20).Returns(mockResponse);
+
+        // Act
+        var result = await controller.GetUserRecommendations(page: 1, pageSize: 20);
+
+        // Assert
+        var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject;
+        var response = okResult.Value.Should().BeOfType<PaginatedRecommendationsResponse>().Subject;
+
+        response.Items.Should().HaveCount(1);
+        response.Items[0].Movie.Title.Should().Be("Fight Club");
+        response.Items[0].Score.Should().Be(0.85);
+        response.Items[0].Reason.Should().Be("Matches Action, Drama from your 8+ rated movies");
+        response.CurrentTier.Should().Be("Elite");
+        response.HasMore.Should().BeTrue();
+
+        // Verify service was called with correct parameters
+        await recommendationsService.Received(1).GetUserRecommendationsAsync(1, 1, 20);
+    }
+
+    [Fact]
+    public async Task GetUserRecommendations_WithDifferentPage_CallsServiceWithCorrectParameters()
+    {
+        // Arrange
+        var watchService = Substitute.For<IWatchService>();
+        var movieService = Substitute.For<IMovieService>();
+        var logger = Substitute.For<ILogger<WatchesController>>();
+        var recommendationsService = Substitute.For<IGroupRecommendationsService>();
+        var cache = Substitute.For<IMemoryCache>();
+
+        var controller = new WatchesController(watchService, movieService, recommendationsService, logger, cache);
+
+        // Mock the authenticated user
+        var claims = new List<Claim>
+        {
+            new Claim(ClaimTypes.NameIdentifier, "1"),
+            new Claim(ClaimTypes.Name, "testuser"),
+            new Claim(ClaimTypes.Email, "test@example.com")
+        };
+        var identity = new ClaimsIdentity(claims, "TestAuth");
+        var claimsPrincipal = new ClaimsPrincipal(identity);
+
+        controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext { User = claimsPrincipal }
+        };
+
+        var mockResponse = new PaginatedRecommendationsResponse
+        {
+            Items = new List<RecommendedMovie>(),
+            Page = 3,
+            PageSize = 20,
+            HasMore = false,
+            CurrentTier = "Strong"
+        };
+
+        recommendationsService.GetUserRecommendationsAsync(1, 3, 20).Returns(mockResponse);
+
+        // Act
+        var result = await controller.GetUserRecommendations(page: 3, pageSize: 20);
+
+        // Assert
+        var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject;
+        var response = okResult.Value.Should().BeOfType<PaginatedRecommendationsResponse>().Subject;
+
+        response.Page.Should().Be(3);
+        response.CurrentTier.Should().Be("Strong");
+        response.HasMore.Should().BeFalse();
+
+        // Verify service was called with page 3
+        await recommendationsService.Received(1).GetUserRecommendationsAsync(1, 3, 20);
+    }
+
+    [Fact]
+    public async Task GetUserRecommendations_ServiceThrowsException_ReturnsInternalServerError()
+    {
+        // Arrange
+        var watchService = Substitute.For<IWatchService>();
+        var movieService = Substitute.For<IMovieService>();
+        var logger = Substitute.For<ILogger<WatchesController>>();
+        var recommendationsService = Substitute.For<IGroupRecommendationsService>();
+        var cache = Substitute.For<IMemoryCache>();
+
+        var controller = new WatchesController(watchService, movieService, recommendationsService, logger, cache);
+
+        // Mock the authenticated user
+        var claims = new List<Claim>
+        {
+            new Claim(ClaimTypes.NameIdentifier, "1"),
+            new Claim(ClaimTypes.Name, "testuser"),
+            new Claim(ClaimTypes.Email, "test@example.com")
+        };
+        var identity = new ClaimsIdentity(claims, "TestAuth");
+        var claimsPrincipal = new ClaimsPrincipal(identity);
+
+        controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext { User = claimsPrincipal }
+        };
+
+        // Mock service to throw exception
+        recommendationsService.GetUserRecommendationsAsync(1, 1, 20)
+            .Returns<PaginatedRecommendationsResponse>(_ => throw new Exception("Database error"));
+
+        // Act
+        var result = await controller.GetUserRecommendations(page: 1, pageSize: 20);
+
+        // Assert
+        var statusCodeResult = result.Result.Should().BeOfType<ObjectResult>().Subject;
+        statusCodeResult.StatusCode.Should().Be(500);
+        statusCodeResult.Value.Should().BeOfType<string>()
+            .Which.Should().Contain("Error getting recommendations");
     }
 }

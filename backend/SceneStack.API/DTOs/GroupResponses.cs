@@ -57,6 +57,16 @@ public class GroupFeedItemResponse
     public bool IsRewatch { get; set; }
 }
 
+public class PaginatedGroupFeedResponse
+{
+    public List<GroupFeedItemResponse> Items { get; set; } = new();
+    public int Skip { get; set; }
+    public int Take { get; set; }
+    public bool HasMore { get; set; }
+    public int TotalCount { get; set; }
+    public int NextSkip { get; set; } // The skip value to use for the next request
+}
+
 public class GroupFeedStatsResponse
 {
     public int GroupId { get; set; }
@@ -116,4 +126,46 @@ public class SharedMovieStats
     public MovieBasicInfo Movie { get; set; } = null!;
     public int WatchedByCount { get; set; }
     public List<string> WatchedByUsernames { get; set; } = new();
+}
+
+public class PaginatedRecommendationsResponse
+{
+    public List<RecommendedMovie> Items { get; set; } = new();
+    public int Page { get; set; }
+    public int PageSize { get; set; }
+    public bool HasMore { get; set; }
+    public string CurrentTier { get; set; } = string.Empty; // "Elite", "Strong", "Broad", "Popular"
+}
+
+public class RecommendedMovie
+{
+    public TmdbMovie Movie { get; set; } = null!;
+    public double Score { get; set; }
+    public string Reason { get; set; } = string.Empty;
+    public List<string> MatchedGenres { get; set; } = new();
+    public string? MatchedDirector { get; set; }
+    public List<string> MatchedCast { get; set; } = new();
+    public string? MatchedWriter { get; set; }
+}
+
+// Internal models for recommendation system
+internal class GroupPreferences
+{
+    public Dictionary<string, int> Tier1Genres { get; set; } = new();
+    public Dictionary<string, int> Tier2Genres { get; set; } = new();
+    public Dictionary<string, int> Tier3Genres { get; set; } = new();
+    public List<string> Tier1Directors { get; set; } = new();
+    public List<string> Tier2Directors { get; set; } = new();
+    public List<string> Tier1Cast { get; set; } = new();
+    public List<string> Tier2Cast { get; set; } = new();
+    public List<string> Tier1Writers { get; set; } = new();
+    public List<string> Tier2Writers { get; set; } = new();
+}
+
+internal enum RecommendationTier
+{
+    Elite = 1,    // 8-10 ratings
+    Strong = 2,   // 6-8 ratings
+    Broad = 3,    // All ratings
+    Popular = 4   // Fallback
 }

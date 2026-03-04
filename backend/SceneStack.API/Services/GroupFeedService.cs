@@ -66,6 +66,145 @@ public class GroupFeedService : IGroupFeedService
         }).ToList();
     }
 
+    public async Task<PaginatedGroupFeedResponse> GetPaginatedGroupFeedAsync(int groupId, int requestingUserId, int skip = 0, int take = 20)
+    {
+        // Verify requesting user is a member of the group
+        var isMember = await _context.GroupMembers
+            .AnyAsync(gm => gm.GroupId == groupId && gm.UserId == requestingUserId);
+
+        if (!isMember)
+        {
+            _logger.LogWarning("User {UserId} attempted to access feed for group {GroupId} without membership", requestingUserId, groupId);
+            throw new UnauthorizedAccessException("You must be a member of this group to view its feed");
+        }
+
+        // Get total count first
+        var totalCount = await _context.WatchGroups
+            .Where(wg => wg.GroupId == groupId)
+            .Include(wg => wg.Watch)
+                .ThenInclude(w => w.User)
+            .Select(wg => wg.Watch)
+            .Where(w => !w.IsPrivate)
+            .CountAsync(w => w.UserId == requestingUserId || w.User.ShareWatches);
+
+        // Fetch items with tracking to know where we left off
+        var allItems = new List<GroupFeedItemResponse>();
+        var currentPosition = skip;
+        var lastItemId = 0;
+        var foundEnough = false;
+
+        // Fetch in batches until we have enough filtered items
+        var batchSize = Math.Min(take * 5, 200);
+        var maxAttempts = 3; // Prevent infinite loops
+        var attempts = 0;
+
+        while (allItems.Count < take && attempts < maxAttempts)
+        {
+            attempts++;
+
+            var watches = await _context.WatchGroups
+                .Where(wg => wg.GroupId == groupId)
+                .Include(wg => wg.Watch)
+                    .ThenInclude(w => w.Movie)
+                .Include(wg => wg.Watch)
+                    .ThenInclude(w => w.User)
+                .Select(wg => wg.Watch)
+                .Where(w => !w.IsPrivate)
+                .OrderByDescending(w => w.WatchedDate)
+                .ThenBy(w => w.Id) // Secondary sort for consistency
+                .Skip(currentPosition)
+                .Take(batchSize)
+                .ToListAsync();
+
+            if (!watches.Any())
+            {
+                // No more items in database
+                foundEnough = true;
+                break;
+            }
+
+            // Apply privacy filters and track each item
+            var processedCount = 0;
+            foreach (var watch in watches)
+            {
+                processedCount++;
+
+                // Check if this item passes privacy filter
+                if (watch.UserId == requestingUserId || watch.User.ShareWatches)
+                {
+                    // Apply field-level privacy
+                    var rating = watch.User.ShareRatings || watch.UserId == requestingUserId ? watch.Rating : null;
+                    var notes = watch.User.ShareNotes || watch.UserId == requestingUserId ? watch.Notes : null;
+
+                    allItems.Add(new GroupFeedItemResponse
+                    {
+                        Id = watch.Id,
+                        UserId = watch.UserId,
+                        Username = watch.User.Username,
+                        IsDeactivated = watch.User.IsDeactivated,
+                        MovieId = watch.MovieId,
+                        MovieTitle = watch.Movie.Title,
+                        PosterPath = watch.Movie.PosterPath,
+                        WatchedDate = watch.WatchedDate,
+                        Rating = rating,
+                        Notes = notes,
+                        WatchLocation = watch.WatchLocation,
+                        WatchedWith = watch.WatchedWith,
+                        IsRewatch = watch.IsRewatch
+                    });
+
+                    lastItemId = watch.Id;
+
+                    if (allItems.Count >= take)
+                    {
+                        // We have enough items, update position to after this item
+                        currentPosition += processedCount;
+                        foundEnough = true;
+                        break;
+                    }
+                }
+            }
+
+            // If we didn't find enough items but processed all from this batch
+            if (!foundEnough)
+            {
+                currentPosition += processedCount;
+
+                // If we got fewer items than batch size, we've reached the end
+                if (watches.Count < batchSize)
+                {
+                    foundEnough = true;
+                    break;
+                }
+            }
+            else
+            {
+                break;
+            }
+        }
+
+        // Check if there are more items available
+        var hasMore = await _context.WatchGroups
+            .Where(wg => wg.GroupId == groupId)
+            .Include(wg => wg.Watch)
+            .Select(wg => wg.Watch)
+            .Where(w => !w.IsPrivate)
+            .OrderByDescending(w => w.WatchedDate)
+            .ThenBy(w => w.Id)
+            .Skip(currentPosition)
+            .AnyAsync();
+
+        return new PaginatedGroupFeedResponse
+        {
+            Items = allItems,
+            Skip = skip,
+            Take = take,
+            HasMore = hasMore,
+            TotalCount = totalCount,
+            NextSkip = currentPosition
+        };
+    }
+
     public async Task<List<Watch>> GetCombinedFeedAsync(int userId, int skip = 0, int take = 20)
     {
         // Get all groups the user is a member of

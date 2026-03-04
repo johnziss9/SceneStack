@@ -43,6 +43,7 @@ export function MovieDetailClient({ params }: MovieDetailPageProps) {
     // Get referrer from URL params to determine back button text
     const referrer = searchParams.get('from') || 'search';
     const searchQuery = searchParams.get('query') || '';
+    const groupId = searchParams.get('groupId') || '';
 
     const [tmdbId, setTmdbId] = useState<number | null>(null);
     const [movie, setMovie] = useState<MovieDetail | null>(null);
@@ -61,6 +62,12 @@ export function MovieDetailClient({ params }: MovieDetailPageProps) {
                 return { text: 'Back to My Wishlist', url: '/wishlist' };
             case 'watches':
                 return { text: 'Back to My Watches', url: '/watched' };
+            case 'group':
+                // Navigate back to the group recommendations tab
+                const groupUrl = groupId
+                    ? `/groups/${groupId}?tab=recommendations`
+                    : '/groups';
+                return { text: 'Back to Recommendations', url: groupUrl };
             case 'search':
             default:
                 // Preserve search query if present
