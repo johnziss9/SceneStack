@@ -18,6 +18,17 @@ export interface CastMember {
     profilePath?: string | null;
 }
 
+export interface DirectorMember {
+    name: string;
+    profilePath?: string | null;
+}
+
+export interface WriterMember {
+    name: string;
+    job: string;
+    profilePath?: string | null;
+}
+
 export interface MovieDetail {
     id: number;
     tmdbId: number;
@@ -34,8 +45,10 @@ export interface MovieDetail {
     tmdbVoteCount?: number | null;
     directorName?: string | null;
     directorProfilePath?: string | null;
+    directors: DirectorMember[];
     writerName?: string | null;
     writerProfilePath?: string | null;
+    writers: WriterMember[];
     cast: CastMember[];
 }
 

@@ -156,8 +156,19 @@ public class MoviesController : ControllerBase
             TmdbVoteCount = movie.TmdbVoteCount,
             DirectorName = movie.DirectorName,
             DirectorProfilePath = movie.DirectorProfilePath,
+            Directors = movie.Directors.Select(d => new DirectorMemberResponse
+            {
+                Name = d.Name,
+                ProfilePath = d.ProfilePath
+            }).ToList(),
             WriterName = movie.WriterName,
             WriterProfilePath = movie.WriterProfilePath,
+            Writers = movie.Writers.Select(w => new WriterMemberResponse
+            {
+                Name = w.Name,
+                Job = w.Job,
+                ProfilePath = w.ProfilePath
+            }).ToList(),
             Cast = movie.Cast.Select(c => new CastMemberResponse
             {
                 Name = c.Name,

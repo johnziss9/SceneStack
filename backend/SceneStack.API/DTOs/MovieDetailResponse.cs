@@ -19,8 +19,10 @@ public class MovieDetailResponse
     public int? TmdbVoteCount { get; set; }
     public string? DirectorName { get; set; }
     public string? DirectorProfilePath { get; set; }
+    public List<DirectorMemberResponse> Directors { get; set; } = new();
     public string? WriterName { get; set; }
     public string? WriterProfilePath { get; set; }
+    public List<WriterMemberResponse> Writers { get; set; } = new();
     public List<CastMemberResponse> Cast { get; set; } = new();
 }
 
@@ -28,6 +30,19 @@ public class CastMemberResponse
 {
     public string Name { get; set; } = string.Empty;
     public string Character { get; set; } = string.Empty;
+    public string? ProfilePath { get; set; }
+}
+
+public class DirectorMemberResponse
+{
+    public string Name { get; set; } = string.Empty;
+    public string? ProfilePath { get; set; }
+}
+
+public class WriterMemberResponse
+{
+    public string Name { get; set; } = string.Empty;
+    public string Job { get; set; } = string.Empty;
     public string? ProfilePath { get; set; }
 }
 

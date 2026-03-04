@@ -391,17 +391,53 @@ export default function WatchDetailPage({ params }: WatchDetailPageProps) {
               </div>
             )}
 
-            {/* Director */}
-            {movieDetail?.directorName && (
+            {/* Crew (Directors & Writers) */}
+            {(movieDetail?.directors?.length > 0 || movieDetail?.writers?.length > 0) && (
               <div>
-                <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">Director</h2>
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 flex-shrink-0 rounded-full bg-primary/20 border-2 border-primary/40 flex items-center justify-center">
-                    <span className="text-sm font-bold text-primary">
-                      {movieDetail.directorName.charAt(0)}
-                    </span>
-                  </div>
-                  <p className="text-sm font-semibold">{movieDetail.directorName}</p>
+                <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">Crew</h2>
+                <div className="space-y-3">
+                  {movieDetail.directors?.map((director, i) => (
+                    <div key={i} className="flex items-center gap-3">
+                      <div className="w-10 h-10 flex-shrink-0 rounded-full overflow-hidden bg-muted flex items-center justify-center">
+                        {director.profilePath ? (
+                          <img
+                            src={`https://image.tmdb.org/t/p/w185${director.profilePath}`}
+                            alt={director.name}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <span className="text-sm font-bold text-muted-foreground">
+                            {director.name.charAt(0)}
+                          </span>
+                        )}
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold">{director.name}</p>
+                        <p className="text-xs text-primary">Director</p>
+                      </div>
+                    </div>
+                  ))}
+                  {movieDetail.writers?.map((writer, i) => (
+                    <div key={i} className="flex items-center gap-3">
+                      <div className="w-10 h-10 flex-shrink-0 rounded-full overflow-hidden bg-muted flex items-center justify-center">
+                        {writer.profilePath ? (
+                          <img
+                            src={`https://image.tmdb.org/t/p/w185${writer.profilePath}`}
+                            alt={writer.name}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <span className="text-sm font-bold text-muted-foreground">
+                            {writer.name.charAt(0)}
+                          </span>
+                        )}
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold">{writer.name}</p>
+                        <p className="text-xs text-primary">{writer.job}</p>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}

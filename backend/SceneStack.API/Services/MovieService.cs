@@ -99,7 +99,9 @@ public class MovieService : IMovieService
                 && existingMovie.Cast.Count == 0
                 && existingMovie.Runtime == null
                 || existingMovie.WriterName == null
-                || existingMovie.DirectorProfilePath == null;
+                || existingMovie.DirectorProfilePath == null
+                || existingMovie.Writers.Count == 0
+                || existingMovie.Directors.Count == 0;
 
             if (!needsEnrichment)
             {
@@ -129,6 +131,12 @@ public class MovieService : IMovieService
                 var enrichDirectorCrew = enrichedCredits?.Crew.FirstOrDefault(c => c.Job == "Director");
                 existingMovie.DirectorName = enrichDirectorCrew?.Name;
                 existingMovie.DirectorProfilePath = enrichDirectorCrew?.ProfilePath;
+                var enrichDirectorCrewList = enrichedCredits?.Crew
+                    .Where(c => c.Job == "Director")
+                    .ToList();
+                existingMovie.Directors = enrichDirectorCrewList?
+                    .Select(c => new DirectorMember { Name = c.Name, ProfilePath = c.ProfilePath })
+                    .ToList() ?? new List<DirectorMember>();
 
                 // Extract all writers (Screenplay, Writer, Story)
                 var enrichWriterCrew = enrichedCredits?.Crew
@@ -137,6 +145,11 @@ public class MovieService : IMovieService
                 var enrichWriters = enrichWriterCrew?.Select(c => c.Name).Distinct().ToList();
                 existingMovie.WriterName = enrichWriters != null && enrichWriters.Any() ? string.Join(", ", enrichWriters) : null;
                 existingMovie.WriterProfilePath = enrichWriterCrew?.FirstOrDefault()?.ProfilePath;
+                existingMovie.Writers = enrichWriterCrew?
+                    .GroupBy(c => c.Name)
+                    .Select(g => g.First())
+                    .Select(c => new WriterMember { Name = c.Name, Job = c.Job, ProfilePath = c.ProfilePath })
+                    .ToList() ?? new List<WriterMember>();
                 existingMovie.Cast = enrichedCredits?.Cast
                     .OrderBy(c => c.Order)
                     .Take(10)
@@ -168,6 +181,14 @@ public class MovieService : IMovieService
         var director = directorCrew?.Name;
         var directorProfilePath = directorCrew?.ProfilePath;
 
+        // Create directors list
+        var directorCrewList = credits?.Crew
+            .Where(c => c.Job == "Director")
+            .ToList();
+        var directorsList = directorCrewList?
+            .Select(c => new DirectorMember { Name = c.Name, ProfilePath = c.ProfilePath })
+            .ToList() ?? new List<DirectorMember>();
+
         // Extract all writers (Screenplay, Writer, Story) and combine them
         var writerCrewList = credits?.Crew
             .Where(c => c.Job == "Screenplay" || c.Job == "Writer" || c.Job == "Story")
@@ -175,6 +196,13 @@ public class MovieService : IMovieService
         var writers = writerCrewList?.Select(c => c.Name).Distinct().ToList();
         var writer = writers != null && writers.Any() ? string.Join(", ", writers) : null;
         var writerProfilePath = writerCrewList?.FirstOrDefault()?.ProfilePath;
+
+        // Create writers list with distinct names
+        var writersList = writerCrewList?
+            .GroupBy(c => c.Name)
+            .Select(g => g.First())
+            .Select(c => new WriterMember { Name = c.Name, Job = c.Job, ProfilePath = c.ProfilePath })
+            .ToList() ?? new List<WriterMember>();
 
         // Extract top 10 billed cast
         var cast = credits?.Cast
@@ -205,8 +233,10 @@ public class MovieService : IMovieService
             TmdbVoteCount = tmdbMovie.VoteCount > 0 ? tmdbMovie.VoteCount : null,
             DirectorName = director,
             DirectorProfilePath = directorProfilePath,
+            Directors = directorsList,
             WriterName = writer,
             WriterProfilePath = writerProfilePath,
+            Writers = writersList,
             Cast = cast,
             CreatedAt = DateTime.UtcNow
         };

@@ -364,61 +364,61 @@ export function MovieDetailClient({ params }: MovieDetailPageProps) {
                     </div>
                 )}
 
-                {/* Crew (Director & Writer) */}
-                {(movie.directorName || movie.writerName) && (
+                {/* Crew (Directors & Writers) */}
+                {(movie.directors?.length > 0 || movie.writers?.length > 0) && (
                     <div className="mt-10">
                         <h2 className="text-lg font-semibold mb-4">Crew</h2>
                         <div className="grid grid-cols-3 sm:grid-cols-5 gap-4">
-                            {movie.directorName && (
-                                <div className="space-y-2">
+                            {movie.directors?.map((director, i) => (
+                                <div key={i} className="space-y-2">
                                     <div className="w-16 h-16 rounded-full overflow-hidden bg-muted flex items-center justify-center">
-                                        {movie.directorProfilePath ? (
+                                        {director.profilePath ? (
                                             <img
-                                                src={`https://image.tmdb.org/t/p/w185${movie.directorProfilePath}`}
-                                                alt={movie.directorName}
+                                                src={`https://image.tmdb.org/t/p/w185${director.profilePath}`}
+                                                alt={director.name}
                                                 className="w-full h-full object-cover"
                                             />
                                         ) : (
                                             <span className="text-xl font-bold text-muted-foreground">
-                                                {movie.directorName.charAt(0)}
+                                                {director.name.charAt(0)}
                                             </span>
                                         )}
                                     </div>
                                     <div>
                                         <p className="text-xs font-semibold leading-tight line-clamp-2">
-                                            {movie.directorName}
+                                            {director.name}
                                         </p>
                                         <p className="text-xs text-primary">
                                             Director
                                         </p>
                                     </div>
                                 </div>
-                            )}
-                            {movie.writerName && (
-                                <div className="space-y-2">
+                            ))}
+                            {movie.writers?.map((writer, i) => (
+                                <div key={i} className="space-y-2">
                                     <div className="w-16 h-16 rounded-full overflow-hidden bg-muted flex items-center justify-center">
-                                        {movie.writerProfilePath ? (
+                                        {writer.profilePath ? (
                                             <img
-                                                src={`https://image.tmdb.org/t/p/w185${movie.writerProfilePath}`}
-                                                alt={movie.writerName}
+                                                src={`https://image.tmdb.org/t/p/w185${writer.profilePath}`}
+                                                alt={writer.name}
                                                 className="w-full h-full object-cover"
                                             />
                                         ) : (
                                             <span className="text-xl font-bold text-muted-foreground">
-                                                {movie.writerName.charAt(0)}
+                                                {writer.name.charAt(0)}
                                             </span>
                                         )}
                                     </div>
                                     <div>
                                         <p className="text-xs font-semibold leading-tight line-clamp-2">
-                                            {movie.writerName}
+                                            {writer.name}
                                         </p>
                                         <p className="text-xs text-primary">
-                                            Writer
+                                            {writer.job}
                                         </p>
                                     </div>
                                 </div>
-                            )}
+                            ))}
                         </div>
                     </div>
                 )}

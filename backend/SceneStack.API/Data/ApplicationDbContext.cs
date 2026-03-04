@@ -60,6 +60,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             // JSON columns for enriched metadata (stored once at creation time)
             entity.Property(e => e.Genres).HasColumnType("jsonb");
             entity.Property(e => e.Cast).HasColumnType("jsonb");
+            entity.Property(e => e.Directors).HasColumnType("jsonb");
+            entity.Property(e => e.Writers).HasColumnType("jsonb");
 
             // Global query filter to exclude soft-deleted movies
             entity.HasQueryFilter(m => !m.IsDeleted);

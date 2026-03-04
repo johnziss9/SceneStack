@@ -356,7 +356,7 @@ export default function EditWatchDialog({
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-[900px] max-h-[90vh] flex flex-col">
+            <DialogContent className="sm:max-w-[500px] max-h-[90vh] flex flex-col">
                 <DialogHeader>
                     <DialogTitle>Edit Watch: {watch.movie.title}</DialogTitle>
                     <DialogDescription>
@@ -365,9 +365,7 @@ export default function EditWatchDialog({
                 </DialogHeader>
 
                 <form ref={formRef} onSubmit={handleSubmit} className="overflow-y-auto flex-1 pr-2" noValidate>
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        {/* Left Column - Form Fields */}
-                        <div className="space-y-4">
+                    <div className="space-y-4">
                     {/* Watch Date */}
                     <div ref={dateRef} className="space-y-2">
                         <Label htmlFor="datePrecision">Date Watched *</Label>
@@ -685,10 +683,6 @@ export default function EditWatchDialog({
                         </div>
                     </button>
                     </div>
-                    {/* End Left Column */}
-
-                    </div>
-                    {/* End Grid */}
 
                     {/* Error Message */}
                     {error && (
