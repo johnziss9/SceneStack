@@ -78,3 +78,54 @@ export interface TmdbSearchResponse {
     total_pages: number;
     total_results: number;
 }
+
+// Person search types
+export interface TmdbPerson {
+    id: number;
+    name: string;
+    known_for_department?: string;
+    profile_path?: string | null;
+    popularity: number;
+    known_for: TmdbKnownForMovie[];
+}
+
+export interface TmdbKnownForMovie {
+    id: number;
+    title?: string;
+    media_type: string;
+}
+
+export interface TmdbPersonSearchResponse {
+    page: number;
+    results: TmdbPerson[];
+    total_pages: number;
+    total_results: number;
+}
+
+export interface TmdbPersonCastCredit {
+    id: number;
+    title: string;
+    character?: string;
+    release_date?: string;
+    poster_path?: string | null;
+    vote_average: number;
+    vote_count: number;
+    popularity: number;
+}
+
+export interface TmdbPersonCrewCredit {
+    id: number;
+    title: string;
+    job: string;
+    department: string;
+    release_date?: string;
+    poster_path?: string | null;
+    vote_average: number;
+    vote_count: number;
+    popularity: number;
+}
+
+export interface TmdbPersonMovieCredits {
+    cast: TmdbPersonCastCredit[];
+    crew: TmdbPersonCrewCredit[];
+}

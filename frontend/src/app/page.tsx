@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Skeleton } from "@/components/ui/skeleton";
@@ -10,14 +10,15 @@ import { Button } from "@/components/ui/button";
 import { Film, TrendingUp, Eye, Users, ArrowRight, Sparkles, Crown, Zap, Loader2, Search, BarChart2 } from 'lucide-react';
 import { MovieSearchBar, type MovieSearchBarRef } from "@/components/MovieSearchBar";
 import { MovieCard } from "@/components/MovieCard";
+import { PersonCard } from "@/components/PersonCard";
 import { WatchCard } from "@/components/WatchCard";
 import { WatchForm } from "@/components/WatchForm";
 import { UpgradeToPremiumModal } from "@/components/UpgradeToPremiumModal";
 import { useAuth } from "@/contexts/AuthContext";
 import { watchApi, movieApi } from "@/lib";
-import type { TmdbMovie, GroupedWatch } from '@/types';
+import type { TmdbMovie, TmdbPerson, GroupedWatch } from '@/types';
 
-export default function Home() {
+function HomeContent() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -32,6 +33,17 @@ export default function Home() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+
+  // Person search state
+  const [searchType, setSearchType] = useState<'movies' | 'people'>('movies');
+  const [personResults, setPersonResults] = useState<TmdbPerson[]>([]);
+  const [personCurrentPage, setPersonCurrentPage] = useState<number>(1);
+  const [personTotalPages, setPersonTotalPages] = useState<number>(0);
+  const [isLoadingMorePeople, setIsLoadingMorePeople] = useState(false);
+  const [selectedPerson, setSelectedPerson] = useState<TmdbPerson | null>(null);
+  const [personMovies, setPersonMovies] = useState<TmdbMovie[]>([]);
+  const [isLoadingPersonMovies, setIsLoadingPersonMovies] = useState(false);
+  const [personMoviesDisplayCount, setPersonMoviesDisplayCount] = useState(20);
 
   // Get initial query from URL
   const initialQuery = searchParams.get('query') || '';
@@ -116,6 +128,11 @@ export default function Home() {
     setCurrentPage(1);
     setCurrentQuery(query);
 
+    // Clear person viewing state when starting a new movie search
+    setSelectedPerson(null);
+    setPersonMovies([]);
+    setPersonMoviesDisplayCount(20);
+
     // Update URL with search query
     const params = new URLSearchParams(window.location.search);
     if (query) {
@@ -130,6 +147,117 @@ export default function Home() {
   const handleLoadingChange = useCallback((loading: boolean) => {
     setIsSearching(loading);
   }, []);
+
+  const handleSearchTypeChange = useCallback((type: 'movies' | 'people') => {
+    setSearchType(type);
+
+    // Clear results when switching modes
+    if (type === 'movies') {
+      setPersonResults([]);
+      setSelectedPerson(null);
+      setPersonMovies([]);
+      setPersonMoviesDisplayCount(20);
+      setPersonCurrentPage(1);
+      setPersonTotalPages(0);
+    } else {
+      setSearchResults([]);
+    }
+  }, []);
+
+  const handlePersonResultsChange = useCallback((results: TmdbPerson[], totalResults: number = 0, totalPages: number = 0, query: string = '') => {
+    setPersonResults(results);
+    setTotalSearchResults(totalResults);
+    setPersonTotalPages(totalPages);
+    setPersonCurrentPage(1);
+    setCurrentQuery(query);
+
+    // Clear person viewing state when starting a new person search
+    setSelectedPerson(null);
+    setPersonMovies([]);
+    setPersonMoviesDisplayCount(20);
+
+    // Update URL with search query
+    const params = new URLSearchParams(window.location.search);
+    if (query) {
+      params.set('query', query);
+    } else {
+      params.delete('query');
+    }
+    const newUrl = params.toString() ? `/?${params.toString()}` : '/';
+    window.history.replaceState({}, '', newUrl);
+  }, []);
+
+  const handleLoadMorePeople = async () => {
+    if (!currentQuery || isLoadingMorePeople || personCurrentPage >= personTotalPages) return;
+
+    setIsLoadingMorePeople(true);
+    try {
+      const nextPage = personCurrentPage + 1;
+      const response = await movieApi.searchPeople(currentQuery, nextPage);
+
+      // Filter out any duplicates
+      const existingIds = new Set(personResults.map(p => p.id));
+      const uniqueResults = response.results.filter(person => !existingIds.has(person.id));
+
+      // Append unique results
+      if (uniqueResults.length > 0) {
+        setPersonResults(prev => [...prev, ...uniqueResults]);
+      }
+
+      // Always increment page so we don't keep fetching the same page
+      setPersonCurrentPage(nextPage);
+    } catch (err) {
+      console.error('Load more people error:', err);
+    } finally {
+      setIsLoadingMorePeople(false);
+    }
+  };
+
+  const handleViewPersonMovies = async (person: TmdbPerson) => {
+    setSelectedPerson(person);
+    setIsLoadingPersonMovies(true);
+    setPersonMoviesDisplayCount(20); // Reset to show first 20
+    try {
+      const credits = await movieApi.getPersonMovies(person.id);
+
+      // Combine cast and crew, filter for directors/writers/screenwriters
+      const allCredits = [
+        ...credits.cast.map(c => ({ ...c, credit_type: 'cast' })),
+        ...credits.crew.filter(c =>
+          c.job === 'Director' ||
+          c.job === 'Screenplay' ||
+          c.job === 'Writer'
+        ).map(c => ({ ...c, credit_type: 'crew' }))
+      ];
+
+      // Remove duplicates by movie ID, sort by popularity
+      const uniqueMovies = Array.from(
+        new Map(allCredits.map(m => [m.id, m])).values()
+      ).sort((a, b) => b.popularity - a.popularity);
+
+      // Convert to TmdbMovie format
+      const movies: TmdbMovie[] = uniqueMovies.map(m => ({
+        id: m.id,
+        title: m.title,
+        release_date: m.release_date,
+        poster_path: m.poster_path,
+        vote_average: m.vote_average,
+        vote_count: m.vote_count,
+        overview: '' // Not included in credits response
+      }));
+
+      setPersonMovies(movies);
+    } catch (err) {
+      console.error('Error fetching person movies:', err);
+      setPersonMovies([]);
+    } finally {
+      setIsLoadingPersonMovies(false);
+    }
+  };
+
+  const handleLoadMorePersonMovies = () => {
+    setPersonMoviesDisplayCount(prev => prev + 20);
+  };
 
   const handleLoadMore = async () => {
     if (!currentQuery || isLoadingMore || currentPage >= totalPages) return;
@@ -390,9 +518,9 @@ export default function Home() {
           <>
             <Card>
               <CardHeader>
-                <CardTitle>Search Movies</CardTitle>
+                <CardTitle>Search Movies & People</CardTitle>
                 <CardDescription>
-                  Search TMDb to find movies to add to your watched list
+                  Search TMDb to find movies or discover films by actors, directors, and writers
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -400,7 +528,10 @@ export default function Home() {
                   ref={searchBarRef}
                   initialQuery={initialQuery}
                   onResultsChange={handleSearchChange}
+                  onPersonResultsChange={handlePersonResultsChange}
                   onLoadingChange={handleLoadingChange}
+                  onSearchTypeChange={handleSearchTypeChange}
+                  showTypeToggle={true}
                 />
                 {!isSearching && searchResults.length === 0 && (
                   <div className="text-sm text-muted-foreground">
@@ -477,13 +608,147 @@ export default function Home() {
               </div>
             )}
 
+            {/* Person Search Results for Logged-In Users */}
+            {searchType === 'people' && !isSearching && personResults.length > 0 && !selectedPerson && (
+              <div className="space-y-6">
+                <div>
+                  <h2 className="text-2xl font-semibold">People Results</h2>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {totalSearchResults > personResults.length ? (
+                      <>Showing {personResults.length} of {totalSearchResults.toLocaleString()} results</>
+                    ) : (
+                      <>{personResults.length} {personResults.length === 1 ? 'person' : 'people'} found</>
+                    )}
+                  </p>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                  {personResults.map((person) => (
+                    <PersonCard
+                      key={person.id}
+                      person={person}
+                      onViewMovies={handleViewPersonMovies}
+                    />
+                  ))}
+                </div>
+                {personCurrentPage < personTotalPages && (
+                  <div className="flex justify-center py-8">
+                    <Button
+                      onClick={handleLoadMorePeople}
+                      disabled={isLoadingMorePeople}
+                      size="lg"
+                      variant="outline"
+                    >
+                      {isLoadingMorePeople ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Loading...
+                        </>
+                      ) : (
+                        'Load More Results'
+                      )}
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Loading Person's Movies */}
+            {isLoadingPersonMovies && (
+              <div className="space-y-6">
+                <h2 className="text-2xl font-semibold">Loading {selectedPerson?.name}'s movies...</h2>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                  {[...Array(10)].map((_, i) => (
+                    <div key={i} className="space-y-3">
+                      <Skeleton variant="poster" className="w-full rounded-lg" />
+                      <Skeleton variant="branded" className="h-4 w-3/4" />
+                      <Skeleton variant="branded" className="h-4 w-1/2" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Person's Movies Display */}
+            {selectedPerson && !isLoadingPersonMovies && (
+              <div className="space-y-6">
+                {personMovies.length > 0 ? (
+                  <>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h2 className="text-2xl font-semibold">{selectedPerson.name}'s Movies</h2>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          Showing {Math.min(personMoviesDisplayCount, personMovies.length)} of {personMovies.length} movies, sorted by popularity
+                        </p>
+                      </div>
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          setSelectedPerson(null);
+                          setPersonMovies([]);
+                          setPersonMoviesDisplayCount(20);
+                        }}
+                      >
+                        Back to People Results
+                      </Button>
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                      {personMovies.slice(0, personMoviesDisplayCount).map((movie) => (
+                        <MovieCard
+                          key={movie.id}
+                          movie={movie}
+                          onAddToWatched={handleAddToWatched}
+                        />
+                      ))}
+                    </div>
+                    {personMovies.length > personMoviesDisplayCount && (
+                      <div className="flex justify-center py-8">
+                        <Button
+                          onClick={handleLoadMorePersonMovies}
+                          size="lg"
+                          variant="outline"
+                        >
+                          Load More ({personMovies.length - personMoviesDisplayCount} remaining)
+                        </Button>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h2 className="text-2xl font-semibold">{selectedPerson.name}'s Movies</h2>
+                      </div>
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          setSelectedPerson(null);
+                          setPersonMovies([]);
+                        }}
+                      >
+                        Back to People Results
+                      </Button>
+                    </div>
+                    <div className="flex flex-col items-center justify-center py-12 space-y-4">
+                      <Film className="h-16 w-16 text-muted-foreground" />
+                      <p className="text-xl text-muted-foreground">No movies found</p>
+                      <p className="text-sm text-muted-foreground text-center max-w-md">
+                        We couldn't find any movies for {selectedPerson.name}.
+                      </p>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+
             {/* No Results Found for Logged-In Users */}
-            {!isSearching && searchResults.length === 0 && currentQuery && (
+            {!isSearching && searchResults.length === 0 && personResults.length === 0 && currentQuery && (
               <div className="flex flex-col items-center justify-center py-12 space-y-4">
                 <Search className="h-16 w-16 text-muted-foreground" />
-                <p className="text-xl text-muted-foreground">No movies found</p>
+                <p className="text-xl text-muted-foreground">
+                  {searchType === 'movies' ? 'No movies found' : 'No people found'}
+                </p>
                 <p className="text-sm text-muted-foreground text-center max-w-md">
-                  We couldn't find any movies matching "{currentQuery}". Try a different search term.
+                  We couldn't find any {searchType === 'movies' ? 'movies' : 'people'} matching "{currentQuery}". Try a different search term.
                 </p>
               </div>
             )}
@@ -491,7 +756,7 @@ export default function Home() {
         )}
 
         {/* Quick Stats for Logged-In Users */}
-        {user && searchResults.length === 0 && (
+        {user && searchResults.length === 0 && personResults.length === 0 && !selectedPerson && (
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <Link href="/watched" className="block hover:scale-[1.02] transition-transform">
               <Card className="h-full cursor-pointer hover:border-primary">
@@ -547,7 +812,7 @@ export default function Home() {
         )}
 
         {/* Trending This Week for Logged-In Users */}
-        {user && searchResults.length === 0 && trendingMovies.length > 0 && (
+        {user && searchResults.length === 0 && personResults.length === 0 && !selectedPerson && trendingMovies.length > 0 && (
           <div>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-2xl font-semibold flex items-center gap-2">
@@ -568,7 +833,7 @@ export default function Home() {
         )}
 
         {/* Loading Trending Movies */}
-        {user && searchResults.length === 0 && isLoadingTrending && trendingMovies.length === 0 && (
+        {user && searchResults.length === 0 && personResults.length === 0 && !selectedPerson && isLoadingTrending && trendingMovies.length === 0 && (
           <div className="space-y-6">
             <h2 className="text-2xl font-semibold mb-4 flex items-center gap-2">
               <TrendingUp className="h-6 w-6 text-primary" />
@@ -587,7 +852,7 @@ export default function Home() {
         )}
 
         {/* Recent Watches Preview for Logged-In Users */}
-        {user && searchResults.length === 0 && recentWatches.length > 0 && (
+        {user && searchResults.length === 0 && personResults.length === 0 && !selectedPerson && recentWatches.length > 0 && (
           <div>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-2xl font-semibold">Recently Watched</h2>
@@ -607,7 +872,7 @@ export default function Home() {
         )}
 
         {/* Loading Recent Watches */}
-        {user && searchResults.length === 0 && isLoadingRecent && recentWatches.length === 0 && (
+        {user && searchResults.length === 0 && personResults.length === 0 && !selectedPerson && isLoadingRecent && recentWatches.length === 0 && (
           <div className="space-y-6">
             <LoadingTips />
             <h2 className="text-2xl font-semibold mb-4">Recently Watched</h2>
@@ -624,7 +889,7 @@ export default function Home() {
         )}
 
         {/* Empty State for Logged-In Users with No Watches */}
-        {user && searchResults.length === 0 && !isLoadingRecent && recentWatches.length === 0 && (
+        {user && searchResults.length === 0 && personResults.length === 0 && !selectedPerson && !isLoadingRecent && recentWatches.length === 0 && (
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-12 space-y-4">
               <Film className="h-16 w-16 text-muted-foreground" />
@@ -653,7 +918,10 @@ export default function Home() {
                   ref={searchBarRef}
                   initialQuery={initialQuery}
                   onResultsChange={handleSearchChange}
+                  onPersonResultsChange={handlePersonResultsChange}
                   onLoadingChange={handleLoadingChange}
+                  onSearchTypeChange={handleSearchTypeChange}
+                  showTypeToggle={true}
                 />
                 {!isSearching && searchResults.length === 0 && (
                   <div className="text-sm text-muted-foreground">
@@ -752,13 +1020,148 @@ export default function Home() {
           </>
         )}
 
+        {/* Person Search Results for Logged-Out Users */}
+        {!user && searchType === 'people' && !isSearching && personResults.length > 0 && !selectedPerson && (
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-2xl font-semibold">People Results</h2>
+              <p className="text-sm text-muted-foreground mt-1">
+                {totalSearchResults > personResults.length ? (
+                  <>Showing {personResults.length} of {totalSearchResults.toLocaleString()} results</>
+                ) : (
+                  <>{personResults.length} {personResults.length === 1 ? 'person' : 'people'} found</>
+                )}
+              </p>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+              {personResults.map((person) => (
+                <PersonCard
+                  key={person.id}
+                  person={person}
+                  onViewMovies={handleViewPersonMovies}
+                />
+              ))}
+            </div>
+            {personCurrentPage < personTotalPages && (
+              <div className="flex justify-center py-8">
+                <Button
+                  onClick={handleLoadMorePeople}
+                  disabled={isLoadingMorePeople}
+                  size="lg"
+                  variant="outline"
+                >
+                  {isLoadingMorePeople ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Loading...
+                    </>
+                  ) : (
+                    'Load More Results'
+                  )}
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Loading Person's Movies for Logged-Out Users */}
+        {!user && isLoadingPersonMovies && (
+          <div className="space-y-6">
+            <h2 className="text-2xl font-semibold">Loading {selectedPerson?.name}'s movies...</h2>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+              {[...Array(10)].map((_, i) => (
+                <div key={i} className="space-y-3">
+                  <Skeleton variant="poster" className="w-full rounded-lg" />
+                  <Skeleton variant="branded" className="h-4 w-3/4" />
+                  <Skeleton variant="branded" className="h-4 w-1/2" />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Person's Movies Display for Logged-Out Users */}
+        {!user && selectedPerson && !isLoadingPersonMovies && (
+          <div className="space-y-6">
+            {personMovies.length > 0 ? (
+              <>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-2xl font-semibold">{selectedPerson.name}'s Movies</h2>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Showing {Math.min(personMoviesDisplayCount, personMovies.length)} of {personMovies.length} movies, sorted by popularity
+                    </p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setSelectedPerson(null);
+                      setPersonMovies([]);
+                      setPersonMoviesDisplayCount(20);
+                    }}
+                  >
+                    Back to People Results
+                  </Button>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                  {personMovies.slice(0, personMoviesDisplayCount).map((movie) => (
+                    <MovieCard
+                      key={movie.id}
+                      movie={movie}
+                      onAddToWatched={handleAddToWatched}
+                    />
+                  ))}
+                </div>
+                {personMovies.length > personMoviesDisplayCount && (
+                  <div className="flex justify-center py-8">
+                    <Button
+                      onClick={handleLoadMorePersonMovies}
+                      size="lg"
+                      variant="outline"
+                    >
+                      Load More ({personMovies.length - personMoviesDisplayCount} remaining)
+                    </Button>
+                  </div>
+                )}
+              </>
+            ) : (
+              <>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-2xl font-semibold">{selectedPerson.name}'s Movies</h2>
+                  </div>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setSelectedPerson(null);
+                      setPersonMovies([]);
+                      setPersonMoviesDisplayCount(20);
+                    }}
+                  >
+                    Back to People Results
+                  </Button>
+                </div>
+                <div className="flex flex-col items-center justify-center py-12 space-y-4">
+                  <Film className="h-16 w-16 text-muted-foreground" />
+                  <p className="text-xl text-muted-foreground">No movies found</p>
+                  <p className="text-sm text-muted-foreground text-center max-w-md">
+                    We couldn't find any movies for {selectedPerson.name}.
+                  </p>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
         {/* No Results Found for Logged-Out Users */}
-        {!user && !isSearching && searchResults.length === 0 && currentQuery && (
+        {!user && !isSearching && searchResults.length === 0 && personResults.length === 0 && currentQuery && (
           <div className="flex flex-col items-center justify-center py-12 space-y-4">
             <Search className="h-16 w-16 text-muted-foreground" />
-            <p className="text-xl text-muted-foreground">No movies found</p>
+            <p className="text-xl text-muted-foreground">
+              {searchType === 'movies' ? 'No movies found' : 'No people found'}
+            </p>
             <p className="text-sm text-muted-foreground text-center max-w-md">
-              We couldn't find any movies matching "{currentQuery}". Try a different search term.
+              We couldn't find any {searchType === 'movies' ? 'movies' : 'people'} matching "{currentQuery}". Try a different search term.
             </p>
           </div>
         )}
@@ -780,5 +1183,13 @@ export default function Home() {
         />
       </div>
     </main>
+  );
+}
+
+export default function Home() {
+  return (
+    <Suspense fallback={<div className="min-h-screen p-4 sm:p-8"><div className="max-w-7xl mx-auto">Loading...</div></div>}>
+      <HomeContent />
+    </Suspense>
   );
 }

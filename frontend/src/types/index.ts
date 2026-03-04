@@ -1,4 +1,4 @@
-export type { Movie, MovieDetail, CastMember, MovieUserStatus, TmdbMovie, TmdbSearchResponse } from './movie';
+export type { Movie, MovieDetail, CastMember, MovieUserStatus, TmdbMovie, TmdbSearchResponse, TmdbPerson, TmdbPersonSearchResponse, TmdbPersonMovieCredits, TmdbPersonCastCredit, TmdbPersonCrewCredit } from './movie';
 export type { User, UserProfile, UpdateProfileRequest, ChangePasswordRequest, DeleteAccountRequest } from './user';
 export type {
     Watch,

@@ -4,6 +4,8 @@ import type { UserStats } from '@/types/stats';
 import type { GroupWithTransferEligibility } from '@/types/groupTransfer';
 import type {
     TmdbSearchResponse,
+    TmdbPersonSearchResponse,
+    TmdbPersonMovieCredits,
     MovieDetail,
     MovieUserStatus,
     Watch,
@@ -77,6 +79,14 @@ export const movieApi = {
     // PUT: api/movies/{movieId}/privacy
     setPrivacy: (movieId: number, isPrivate: boolean, groupIds: number[]) =>
         api.put<void>(`/api/movies/${movieId}/privacy`, { isPrivate, groupIds }),
+
+    // GET: api/people/search?query={query}&page={page}
+    searchPeople: (query: string, page: number = 1) =>
+        api.get<TmdbPersonSearchResponse>(`/api/people/search?query=${encodeURIComponent(query)}&page=${page}`),
+
+    // GET: api/people/{personId}/movies
+    getPersonMovies: (personId: number) =>
+        api.get<TmdbPersonMovieCredits>(`/api/people/${personId}/movies`),
 };
 
 // Watchlist endpoints

@@ -300,4 +300,54 @@ public class TmdbService : ITmdbService
             return null;
         }
     }
+
+    public async Task<TmdbPersonSearchResult?> SearchPeopleAsync(string query, int page = 1)
+    {
+        try
+        {
+            var url = $"{_settings.BaseUrl}/search/person?api_key={_settings.ApiKey}&query={Uri.EscapeDataString(query)}&page={page}";
+            _logger.LogInformation("Calling TMDb URL: {Url}", url.Replace(_settings.ApiKey, "***"));
+
+            var response = await _httpClient.GetAsync(url);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogError("TMDb API error: {StatusCode}", response.StatusCode);
+                return null;
+            }
+
+            var content = await response.Content.ReadAsStringAsync();
+            return JsonSerializer.Deserialize<TmdbPersonSearchResult>(content);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error searching people with query: {Query}", query);
+            return null;
+        }
+    }
+
+    public async Task<TmdbPersonMovieCredits?> GetPersonMovieCreditsAsync(int personId)
+    {
+        try
+        {
+            var url = $"{_settings.BaseUrl}/person/{personId}/movie_credits?api_key={_settings.ApiKey}";
+            _logger.LogInformation("Calling TMDb URL: {Url}", url.Replace(_settings.ApiKey, "***"));
+
+            var response = await _httpClient.GetAsync(url);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogError("TMDb API error: {StatusCode} for person {PersonId}", response.StatusCode, personId);
+                return null;
+            }
+
+            var content = await response.Content.ReadAsStringAsync();
+            return JsonSerializer.Deserialize<TmdbPersonMovieCredits>(content);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting movie credits for person ID: {PersonId}", personId);
+            return null;
+        }
+    }
 }

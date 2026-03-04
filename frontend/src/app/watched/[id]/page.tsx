@@ -392,7 +392,7 @@ export default function WatchDetailPage({ params }: WatchDetailPageProps) {
             )}
 
             {/* Crew (Directors & Writers) */}
-            {(movieDetail?.directors?.length > 0 || movieDetail?.writers?.length > 0) && (
+            {((movieDetail?.directors && movieDetail.directors.length > 0) || (movieDetail?.writers && movieDetail.writers.length > 0)) && (
               <div>
                 <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">Crew</h2>
                 <div className="space-y-3">

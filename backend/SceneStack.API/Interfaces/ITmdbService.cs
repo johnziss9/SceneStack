@@ -15,4 +15,6 @@ public interface ITmdbService
         int? voteCountMin = null,
         string sortBy = "popularity.desc",
         int page = 1);
+    Task<TmdbPersonSearchResult?> SearchPeopleAsync(string query, int page = 1);
+    Task<TmdbPersonMovieCredits?> GetPersonMovieCreditsAsync(int personId);
 }
