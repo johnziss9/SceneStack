@@ -80,6 +80,7 @@ export interface GroupFeedItem {
     username: string;
     isDeactivated: boolean;
     movieId: number;
+    tmdbId: number;
     movieTitle: string;
     posterPath?: string;
     watchedDate: string; // ISO date string

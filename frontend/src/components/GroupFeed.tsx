@@ -138,7 +138,7 @@ export function GroupFeed({ groupId }: GroupFeedProps) {
                             <div className="flex gap-4">
                                 {/* Movie Poster */}
                                 <Link
-                                    href={`/watched/${item.movieId}`}
+                                    href={`/movies/${item.tmdbId}?from=groupfeed&groupId=${groupId}`}
                                     className="flex-shrink-0 relative"
                                 >
                                     {posterUrl ? (
@@ -178,7 +178,7 @@ export function GroupFeed({ groupId }: GroupFeedProps) {
                                             )}
                                         </div>
                                         <Link
-                                            href={`/watched/${item.movieId}`}
+                                            href={`/movies/${item.tmdbId}?from=groupfeed&groupId=${groupId}`}
                                             className="font-bold text-lg hover:text-primary transition-colors inline-block mt-0.5"
                                         >
                                             {item.movieTitle}

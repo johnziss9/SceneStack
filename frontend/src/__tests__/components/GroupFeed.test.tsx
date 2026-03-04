@@ -35,6 +35,7 @@ describe('GroupFeed', () => {
             username: 'johndoe',
             isDeactivated: false,
             movieId: 1,
+            tmdbId: 550,
             movieTitle: 'Fight Club',
             posterPath: '/path1.jpg',
             watchedDate: '2024-12-30T00:00:00Z',
@@ -50,6 +51,7 @@ describe('GroupFeed', () => {
             username: 'janedoe',
             isDeactivated: false,
             movieId: 2,
+            tmdbId: 603,
             movieTitle: 'The Matrix',
             posterPath: '/path2.jpg',
             watchedDate: '2024-12-28T00:00:00Z',
@@ -524,7 +526,9 @@ describe('GroupFeed', () => {
             id: i + 1,
             userId: 1,
             username: 'testuser',
+            isDeactivated: false,
             movieId: i + 1,
+            tmdbId: 100 + i,
             movieTitle: `Movie ${i + 1}`,
             posterPath: '/path.jpg',
             watchedDate: '2024-12-30T00:00:00Z',
@@ -535,7 +539,14 @@ describe('GroupFeed', () => {
             isRewatch: false,
         }))
 
-            ; (groupApi.getFeed as jest.Mock).mockResolvedValueOnce(twentyItems)
+            ; (groupApi.getFeed as jest.Mock).mockResolvedValueOnce({
+            items: twentyItems,
+            skip: 0,
+            take: 20,
+            hasMore: true,
+            totalCount: 40,
+            nextSkip: 20
+        })
             ; (groupApi.getFeed as jest.Mock).mockImplementation(
                 () => new Promise((resolve) => setTimeout(resolve, 100))
             )
@@ -561,7 +572,9 @@ describe('GroupFeed', () => {
             id: i + 1,
             userId: 1,
             username: 'testuser',
+            isDeactivated: false,
             movieId: i + 1,
+            tmdbId: 100 + i,
             movieTitle: `Movie ${i + 1}`,
             posterPath: '/path.jpg',
             watchedDate: '2024-12-30T00:00:00Z',
@@ -572,7 +585,14 @@ describe('GroupFeed', () => {
             isRewatch: false,
         }))
 
-            ; (groupApi.getFeed as jest.Mock).mockResolvedValueOnce(twentyItems)
+            ; (groupApi.getFeed as jest.Mock).mockResolvedValueOnce({
+            items: twentyItems,
+            skip: 0,
+            take: 20,
+            hasMore: true,
+            totalCount: 40,
+            nextSkip: 20
+        })
             ; (groupApi.getFeed as jest.Mock).mockImplementation(
                 () => new Promise((resolve) => setTimeout(resolve, 100))
             )
@@ -609,7 +629,9 @@ describe('GroupFeed', () => {
 
         const links = screen.getAllByRole('link')
         expect(links.length).toBeGreaterThan(0)
-        expect(links[0]).toHaveAttribute('href', expect.stringContaining('/watched/'))
+        expect(links[0]).toHaveAttribute('href', expect.stringContaining('/movies/'))
+        expect(links[0]).toHaveAttribute('href', expect.stringContaining('from=groupfeed'))
+        expect(links[0]).toHaveAttribute('href', expect.stringContaining('groupId=1'))
     })
 
     it('refetches feed when groupId changes', async () => {

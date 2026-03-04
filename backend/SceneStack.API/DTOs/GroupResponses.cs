@@ -47,6 +47,7 @@ public class GroupFeedItemResponse
     public string Username { get; set; } = string.Empty;
     public bool IsDeactivated { get; set; }
     public int MovieId { get; set; }
+    public int TmdbId { get; set; }
     public string MovieTitle { get; set; } = string.Empty;
     public string? PosterPath { get; set; }
     public DateTime WatchedDate { get; set; }

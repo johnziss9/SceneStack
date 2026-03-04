@@ -62,6 +62,12 @@ export function MovieDetailClient({ params }: MovieDetailPageProps) {
                 return { text: 'Back to My Wishlist', url: '/wishlist' };
             case 'watches':
                 return { text: 'Back to My Watches', url: '/watched' };
+            case 'groupfeed':
+                // Navigate back to the group feed
+                const feedUrl = groupId
+                    ? `/groups/${groupId}`
+                    : '/groups';
+                return { text: 'Back to Group', url: feedUrl };
             case 'group':
                 // Navigate back to the group recommendations tab
                 const groupUrl = groupId
