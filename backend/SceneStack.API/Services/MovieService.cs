@@ -264,4 +264,40 @@ public class MovieService : IMovieService
             WatchlistItemId = watchlistItem?.Id
         };
     }
+
+    public async Task SetPrivacyAsync(int movieId, bool isPrivate, List<int> groupIds)
+    {
+        var movie = await _context.Movies
+            .Include(m => m.MovieGroups)
+            .FirstOrDefaultAsync(m => m.Id == movieId);
+
+        if (movie == null)
+        {
+            _logger.LogWarning("Attempted to set privacy for non-existent movie ID: {MovieId}", movieId);
+            return;
+        }
+
+        // Update privacy flag
+        movie.IsPrivate = isPrivate;
+
+        // Remove all existing MovieGroups
+        _context.MovieGroups.RemoveRange(movie.MovieGroups);
+
+        // Add new MovieGroups if not private
+        if (!isPrivate && groupIds.Any())
+        {
+            var newMovieGroups = groupIds.Distinct().Select(groupId => new MovieGroup
+            {
+                MovieId = movieId,
+                GroupId = groupId,
+                SharedAt = DateTime.UtcNow
+            }).ToList();
+
+            _context.MovieGroups.AddRange(newMovieGroups);
+        }
+
+        await _context.SaveChangesAsync();
+        _logger.LogInformation("Set privacy for movie {MovieId}: IsPrivate={IsPrivate}, Groups={GroupCount}",
+            movieId, isPrivate, groupIds.Count);
+    }
 }

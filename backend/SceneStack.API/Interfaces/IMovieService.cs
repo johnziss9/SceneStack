@@ -13,4 +13,5 @@ public interface IMovieService
     Task<Movie?> GetByTmdbIdAsync(int tmdbId);
     Task<Movie?> GetOrCreateFromTmdbAsync(int tmdbId);
     Task<MovieUserStatus> GetMyStatusAsync(int userId, int tmdbId);
+    Task SetPrivacyAsync(int movieId, bool isPrivate, List<int> groupIds);
 }

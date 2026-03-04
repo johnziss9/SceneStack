@@ -30,15 +30,13 @@ public class GroupFeedService : IGroupFeedService
             throw new UnauthorizedAccessException("You must be a member of this group to view its feed");
         }
 
-        // Get watches shared with this group
-        var watches = await _context.WatchGroups
-            .Where(wg => wg.GroupId == groupId)
-            .Include(wg => wg.Watch)
-                .ThenInclude(w => w.Movie)
-            .Include(wg => wg.Watch)
-                .ThenInclude(w => w.User)
-            .Select(wg => wg.Watch)
-            .Where(w => !w.IsPrivate)
+        // Get watches for movies shared with this group
+        var watches = await _context.MovieGroups
+            .Where(mg => mg.GroupId == groupId)
+            .SelectMany(mg => _context.Watches
+                .Where(w => w.MovieId == mg.MovieId && !w.Movie.IsPrivate))
+            .Include(w => w.Movie)
+            .Include(w => w.User)
             .OrderByDescending(w => w.WatchedDate)
             .Skip(skip)
             .Take(take)
@@ -80,12 +78,11 @@ public class GroupFeedService : IGroupFeedService
         }
 
         // Get total count first
-        var totalCount = await _context.WatchGroups
-            .Where(wg => wg.GroupId == groupId)
-            .Include(wg => wg.Watch)
-                .ThenInclude(w => w.User)
-            .Select(wg => wg.Watch)
-            .Where(w => !w.IsPrivate)
+        var totalCount = await _context.MovieGroups
+            .Where(mg => mg.GroupId == groupId)
+            .SelectMany(mg => _context.Watches
+                .Where(w => w.MovieId == mg.MovieId && !w.Movie.IsPrivate))
+            .Include(w => w.User)
             .CountAsync(w => w.UserId == requestingUserId || w.User.ShareWatches);
 
         // Fetch items with tracking to know where we left off
@@ -103,14 +100,12 @@ public class GroupFeedService : IGroupFeedService
         {
             attempts++;
 
-            var watches = await _context.WatchGroups
-                .Where(wg => wg.GroupId == groupId)
-                .Include(wg => wg.Watch)
-                    .ThenInclude(w => w.Movie)
-                .Include(wg => wg.Watch)
-                    .ThenInclude(w => w.User)
-                .Select(wg => wg.Watch)
-                .Where(w => !w.IsPrivate)
+            var watches = await _context.MovieGroups
+                .Where(mg => mg.GroupId == groupId)
+                .SelectMany(mg => _context.Watches
+                    .Where(w => w.MovieId == mg.MovieId && !w.Movie.IsPrivate))
+                .Include(w => w.Movie)
+                .Include(w => w.User)
                 .OrderByDescending(w => w.WatchedDate)
                 .ThenBy(w => w.Id) // Secondary sort for consistency
                 .Skip(currentPosition)
@@ -186,11 +181,10 @@ public class GroupFeedService : IGroupFeedService
         }
 
         // Check if there are more items available
-        var hasMore = await _context.WatchGroups
-            .Where(wg => wg.GroupId == groupId)
-            .Include(wg => wg.Watch)
-            .Select(wg => wg.Watch)
-            .Where(w => !w.IsPrivate)
+        var hasMore = await _context.MovieGroups
+            .Where(mg => mg.GroupId == groupId)
+            .SelectMany(mg => _context.Watches
+                .Where(w => w.MovieId == mg.MovieId && !w.Movie.IsPrivate))
             .OrderByDescending(w => w.WatchedDate)
             .ThenBy(w => w.Id)
             .Skip(currentPosition)
@@ -222,15 +216,13 @@ public class GroupFeedService : IGroupFeedService
         }
 
         // Get all watches from all user's groups
-        var watches = await _context.WatchGroups
-            .Where(wg => userGroupIds.Contains(wg.GroupId))
-            .Include(wg => wg.Watch)
-                .ThenInclude(w => w.Movie)
-            .Include(wg => wg.Watch)
-                .ThenInclude(w => w.User)
-            .Select(wg => wg.Watch)
-            .Where(w => !w.IsPrivate)
-            .Distinct() // Remove duplicates if watch is shared with multiple groups
+        var watches = await _context.MovieGroups
+            .Where(mg => userGroupIds.Contains(mg.GroupId))
+            .SelectMany(mg => _context.Watches
+                .Where(w => w.MovieId == mg.MovieId && !w.Movie.IsPrivate))
+            .Include(w => w.Movie)
+            .Include(w => w.User)
+            .Distinct() // Remove duplicates if movie is shared with multiple groups
             .OrderByDescending(w => w.WatchedDate)
             .Skip(skip)
             .Take(take)
@@ -272,14 +264,12 @@ public class GroupFeedService : IGroupFeedService
         }
 
         // Get all watches for the group (not paginated for stats)
-        var allWatches = await _context.WatchGroups
-            .Where(wg => wg.GroupId == groupId)
-            .Include(wg => wg.Watch)
-                .ThenInclude(w => w.Movie)
-            .Include(wg => wg.Watch)
-                .ThenInclude(w => w.User)
-            .Select(wg => wg.Watch)
-            .Where(w => !w.IsPrivate)
+        var allWatches = await _context.MovieGroups
+            .Where(mg => mg.GroupId == groupId)
+            .SelectMany(mg => _context.Watches
+                .Where(w => w.MovieId == mg.MovieId && !w.Movie.IsPrivate))
+            .Include(w => w.Movie)
+            .Include(w => w.User)
             .ToListAsync();
 
         // Calculate stats BEFORE privacy filtering (stats show group aggregate data)
@@ -376,13 +366,11 @@ public class GroupFeedService : IGroupFeedService
                 WatchLocation = watch.WatchLocation,
                 WatchedWith = watch.WatchedWith,
                 IsRewatch = watch.IsRewatch,
-                IsPrivate = watch.IsPrivate,
                 CreatedAt = watch.CreatedAt,
                 IsDeleted = watch.IsDeleted,
                 DeletedAt = watch.DeletedAt,
                 User = watch.User,
-                Movie = watch.Movie,
-                WatchGroups = watch.WatchGroups
+                Movie = watch.Movie
             };
 
             filteredWatches.Add(filteredWatch);

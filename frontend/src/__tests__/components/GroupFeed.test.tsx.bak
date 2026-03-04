@@ -56,9 +56,9 @@ describe('GroupFeed', () => {
             posterPath: '/path2.jpg',
             watchedDate: '2024-12-28T00:00:00Z',
             rating: 10,
-            notes: undefined,
-            watchLocation: undefined,
-            watchedWith: undefined,
+            notes: null,
+            watchLocation: null,
+            watchedWith: null,
             isRewatch: true,
         },
     ]
@@ -372,7 +372,7 @@ describe('GroupFeed', () => {
         const itemsWithoutPoster: GroupFeedItem[] = [
             {
                 ...mockFeedItems[0],
-                posterPath: undefined,
+                posterPath: null,
             },
         ]
 
@@ -400,7 +400,6 @@ describe('GroupFeed', () => {
             username: 'testuser',
             isDeactivated: false,
             movieId: i + 1,
-            tmdbId: i + 100,
             movieTitle: `Movie ${i + 1}`,
             posterPath: '/path.jpg',
             watchedDate: '2024-12-30T00:00:00Z',
@@ -459,7 +458,6 @@ describe('GroupFeed', () => {
             username: 'testuser',
             isDeactivated: false,
             movieId: i + 1,
-            tmdbId: i + 100,
             movieTitle: `Movie ${i + 1}`,
             posterPath: '/path.jpg',
             watchedDate: '2024-12-30T00:00:00Z',
@@ -477,7 +475,6 @@ describe('GroupFeed', () => {
             username: 'testuser',
             isDeactivated: false,
             movieId: i + 21,
-            tmdbId: i + 121,
             movieTitle: `Movie ${i + 21}`,
             posterPath: '/path.jpg',
             watchedDate: '2024-12-30T00:00:00Z',
@@ -536,9 +533,9 @@ describe('GroupFeed', () => {
             posterPath: '/path.jpg',
             watchedDate: '2024-12-30T00:00:00Z',
             rating: 8,
-            notes: undefined,
-            watchLocation: undefined,
-            watchedWith: undefined,
+            notes: null,
+            watchLocation: null,
+            watchedWith: null,
             isRewatch: false,
         }))
 
@@ -582,9 +579,9 @@ describe('GroupFeed', () => {
             posterPath: '/path.jpg',
             watchedDate: '2024-12-30T00:00:00Z',
             rating: 8,
-            notes: undefined,
-            watchLocation: undefined,
-            watchedWith: undefined,
+            notes: null,
+            watchLocation: null,
+            watchedWith: null,
             isRewatch: false,
         }))
 

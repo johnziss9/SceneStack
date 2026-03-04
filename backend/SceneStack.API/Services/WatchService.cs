@@ -9,11 +9,13 @@ namespace SceneStack.API.Services;
 public class WatchService : IWatchService
 {
     private readonly ApplicationDbContext _context;
+    private readonly IMovieService _movieService;
     private readonly ILogger<WatchService> _logger;
 
-    public WatchService(ApplicationDbContext context, ILogger<WatchService> logger)
+    public WatchService(ApplicationDbContext context, IMovieService movieService, ILogger<WatchService> logger)
     {
         _context = context;
+        _movieService = movieService;
         _logger = logger;
     }
 
@@ -22,7 +24,6 @@ public class WatchService : IWatchService
         return await _context.Watches
             .Include(w => w.Movie)
             .Include(w => w.User)
-            .Include(w => w.WatchGroups)
             .FirstOrDefaultAsync(w => w.Id == id);
     }
 
@@ -30,8 +31,8 @@ public class WatchService : IWatchService
     {
         var query = _context.Watches
             .Include(w => w.Movie)
+                .ThenInclude(m => m.MovieGroups)
             .Include(w => w.User)
-            .Include(w => w.WatchGroups)
             .AsQueryable();
 
         if (userId.HasValue)
@@ -41,7 +42,7 @@ public class WatchService : IWatchService
 
         if (groupId.HasValue)
         {
-            query = query.Where(w => w.WatchGroups.Any(wg => wg.GroupId == groupId.Value));
+            query = query.Where(w => w.Movie.MovieGroups.Any(mg => mg.GroupId == groupId.Value));
         }
 
         return await query
@@ -62,7 +63,7 @@ public class WatchService : IWatchService
             watchesQuery = watchesQuery.Where(w => EF.Functions.ILike(w.Movie.Title, $"%{request.Search}%"));
 
         if (request.GroupId.HasValue)
-            watchesQuery = watchesQuery.Where(w => w.WatchGroups.Any(wg => wg.GroupId == request.GroupId.Value));
+            watchesQuery = watchesQuery.Where(w => w.Movie.MovieGroups.Any(mg => mg.GroupId == request.GroupId.Value));
 
         if (request.WatchedFrom.HasValue)
             watchesQuery = watchesQuery.Where(w => w.WatchedDate >= request.WatchedFrom.Value);
@@ -132,7 +133,7 @@ public class WatchService : IWatchService
         // Step 2: Fetch full watch + movie data only for the paged movie IDs
         var watches = await _context.Watches
             .Include(w => w.Movie)
-            .Include(w => w.WatchGroups)
+                .ThenInclude(m => m.MovieGroups)
             .Where(w => w.UserId == request.UserId && pagedMovieIds.Contains(w.MovieId))
             .OrderByDescending(w => w.WatchedDate)
             .ToListAsync();
@@ -153,7 +154,9 @@ public class WatchService : IWatchService
                         Year = g.First().Movie.Year,
                         PosterPath = g.First().Movie.PosterPath,
                         Synopsis = g.First().Movie.Synopsis,
-                        AiSynopsis = g.First().Movie.AiSynopsis
+                        AiSynopsis = g.First().Movie.AiSynopsis,
+                        IsPrivate = g.First().Movie.IsPrivate,
+                        GroupIds = g.First().Movie.MovieGroups.Select(mg => mg.GroupId).ToList()
                     },
                     WatchCount = g.Count,
                     AverageRating = g.Any(w => w.Rating.HasValue)
@@ -170,8 +173,6 @@ public class WatchService : IWatchService
                         WatchLocation = w.WatchLocation,
                         WatchedWith = w.WatchedWith,
                         IsRewatch = w.IsRewatch,
-                        IsPrivate = w.IsPrivate,
-                        GroupIds = w.WatchGroups?.Select(wg => wg.GroupId).ToList() ?? new List<int>(),
                         Movie = new MovieBasicInfo
                         {
                             Id = w.Movie.Id,
@@ -180,7 +181,9 @@ public class WatchService : IWatchService
                             Year = w.Movie.Year,
                             PosterPath = w.Movie.PosterPath,
                             Synopsis = w.Movie.Synopsis,
-                            AiSynopsis = w.Movie.AiSynopsis
+                            AiSynopsis = w.Movie.AiSynopsis,
+                            IsPrivate = w.Movie.IsPrivate,
+                            GroupIds = w.Movie.MovieGroups.Select(mg => mg.GroupId).ToList()
                         }
                     }).OrderByDescending(w => w.WatchedDate).ToList()
                 };
@@ -202,62 +205,67 @@ public class WatchService : IWatchService
     {
         return await _context.Watches
             .Include(w => w.Movie)
+                .ThenInclude(m => m.MovieGroups)
             .Include(w => w.User)
-            .Include(w => w.WatchGroups)
             .Where(w => w.MovieId == movieId && w.UserId == userId)
             .OrderByDescending(w => w.WatchedDate)
             .ToListAsync();
     }
 
-    public async Task<Watch> CreateAsync(Watch watch, List<int> groupIds)
+    public async Task<Watch> CreateAsync(Watch watch, bool? isPrivate, List<int>? groupIds)
     {
         watch.CreatedAt = DateTime.UtcNow;
         _context.Watches.Add(watch);
         await _context.SaveChangesAsync();
 
-        // Associate watch with groups
-        if (groupIds != null && groupIds.Any())
+        // Check if this is the first watch of this movie by this user
+        var isFirstWatch = !await _context.Watches
+            .AnyAsync(w => w.UserId == watch.UserId && w.MovieId == watch.MovieId && w.Id != watch.Id);
+
+        // If first watch and privacy settings provided, set movie-level privacy
+        if (isFirstWatch && isPrivate.HasValue)
         {
-            foreach (var groupId in groupIds)
+            var validGroupIds = new List<int>();
+
+            // Verify user is member of all specified groups before setting privacy
+            if (groupIds != null && groupIds.Any())
             {
-                // Verify user is a member of the group
-                var isMember = await _context.GroupMembers
-                    .AnyAsync(gm => gm.GroupId == groupId && gm.UserId == watch.UserId);
-
-                if (isMember)
+                foreach (var groupId in groupIds)
                 {
-                    var watchGroup = new WatchGroup
-                    {
-                        WatchId = watch.Id,
-                        GroupId = groupId,
-                        SharedAt = DateTime.UtcNow
-                    };
-                    _context.WatchGroups.Add(watchGroup);
+                    var isMember = await _context.GroupMembers
+                        .AnyAsync(gm => gm.GroupId == groupId && gm.UserId == watch.UserId);
 
-                    // Update group's updatedAt timestamp for "Last Updated" sorting
-                    var group = await _context.Groups.FindAsync(groupId);
-                    if (group != null)
+                    if (isMember)
                     {
-                        group.UpdatedAt = DateTime.UtcNow;
+                        validGroupIds.Add(groupId);
+
+                        // Update group's updatedAt timestamp for "Last Updated" sorting
+                        var group = await _context.Groups.FindAsync(groupId);
+                        if (group != null)
+                        {
+                            group.UpdatedAt = DateTime.UtcNow;
+                        }
+                    }
+                    else
+                    {
+                        _logger.LogWarning("User {UserId} attempted to share movie with group {GroupId} but is not a member", watch.UserId, groupId);
                     }
                 }
-                else
-                {
-                    _logger.LogWarning("User {UserId} attempted to share watch with group {GroupId} but is not a member", watch.UserId, groupId);
-                }
+
+                await _context.SaveChangesAsync();
             }
 
-            await _context.SaveChangesAsync();
+            // Set movie privacy
+            await _movieService.SetPrivacyAsync(watch.MovieId, isPrivate.Value, validGroupIds);
         }
 
         // Reload with navigation properties
         return (await GetByIdAsync(watch.Id))!;
     }
 
-    public async Task<Watch?> UpdateAsync(int id, Watch watch, List<int>? groupIds = null)
+    public async Task<Watch?> UpdateAsync(int id, Watch watch)
     {
         var existingWatch = await _context.Watches
-            .Include(w => w.WatchGroups)
             .FirstOrDefaultAsync(w => w.Id == id);
 
         if (existingWatch == null)
@@ -269,41 +277,6 @@ public class WatchService : IWatchService
         existingWatch.WatchLocation = watch.WatchLocation;
         existingWatch.WatchedWith = watch.WatchedWith;
         existingWatch.IsRewatch = watch.IsRewatch;
-        existingWatch.IsPrivate = watch.IsPrivate;
-
-        // Update group associations if provided
-        if (groupIds != null)
-        {
-            // Remove existing group associations
-            var existingWatchGroups = existingWatch.WatchGroups.ToList();
-            _context.WatchGroups.RemoveRange(existingWatchGroups);
-
-            // Add new group associations
-            foreach (var groupId in groupIds)
-            {
-                // Verify user is a member of the group
-                var isMember = await _context.GroupMembers
-                    .AnyAsync(gm => gm.GroupId == groupId && gm.UserId == existingWatch.UserId);
-
-                if (isMember)
-                {
-                    var watchGroup = new WatchGroup
-                    {
-                        WatchId = existingWatch.Id,
-                        GroupId = groupId,
-                        SharedAt = DateTime.UtcNow
-                    };
-                    _context.WatchGroups.Add(watchGroup);
-
-                    // Update group's updatedAt timestamp for "Last Updated" sorting
-                    var group = await _context.Groups.FindAsync(groupId);
-                    if (group != null)
-                    {
-                        group.UpdatedAt = DateTime.UtcNow;
-                    }
-                }
-            }
-        }
 
         await _context.SaveChangesAsync();
 
@@ -339,15 +312,13 @@ public class WatchService : IWatchService
             return new List<Watch>();
         }
 
-        // Get all watches shared with this group
-        var watches = await _context.WatchGroups
-            .Where(wg => wg.GroupId == groupId)
-            .Include(wg => wg.Watch)
-                .ThenInclude(w => w.Movie)
-            .Include(wg => wg.Watch)
-                .ThenInclude(w => w.User)
-            .Select(wg => wg.Watch)
-            .Where(w => !w.IsPrivate) // Exclude private watches
+        // Get all movies shared with this group via MovieGroups
+        var watches = await _context.MovieGroups
+            .Where(mg => mg.GroupId == groupId)
+            .SelectMany(mg => _context.Watches
+                .Where(w => w.MovieId == mg.MovieId && !w.Movie.IsPrivate))
+            .Include(w => w.Movie)
+            .Include(w => w.User)
             .OrderByDescending(w => w.WatchedDate)
             .ToListAsync();
 
@@ -380,157 +351,6 @@ public class WatchService : IWatchService
         return filteredWatches;
     }
 
-    public async Task<BulkUpdateResult> BulkUpdateAsync(
-        int userId,
-        List<int> watchIds,
-        bool isPrivate,
-        List<int>? groupIds,
-        string groupOperation)
-    {
-        var result = new BulkUpdateResult
-        {
-            Success = true,
-            Updated = 0,
-            Failed = 0,
-            Errors = new List<string>()
-        };
-
-        // Validate group operation
-        if (groupOperation != "add" && groupOperation != "replace")
-        {
-            result.Success = false;
-            result.Errors.Add("Invalid groupOperation. Must be 'add' or 'replace'.");
-            return result;
-        }
-
-        // Start transaction for atomic operation
-        using var transaction = await _context.Database.BeginTransactionAsync();
-
-        try
-        {
-            // Get all watches and verify ownership
-            var watches = await _context.Watches
-                .Include(w => w.WatchGroups)
-                .Where(w => watchIds.Contains(w.Id))
-                .ToListAsync();
-
-            // Check if all watches exist and belong to user
-            var foundIds = watches.Select(w => w.Id).ToList();
-            var missingIds = watchIds.Except(foundIds).ToList();
-            
-            if (missingIds.Any())
-            {
-                result.Errors.Add($"Watches not found: {string.Join(", ", missingIds)}");
-            }
-
-            var unauthorizedWatches = watches.Where(w => w.UserId != userId).ToList();
-            if (unauthorizedWatches.Any())
-            {
-                var unauthorizedIds = unauthorizedWatches.Select(w => w.Id);
-                result.Errors.Add($"Unauthorized access to watches: {string.Join(", ", unauthorizedIds)}");
-                result.Failed = unauthorizedWatches.Count;
-            }
-
-            // Get authorized watches only
-            var authorizedWatches = watches.Where(w => w.UserId == userId).ToList();
-
-            // Verify user is member of all specified groups
-            if (groupIds != null && groupIds.Any())
-            {
-                var userGroupIds = await _context.GroupMembers
-                    .Where(gm => gm.UserId == userId)
-                    .Select(gm => gm.GroupId)
-                    .ToListAsync();
-
-                var invalidGroupIds = groupIds.Except(userGroupIds).ToList();
-                if (invalidGroupIds.Any())
-                {
-                    result.Success = false;
-                    result.Errors.Add($"User is not a member of groups: {string.Join(", ", invalidGroupIds)}");
-                    await transaction.RollbackAsync();
-                    return result;
-                }
-            }
-
-            // Update each watch
-            foreach (var watch in authorizedWatches)
-            {
-                try
-                {
-                    // Update privacy
-                    watch.IsPrivate = isPrivate;
-
-                    // Update group associations
-                    if (groupOperation == "replace")
-                    {
-                        // Remove all existing group associations
-                        var existingWatchGroups = watch.WatchGroups.ToList();
-                        _context.WatchGroups.RemoveRange(existingWatchGroups);
-                    }
-                    // For "add" operation, keep existing associations
-
-                    // Add new group associations (if not private)
-                    if (!isPrivate && groupIds != null && groupIds.Any())
-                    {
-                        foreach (var groupId in groupIds)
-                        {
-                            // For "add" operation, check if association already exists
-                            if (groupOperation == "add")
-                            {
-                                var exists = watch.WatchGroups.Any(wg => wg.GroupId == groupId);
-                                if (exists)
-                                    continue; // Skip if already associated
-                            }
-
-                            var watchGroup = new WatchGroup
-                            {
-                                WatchId = watch.Id,
-                                GroupId = groupId,
-                                SharedAt = DateTime.UtcNow
-                            };
-                            _context.WatchGroups.Add(watchGroup);
-
-                            // Update group's updatedAt timestamp for "Last Updated" sorting
-                            var group = await _context.Groups.FindAsync(groupId);
-                            if (group != null)
-                            {
-                                group.UpdatedAt = DateTime.UtcNow;
-                            }
-                        }
-                    }
-                    else if (isPrivate)
-                    {
-                        // If making private, remove all group associations
-                        var allWatchGroups = watch.WatchGroups.ToList();
-                        _context.WatchGroups.RemoveRange(allWatchGroups);
-                    }
-
-                    result.Updated++;
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Error updating watch {WatchId}", watch.Id);
-                    result.Failed++;
-                    result.Errors.Add($"Failed to update watch {watch.Id}: {ex.Message}");
-                }
-            }
-
-            // Save all changes
-            await _context.SaveChangesAsync();
-            await transaction.CommitAsync();
-
-            result.Success = result.Failed == 0;
-            return result;
-        }
-        catch (Exception ex)
-        {
-            await transaction.RollbackAsync();
-            _logger.LogError(ex, "Error in bulk update operation");
-            result.Success = false;
-            result.Errors.Add($"Bulk update failed: {ex.Message}");
-            return result;
-        }
-    }
 }
 
 // Private projection type used by GetGroupedWatchesAsync

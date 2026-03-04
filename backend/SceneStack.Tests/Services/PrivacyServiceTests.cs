@@ -45,7 +45,6 @@ public class PrivacyServiceTests
             UserId = owner.Id,
             MovieId = 1,
             WatchedDate = DateTime.UtcNow,
-            IsPrivate = true,
             CreatedAt = DateTime.UtcNow
         };
         context.Watches.Add(privateWatch);
@@ -96,7 +95,6 @@ public class PrivacyServiceTests
             UserId = user1.Id,
             MovieId = 1,
             WatchedDate = DateTime.UtcNow,
-            IsPrivate = false,
             CreatedAt = DateTime.UtcNow
         };
         context.Watches.Add(watch);
@@ -147,7 +145,6 @@ public class PrivacyServiceTests
             UserId = user1.Id,
             MovieId = 1,
             WatchedDate = DateTime.UtcNow,
-            IsPrivate = false,
             CreatedAt = DateTime.UtcNow
         };
         context.Watches.Add(watch);
@@ -181,7 +178,6 @@ public class PrivacyServiceTests
             UserId = user1.Id,
             MovieId = 1,
             WatchedDate = DateTime.UtcNow,
-            IsPrivate = false,
             CreatedAt = DateTime.UtcNow
         };
         context.Watches.Add(watch);
@@ -252,7 +248,6 @@ public class PrivacyServiceTests
             MovieId = 1,
             WatchedDate = DateTime.UtcNow,
             Rating = 9,
-            IsPrivate = false,
             CreatedAt = DateTime.UtcNow
         };
         context.Watches.Add(watch);
@@ -305,7 +300,6 @@ public class PrivacyServiceTests
             MovieId = 1,
             WatchedDate = DateTime.UtcNow,
             Rating = 9,
-            IsPrivate = false,
             CreatedAt = DateTime.UtcNow
         };
         context.Watches.Add(watch);
@@ -376,7 +370,6 @@ public class PrivacyServiceTests
             MovieId = 1,
             WatchedDate = DateTime.UtcNow,
             Notes = "Personal thoughts",
-            IsPrivate = false,
             CreatedAt = DateTime.UtcNow
         };
         context.Watches.Add(watch);
@@ -429,7 +422,6 @@ public class PrivacyServiceTests
             MovieId = 1,
             WatchedDate = DateTime.UtcNow,
             Notes = "Great movie!",
-            IsPrivate = false,
             CreatedAt = DateTime.UtcNow
         };
         context.Watches.Add(watch);
@@ -492,6 +484,25 @@ public class PrivacyServiceTests
         );
         await context.SaveChangesAsync();
 
+        // Create two movies - one public, one private
+        var publicMovie = new Movie
+        {
+            TmdbId = 1001,
+            Title = "Privacy Test Movie",
+            Year = 2024,
+            CreatedAt = DateTime.UtcNow
+        };
+        var privateMovie = new Movie
+        {
+            TmdbId = 1002,
+            Title = "Private Movie",
+            Year = 2024,
+            IsPrivate = true,
+            CreatedAt = DateTime.UtcNow
+        };
+        context.Movies.AddRange(publicMovie, privateMovie);
+        await context.SaveChangesAsync();
+
         // Create watches
         var watches = new List<Watch>
         {
@@ -499,43 +510,39 @@ public class PrivacyServiceTests
             new Watch
             {
                 UserId = viewer.Id,
-                MovieId = 1,
+                MovieId = publicMovie.Id,
                 WatchedDate = DateTime.UtcNow,
                 Rating = 10,
                 Notes = "My watch",
-                IsPrivate = false,
                 CreatedAt = DateTime.UtcNow
             },
             // Owner1's watch - shares everything
             new Watch
             {
                 UserId = owner1.Id,
-                MovieId = 1,
+                MovieId = publicMovie.Id,
                 WatchedDate = DateTime.UtcNow.AddDays(-1),
                 Rating = 9,
                 Notes = "Owner1 notes",
-                IsPrivate = false,
                 CreatedAt = DateTime.UtcNow
             },
             // Owner2's watch - shares watch but not rating/notes
             new Watch
             {
                 UserId = owner2.Id,
-                MovieId = 1,
+                MovieId = publicMovie.Id,
                 WatchedDate = DateTime.UtcNow.AddDays(-2),
                 Rating = 8,
                 Notes = "Owner2 notes",
-                IsPrivate = false,
                 CreatedAt = DateTime.UtcNow
             },
-            // Private watch - should be excluded
+            // Private watch (private movie) - should be excluded
             new Watch
             {
                 UserId = owner1.Id,
-                MovieId = 1,
+                MovieId = privateMovie.Id,
                 WatchedDate = DateTime.UtcNow.AddDays(-3),
                 Rating = 7,
-                IsPrivate = true,
                 CreatedAt = DateTime.UtcNow
             }
         };

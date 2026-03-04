@@ -59,7 +59,6 @@ describe('GroupDetail', () => {
         },
         createdAt: '2024-01-15T10:00:00Z',
         updatedAt: '2024-01-15T10:00:00Z',
-        memberCount: 3,
         members: [
             {
                 userId: 1,
@@ -97,12 +96,11 @@ describe('GroupDetail', () => {
 
         // Mock authenticated user as creator
         mockUseAuth.mockReturnValue({
-            user: { id: 1, username: 'johndoe', email: 'john@example.com', isPremium: false },
+            user: { id: 1, username: 'johndoe', email: 'john@example.com' },
             loading: false,
             login: jest.fn(),
             register: jest.fn(),
             logout: jest.fn(),
-            refreshUser: jest.fn(),
         })
     })
 
@@ -246,12 +244,11 @@ describe('GroupDetail', () => {
 
     it('shows edit button for admin', async () => {
         mockUseAuth.mockReturnValue({
-            user: { id: 2, username: 'janedoe', email: 'jane@example.com', isPremium: false },
+            user: { id: 2, username: 'janedoe', email: 'jane@example.com' },
             loading: false,
             login: jest.fn(),
             register: jest.fn(),
             logout: jest.fn(),
-            refreshUser: jest.fn(),
         })
 
             ; (groupApi.getGroup as jest.Mock).mockResolvedValue(mockGroup)
@@ -266,12 +263,11 @@ describe('GroupDetail', () => {
 
     it('does not show delete button for admin', async () => {
         mockUseAuth.mockReturnValue({
-            user: { id: 2, username: 'janedoe', email: 'jane@example.com', isPremium: false },
+            user: { id: 2, username: 'janedoe', email: 'jane@example.com' },
             loading: false,
             login: jest.fn(),
             register: jest.fn(),
             logout: jest.fn(),
-            refreshUser: jest.fn(),
         })
 
             ; (groupApi.getGroup as jest.Mock).mockResolvedValue(mockGroup)
@@ -287,12 +283,11 @@ describe('GroupDetail', () => {
 
     it('does not show edit or delete buttons for regular member', async () => {
         mockUseAuth.mockReturnValue({
-            user: { id: 3, username: 'bobsmith', email: 'bob@example.com', isPremium: false },
+            user: { id: 3, username: 'bobsmith', email: 'bob@example.com' },
             loading: false,
             login: jest.fn(),
             register: jest.fn(),
             logout: jest.fn(),
-            refreshUser: jest.fn(),
         })
 
             ; (groupApi.getGroup as jest.Mock).mockResolvedValue(mockGroup)
@@ -320,12 +315,11 @@ describe('GroupDetail', () => {
 
     it('shows add member button for admin', async () => {
         mockUseAuth.mockReturnValue({
-            user: { id: 2, username: 'janedoe', email: 'jane@example.com', isPremium: false },
+            user: { id: 2, username: 'janedoe', email: 'jane@example.com' },
             loading: false,
             login: jest.fn(),
             register: jest.fn(),
             logout: jest.fn(),
-            refreshUser: jest.fn(),
         })
 
             ; (groupApi.getGroup as jest.Mock).mockResolvedValue(mockGroup)

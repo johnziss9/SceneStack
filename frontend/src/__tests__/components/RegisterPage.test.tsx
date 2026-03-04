@@ -23,6 +23,7 @@ describe('RegisterPage', () => {
             login: jest.fn(),
             register: mockRegister,
             logout: jest.fn(),
+            refreshUser: jest.fn(),
         });
     });
 

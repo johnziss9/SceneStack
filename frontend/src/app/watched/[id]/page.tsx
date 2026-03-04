@@ -27,6 +27,7 @@ import { toast } from '@/lib/toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { LoadingTips } from "@/components/LoadingTips";
 import { MovieInsight } from '@/components/MovieInsight';
+import { MoviePrivacyCard } from '@/components/MoviePrivacyCard';
 import { useAuth } from '@/contexts/AuthContext';
 import { formatWatchDate } from '@/lib/utils';
 
@@ -442,6 +443,12 @@ export default function WatchDetailPage({ params }: WatchDetailPageProps) {
               isPremium={user?.isPremium ?? false}
             />
 
+            {/* Movie Privacy Settings */}
+            <MoviePrivacyCard
+              movie={movie}
+              onPrivacyUpdated={setMovie}
+            />
+
             {/* Watch History */}
             <Card>
               <CardHeader className="pb-3">
@@ -564,6 +571,7 @@ export default function WatchDetailPage({ params }: WatchDetailPageProps) {
           open={isRewatchDialogOpen}
           onOpenChange={setIsRewatchDialogOpen}
           onSuccess={handleRewatchSuccess}
+          isFirstWatch={false}
         />
       )}
     </main>

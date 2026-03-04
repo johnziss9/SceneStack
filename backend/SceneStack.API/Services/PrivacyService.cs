@@ -20,6 +20,7 @@ public class PrivacyService : IPrivacyService
     {
         var watch = await _context.Watches
             .Include(w => w.User)
+            .Include(w => w.Movie)
             .FirstOrDefaultAsync(w => w.Id == watchId);
 
         if (watch == null)
@@ -29,8 +30,8 @@ public class PrivacyService : IPrivacyService
         if (watch.UserId == requestingUserId)
             return true;
 
-        // If watch is marked private, only owner can see it
-        if (watch.IsPrivate)
+        // If movie is marked private, only owner can see it
+        if (watch.Movie.IsPrivate)
             return false;
 
         // Check if users share a group
@@ -45,6 +46,7 @@ public class PrivacyService : IPrivacyService
     {
         var watch = await _context.Watches
             .Include(w => w.User)
+            .Include(w => w.Movie)
             .FirstOrDefaultAsync(w => w.Id == watchId);
 
         if (watch == null)
@@ -54,8 +56,8 @@ public class PrivacyService : IPrivacyService
         if (watch.UserId == requestingUserId)
             return true;
 
-        // If watch is marked private, only owner can see anything
-        if (watch.IsPrivate)
+        // If movie is marked private, only owner can see anything
+        if (watch.Movie.IsPrivate)
             return false;
 
         // Check if users share a group
@@ -70,6 +72,7 @@ public class PrivacyService : IPrivacyService
     {
         var watch = await _context.Watches
             .Include(w => w.User)
+            .Include(w => w.Movie)
             .FirstOrDefaultAsync(w => w.Id == watchId);
 
         if (watch == null)
@@ -79,8 +82,8 @@ public class PrivacyService : IPrivacyService
         if (watch.UserId == requestingUserId)
             return true;
 
-        // If watch is marked private, only owner can see anything
-        if (watch.IsPrivate)
+        // If movie is marked private, only owner can see anything
+        if (watch.Movie.IsPrivate)
             return false;
 
         // Check if users share a group
@@ -104,8 +107,14 @@ public class PrivacyService : IPrivacyService
                 continue;
             }
 
-            // If watch is marked private, skip it
-            if (watch.IsPrivate)
+            // Load movie if not already loaded
+            if (watch.Movie == null)
+            {
+                watch.Movie = await _context.Movies.FindAsync(watch.MovieId) ?? new Movie();
+            }
+
+            // If movie is marked private, skip it
+            if (watch.Movie.IsPrivate)
                 continue;
 
             // Check if users share a group

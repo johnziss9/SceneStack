@@ -433,15 +433,13 @@ public class GroupService : IGroupService
             return null;
         }
 
-        // Load all watches shared with this group
-        var groupWatches = await _context.WatchGroups
-            .Where(wg => wg.GroupId == groupId)
-            .Include(wg => wg.Watch)
-                .ThenInclude(w => w.Movie)
-            .Include(wg => wg.Watch)
-                .ThenInclude(w => w.User)
-            .Select(wg => wg.Watch)
-            .Where(w => !w.IsPrivate)
+        // Load all watches for movies shared with this group
+        var groupWatches = await _context.MovieGroups
+            .Where(mg => mg.GroupId == groupId)
+            .SelectMany(mg => _context.Watches
+                .Where(w => w.MovieId == mg.MovieId && !w.Movie.IsPrivate))
+            .Include(w => w.Movie)
+            .Include(w => w.User)
             .ToListAsync();
 
         // Apply privacy filtering — always include requesting user's own watches

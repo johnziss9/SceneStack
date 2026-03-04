@@ -112,7 +112,7 @@ public class GroupRecommendationsServicePaginatedTests
         await context.SaveChangesAsync();
 
         // Link watch to group
-        context.WatchGroups.Add(new WatchGroup { WatchId = watch.Id, GroupId = group.Id, SharedAt = DateTime.UtcNow });
+        context.MovieGroups.Add(new MovieGroup { MovieId = watch.MovieId, GroupId = group.Id, SharedAt = DateTime.UtcNow });
         await context.SaveChangesAsync();
 
         // Mock TMDb Discover API to return similar movies
@@ -246,7 +246,7 @@ public class GroupRecommendationsServicePaginatedTests
         await context.SaveChangesAsync();
 
         // Link watch to group
-        context.WatchGroups.Add(new WatchGroup { WatchId = watch.Id, GroupId = group.Id, SharedAt = DateTime.UtcNow });
+        context.MovieGroups.Add(new MovieGroup { MovieId = watch.MovieId, GroupId = group.Id, SharedAt = DateTime.UtcNow });
         await context.SaveChangesAsync();
 
         // Mock TMDb Discover to return Pulp Fiction (which should be filtered) and another movie
@@ -346,7 +346,7 @@ public class GroupRecommendationsServicePaginatedTests
         await context.SaveChangesAsync();
 
         // Link watch to group
-        context.WatchGroups.Add(new WatchGroup { WatchId = watch.Id, GroupId = group.Id, SharedAt = DateTime.UtcNow });
+        context.MovieGroups.Add(new MovieGroup { MovieId = watch.MovieId, GroupId = group.Id, SharedAt = DateTime.UtcNow });
         await context.SaveChangesAsync();
 
         // Mock Discover API
@@ -433,7 +433,7 @@ public class GroupRecommendationsServicePaginatedTests
         await context.SaveChangesAsync();
 
         // Link watch to group
-        context.WatchGroups.Add(new WatchGroup { WatchId = watch.Id, GroupId = group.Id, SharedAt = DateTime.UtcNow });
+        context.MovieGroups.Add(new MovieGroup { MovieId = watch.MovieId, GroupId = group.Id, SharedAt = DateTime.UtcNow });
         await context.SaveChangesAsync();
 
         // Mock Discover with two similar movies - one by Scorsese, one not
@@ -559,7 +559,7 @@ public class GroupRecommendationsServicePaginatedTests
         await context.SaveChangesAsync();
 
         // Link watch to group
-        context.WatchGroups.Add(new WatchGroup { WatchId = watch.Id, GroupId = group.Id, SharedAt = DateTime.UtcNow });
+        context.MovieGroups.Add(new MovieGroup { MovieId = watch.MovieId, GroupId = group.Id, SharedAt = DateTime.UtcNow });
         await context.SaveChangesAsync();
 
         // Mock Discover with two similar crime/drama movies - one by Tarantino, one not
@@ -699,7 +699,7 @@ public class GroupRecommendationsServicePaginatedTests
         await context.SaveChangesAsync();
 
         // Link watch to group
-        context.WatchGroups.Add(new WatchGroup { WatchId = watch.Id, GroupId = group.Id, SharedAt = DateTime.UtcNow });
+        context.MovieGroups.Add(new MovieGroup { MovieId = watch.MovieId, GroupId = group.Id, SharedAt = DateTime.UtcNow });
         await context.SaveChangesAsync();
 
         // Mock Discover with two movies - one also written by Kaufman, one not

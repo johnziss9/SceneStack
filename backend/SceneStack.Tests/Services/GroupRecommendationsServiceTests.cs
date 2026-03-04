@@ -249,8 +249,20 @@ public class GroupRecommendationsServiceTests
         var logger = Substitute.For<ILogger<GroupRecommendationsService>>();
         var service = new GroupRecommendationsService(context, tmdbService, logger, _cache);
 
-        var user1 = context.Users.First();
-        var user2 = context.Users.Skip(1).First();
+        // Use second user to avoid conflict with seeded data
+        var user1 = context.Users.Skip(1).First();
+
+        // Create a third user
+        var user2 = new User
+        {
+            Username = "user3",
+            Email = "user3@example.com",
+            IsPremium = false,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+        context.Users.Add(user2);
+        await context.SaveChangesAsync();
 
         // Create a group
         var group = new Group
@@ -269,32 +281,27 @@ public class GroupRecommendationsServiceTests
         );
         await context.SaveChangesAsync();
 
-        // Add a second movie
-        var movie2 = new Movie
-        {
-            TmdbId = 551,
-            Title = "The Matrix",
-            Year = 1999,
-            CreatedAt = DateTime.UtcNow
-        };
-        context.Movies.Add(movie2);
+        // Create two new movies to avoid conflicts
+        var movie1 = new Movie { TmdbId = 1001, Title = "Movie 1", Year = 2024, CreatedAt = DateTime.UtcNow };
+        var movie2 = new Movie { TmdbId = 1002, Title = "Movie 2", Year = 2024, CreatedAt = DateTime.UtcNow };
+        context.Movies.AddRange(movie1, movie2);
         await context.SaveChangesAsync();
 
         // Create watches with ratings
         var watches = new[]
         {
-            new Watch { UserId = user1.Id, MovieId = 1, WatchedDate = DateTime.UtcNow, Rating = 9, CreatedAt = DateTime.UtcNow },
-            new Watch { UserId = user2.Id, MovieId = 1, WatchedDate = DateTime.UtcNow.AddDays(-1), Rating = 10, CreatedAt = DateTime.UtcNow },
+            new Watch { UserId = user1.Id, MovieId = movie1.Id, WatchedDate = DateTime.UtcNow, Rating = 9, CreatedAt = DateTime.UtcNow },
+            new Watch { UserId = user2.Id, MovieId = movie1.Id, WatchedDate = DateTime.UtcNow.AddDays(-1), Rating = 10, CreatedAt = DateTime.UtcNow },
             new Watch { UserId = user1.Id, MovieId = movie2.Id, WatchedDate = DateTime.UtcNow.AddDays(-2), Rating = 8, CreatedAt = DateTime.UtcNow }
         };
         context.Watches.AddRange(watches);
         await context.SaveChangesAsync();
 
-        // Link watches to group
-        foreach (var watch in watches)
-        {
-            context.WatchGroups.Add(new WatchGroup { WatchId = watch.Id, GroupId = group.Id, SharedAt = DateTime.UtcNow });
-        }
+        // Link both movies to group (not each watch individually)
+        context.MovieGroups.AddRange(
+            new MovieGroup { MovieId = movie1.Id, GroupId = group.Id, SharedAt = DateTime.UtcNow },
+            new MovieGroup { MovieId = movie2.Id, GroupId = group.Id, SharedAt = DateTime.UtcNow }
+        );
         await context.SaveChangesAsync();
 
         // Mock TMDb recommendations

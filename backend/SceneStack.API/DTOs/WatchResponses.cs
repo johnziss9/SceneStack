@@ -11,8 +11,6 @@ public class WatchResponse
     public string? WatchLocation { get; set; }
     public string? WatchedWith { get; set; }
     public bool IsRewatch { get; set; }
-    public bool IsPrivate { get; set; }
-    public List<int> GroupIds { get; set; } = new();
     public DateTime CreatedAt { get; set; }
 
     // Nested objects without circular references
@@ -29,6 +27,8 @@ public class MovieBasicInfo
     public string? PosterPath { get; set; }
     public string? Synopsis { get; set; }
     public string? AiSynopsis { get; set; }
+    public bool IsPrivate { get; set; }
+    public List<int> GroupIds { get; set; } = new();
 }
 
 public class UserBasicInfo
@@ -58,8 +58,6 @@ public class WatchEntryResponse
     public string? WatchLocation { get; set; }
     public string? WatchedWith { get; set; }
     public bool IsRewatch { get; set; }
-    public bool IsPrivate { get; set; }
-    public List<int> GroupIds { get; set; } = new();
     public MovieBasicInfo Movie { get; set; } = null!;
 }
 
@@ -71,12 +69,4 @@ public class PaginatedGroupedWatchesResponse
     public int PageSize { get; set; }
     public int TotalPages { get; set; }
     public bool HasMore { get; set; }
-}
-
-public class BulkUpdateResult
-{
-    public bool Success { get; set; }
-    public int Updated { get; set; }
-    public int Failed { get; set; }
-    public List<string> Errors { get; set; } = new();
 }

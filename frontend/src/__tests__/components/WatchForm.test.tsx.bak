@@ -78,7 +78,7 @@ describe('WatchForm', () => {
 
         // Mock authenticated user
         mockUseAuth.mockReturnValue({
-            user: { id: 1, username: 'testuser', email: 'test@example.com', isPremium: false },
+            user: { id: 1, username: 'testuser', email: 'test@example.com' },
             loading: false,
             login: jest.fn(),
             register: jest.fn(),

@@ -18,8 +18,6 @@ public static class WatchMapper
             WatchLocation = watch.WatchLocation,
             WatchedWith = watch.WatchedWith,
             IsRewatch = watch.IsRewatch,
-            IsPrivate = watch.IsPrivate,
-            GroupIds = watch.WatchGroups?.Select(wg => wg.GroupId).ToList() ?? new List<int>(),
             CreatedAt = watch.CreatedAt,
             Movie = new MovieBasicInfo
             {
@@ -29,7 +27,9 @@ public static class WatchMapper
                 Year = watch.Movie.Year,
                 PosterPath = watch.Movie.PosterPath,
                 Synopsis = watch.Movie.Synopsis,
-                AiSynopsis = watch.Movie.AiSynopsis
+                AiSynopsis = watch.Movie.AiSynopsis,
+                IsPrivate = watch.Movie.IsPrivate,
+                GroupIds = watch.Movie.MovieGroups.Select(mg => mg.GroupId).ToList()
             },
             User = new UserBasicInfo
             {

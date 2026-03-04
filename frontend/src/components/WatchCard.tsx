@@ -32,10 +32,9 @@ export const WatchCard = memo(function WatchCard({ groupedWatch }: WatchCardProp
         ? `https://image.tmdb.org/t/p/w342${movie.posterPath}`
         : null;
 
-    // Determine privacy status
-    const allPrivate = watches.every(w => w.isPrivate);
-    const allShared = watches.every(w => !w.isPrivate && w.groupIds && w.groupIds.length > 0);
-    const hasShared = watches.some(w => !w.isPrivate && w.groupIds && w.groupIds.length > 0);
+    // Privacy status is at movie level
+    const isPrivate = movie.isPrivate ?? false;
+    const hasShared = !movie.isPrivate && movie.groupIds && movie.groupIds.length > 0;
 
     return (
         <TooltipProvider>
@@ -103,7 +102,7 @@ export const WatchCard = memo(function WatchCard({ groupedWatch }: WatchCardProp
                         ) : <div />}
 
                         {/* Privacy indicator */}
-                        {allPrivate && (
+                        {isPrivate && (
                             <Tooltip>
                                 <TooltipTrigger asChild>
                                     <div className="bg-primary text-primary-foreground p-1.5 rounded-full">
@@ -111,11 +110,11 @@ export const WatchCard = memo(function WatchCard({ groupedWatch }: WatchCardProp
                                     </div>
                                 </TooltipTrigger>
                                 <TooltipContent>
-                                    <p>This watch is private</p>
+                                    <p>This movie is private</p>
                                 </TooltipContent>
                             </Tooltip>
                         )}
-                        {!allPrivate && hasShared && (
+                        {hasShared && (
                             <Tooltip>
                                 <TooltipTrigger asChild>
                                     <div className="bg-primary text-primary-foreground p-1.5 rounded-full">

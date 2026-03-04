@@ -251,7 +251,7 @@ public class WatchesControllerTests
             User = new User { Id = 1, Username = "testuser", Email = "test@test.com" }
         };
 
-        watchService.CreateAsync(Arg.Any<Watch>(), Arg.Any<List<int>>()).Returns(createdWatch);
+        watchService.CreateAsync(Arg.Any<Watch>(), Arg.Any<bool?>(), Arg.Any<List<int>?>()).Returns(createdWatch);
 
         var request = new CreateWatchRequest
         {
@@ -317,12 +317,17 @@ public class WatchesControllerTests
             Rating = 9,
             Notes = "Great movie",
             IsRewatch = false,
-            Movie = new Movie { Id = 1, TmdbId = 550, Title = "Fight Club", Year = 1999 },
-            User = new User { Id = 1, Username = "testuser", Email = "test@test.com" },
-            WatchGroups = new List<WatchGroup>
-            {
-                new WatchGroup { WatchId = 1, GroupId = 1, SharedAt = DateTime.UtcNow }
-            }
+            Movie = new Movie {
+                Id = 1,
+                TmdbId = 550,
+                Title = "Fight Club",
+                Year = 1999,
+                MovieGroups = new List<MovieGroup>
+                {
+                    new MovieGroup { MovieId = 1, GroupId = 1, SharedAt = DateTime.UtcNow }
+                }
+            },
+            User = new User { Id = 1, Username = "testuser", Email = "test@test.com" }
         };
 
         var updatedWatch = new Watch
@@ -402,13 +407,18 @@ public class WatchesControllerTests
             WatchedDate = DateTime.UtcNow,
             Rating = 9,
             IsRewatch = false,
-            Movie = new Movie { Id = 1, TmdbId = 550, Title = "Fight Club", Year = 1999 },
-            User = new User { Id = 1, Username = "testuser", Email = "test@test.com" },
-            WatchGroups = new List<WatchGroup>
-            {
-                new WatchGroup { WatchId = 1, GroupId = 1, SharedAt = DateTime.UtcNow },
-                new WatchGroup { WatchId = 1, GroupId = 2, SharedAt = DateTime.UtcNow }
-            }
+            Movie = new Movie {
+                Id = 1,
+                TmdbId = 550,
+                Title = "Fight Club",
+                Year = 1999,
+                MovieGroups = new List<MovieGroup>
+                {
+                    new MovieGroup { MovieId = 1, GroupId = 1, SharedAt = DateTime.UtcNow },
+                    new MovieGroup { MovieId = 1, GroupId = 2, SharedAt = DateTime.UtcNow }
+                }
+            },
+            User = new User { Id = 1, Username = "testuser", Email = "test@test.com" }
         };
 
         watchService.GetByIdAsync(1).Returns(existingWatch);
@@ -545,18 +555,18 @@ public class WatchesControllerTests
             MovieId = 1,
             WatchedDate = DateTime.UtcNow,
             Rating = 9,
-            IsPrivate = false,
             IsRewatch = false,
             Movie = movie,
-            User = new User { Id = 1, Username = "testuser", Email = "test@test.com" },
-            WatchGroups = new List<WatchGroup>
-            {
-                new WatchGroup { WatchId = 1, GroupId = 1, SharedAt = DateTime.UtcNow },
-                new WatchGroup { WatchId = 1, GroupId = 2, SharedAt = DateTime.UtcNow }
-            }
+            User = new User { Id = 1, Username = "testuser", Email = "test@test.com" }
         };
 
-        watchService.CreateAsync(Arg.Any<Watch>(), Arg.Any<List<int>>()).Returns(createdWatch);
+        movie.MovieGroups = new List<MovieGroup>
+        {
+            new MovieGroup { MovieId = 1, GroupId = 1, SharedAt = DateTime.UtcNow },
+            new MovieGroup { MovieId = 1, GroupId = 2, SharedAt = DateTime.UtcNow }
+        };
+
+        watchService.CreateAsync(Arg.Any<Watch>(), Arg.Any<bool?>(), Arg.Any<List<int>?>()).Returns(createdWatch);
 
         var request = new CreateWatchRequest
         {
@@ -576,10 +586,11 @@ public class WatchesControllerTests
         var returnedWatch = createdResult.Value.Should().BeOfType<WatchResponse>().Subject;
         returnedWatch.Rating.Should().Be(9);
 
-        // Verify CreateAsync was called with group IDs
+        // Verify CreateAsync was called with privacy and group IDs
         await watchService.Received(1).CreateAsync(
-            Arg.Is<Watch>(w => w.IsPrivate == false),
-            Arg.Is<List<int>>(g => g.Count == 2 && g.Contains(1) && g.Contains(2))
+            Arg.Any<Watch>(),
+            Arg.Any<bool?>(),
+            Arg.Is<List<int>?>(g => g != null && g.Count == 2 && g.Contains(1) && g.Contains(2))
         );
     }
 

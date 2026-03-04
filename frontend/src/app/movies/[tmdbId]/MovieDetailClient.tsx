@@ -469,6 +469,7 @@ export function MovieDetailClient({ params }: MovieDetailPageProps) {
                 open={isWatchFormOpen}
                 onOpenChange={setIsWatchFormOpen}
                 onSuccess={handleWatchSuccess}
+                isFirstWatch={!status || status.watchCount === 0}
             />
         </div>
     );

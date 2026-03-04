@@ -1,6 +1,7 @@
 import { userApi } from '@/lib/api'
 import { api } from '@/lib/api-client'
-import type { GroupWithTransferEligibility, DeleteAccountRequest } from '@/types'
+import type { DeleteAccountRequest } from '@/types'
+import type { GroupWithTransferEligibility } from '@/types/groupTransfer'
 
 // Mock the api-client module
 jest.mock('@/lib/api-client', () => ({

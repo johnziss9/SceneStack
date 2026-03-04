@@ -25,8 +25,10 @@ public class CreateWatchRequest
     public string? WatchLocation { get; set; }
     public string? WatchedWith { get; set; }
     public bool IsRewatch { get; set; }
-    public bool IsPrivate { get; set; } = false;
-    public List<int> GroupIds { get; set; } = new();  // Groups to share this watch with
+
+    // Privacy fields (only used on first watch to set movie-level privacy)
+    public bool? IsPrivate { get; set; }  // Nullable - only provided on first watch
+    public List<int>? GroupIds { get; set; }  // Groups to share this movie with (first watch only)
 }
 
 public class UpdateWatchRequest
@@ -37,14 +39,5 @@ public class UpdateWatchRequest
     public string? WatchLocation { get; set; }
     public string? WatchedWith { get; set; }
     public bool IsRewatch { get; set; }
-    public bool IsPrivate { get; set; }
-    public List<int>? GroupIds { get; set; }
-}
-
-public class BulkUpdateWatchesRequest
-{
-    public List<int> WatchIds { get; set; } = new();
-    public bool IsPrivate { get; set; }
-    public List<int>? GroupIds { get; set; }
-    public string GroupOperation { get; set; } = "replace"; // "add" or "replace"
+    // Privacy removed - managed at movie level, not watch level
 }

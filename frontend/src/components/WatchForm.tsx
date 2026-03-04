@@ -23,9 +23,10 @@ interface WatchFormProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     onSuccess: () => void;
+    isFirstWatch?: boolean; // If true, show privacy fields. If false, hide them (privacy already set)
 }
 
-export function WatchForm({ movie, open, onOpenChange, onSuccess }: WatchFormProps) {
+export function WatchForm({ movie, open, onOpenChange, onSuccess, isFirstWatch = true }: WatchFormProps) {
     const { user } = useAuth();
     const router = useRouter();
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -91,14 +92,16 @@ export function WatchForm({ movie, open, onOpenChange, onSuccess }: WatchFormPro
         }
     }, [open]);
 
-    // Fetch user's groups when dialog opens
+    // Fetch user's groups when dialog opens (only for first watch)
     useEffect(() => {
         if (open && user) {
-            fetchUserGroups();
+            if (isFirstWatch) {
+                fetchUserGroups();
+            }
             fetchLocationSuggestions();
             fetchWatchedWithSuggestions();
         }
-    }, [open, user]);
+    }, [open, user, isFirstWatch]);
 
     const fetchUserGroups = async () => {
         try {
@@ -264,15 +267,17 @@ export function WatchForm({ movie, open, onOpenChange, onSuccess }: WatchFormPro
             if (!firstErrorRef) firstErrorRef = locationRef;
         }
 
-        // Validate privacy selection
-        if (!sharingMode) {
-            setPrivacyError('Please select a privacy option');
-            isValid = false;
-            if (!firstErrorRef) firstErrorRef = privacyRef;
-        } else if (sharingMode === 'specific' && selectedGroups.length === 0) {
-            setPrivacyError('Please select at least one group to share with');
-            isValid = false;
-            if (!firstErrorRef) firstErrorRef = privacyRef;
+        // Validate privacy selection (only required for first watch)
+        if (isFirstWatch) {
+            if (!sharingMode) {
+                setPrivacyError('Please select a privacy option');
+                isValid = false;
+                if (!firstErrorRef) firstErrorRef = privacyRef;
+            } else if (sharingMode === 'specific' && selectedGroups.length === 0) {
+                setPrivacyError('Please select at least one group to share with');
+                isValid = false;
+                if (!firstErrorRef) firstErrorRef = privacyRef;
+            }
         }
 
         // Scroll to first error if validation failed
@@ -320,12 +325,15 @@ export function WatchForm({ movie, open, onOpenChange, onSuccess }: WatchFormPro
                 watchLocation: watchLocation === "Other" ? customLocation : watchLocation || undefined,
                 watchedWith: watchedWith || undefined,
                 isRewatch,
-                isPrivate: sharingMode === 'private',
-                groupIds: sharingMode === 'all'
-                    ? userGroups.map(g => g.id) // Send all group IDs if "all groups" is selected
-                    : sharingMode === 'specific'
-                    ? selectedGroups
-                    : undefined,
+                // Only include privacy data on first watch
+                ...(isFirstWatch && {
+                    isPrivate: sharingMode === 'private',
+                    groupIds: sharingMode === 'all'
+                        ? userGroups.map(g => g.id)
+                        : sharingMode === 'specific'
+                        ? selectedGroups
+                        : undefined,
+                }),
             };
 
             await watchApi.createWatch(watchData);
@@ -387,7 +395,7 @@ export function WatchForm({ movie, open, onOpenChange, onSuccess }: WatchFormPro
     return (
         <>
         <Dialog open={open} onOpenChange={handleOpenChange}>
-            <DialogContent className="sm:max-w-[900px] max-h-[90vh] flex flex-col">
+            <DialogContent className={`${isFirstWatch ? 'sm:max-w-[900px]' : 'sm:max-w-[500px]'} max-h-[90vh] flex flex-col`}>
                 <DialogHeader>
                     <DialogTitle>Log Watch</DialogTitle>
                     <DialogDescription>
@@ -396,7 +404,7 @@ export function WatchForm({ movie, open, onOpenChange, onSuccess }: WatchFormPro
                 </DialogHeader>
 
                 <form ref={formRef} onSubmit={handleSubmit} className="overflow-y-auto flex-1 pr-2" noValidate>
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div className={`grid grid-cols-1 ${isFirstWatch ? 'lg:grid-cols-2' : ''} gap-6`}>
                         {/* Left Column - Form Fields */}
                         <div className="space-y-4">
                     {/* Watch Date */}
@@ -717,7 +725,8 @@ export function WatchForm({ movie, open, onOpenChange, onSuccess }: WatchFormPro
                     </div>
                     {/* End Left Column */}
 
-                    {/* Right Column - Privacy & Sharing */}
+                    {/* Right Column - Privacy & Sharing (only shown on first watch) */}
+                    {isFirstWatch && (
                     <div ref={privacyRef} className="space-y-4">
                         <Label className="text-base">Privacy & Sharing *</Label>
 
@@ -887,6 +896,7 @@ export function WatchForm({ movie, open, onOpenChange, onSuccess }: WatchFormPro
                             <p className="text-sm text-destructive">{privacyError}</p>
                         )}
                     </div>
+                    )}
                     {/* End Right Column */}
 
                     </div>

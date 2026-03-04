@@ -18,14 +18,26 @@ public class GroupFeedServiceTests
         var logger = Substitute.For<ILogger<GroupFeedService>>();
         var service = new GroupFeedService(context, logger);
 
-        var user1 = context.Users.First();
-        var user2 = context.Users.Skip(1).First();
+        // Use second user to avoid conflict with seeded watch (user1 + movie1)
+        var user1 = context.Users.Skip(1).First();
+
+        // Create a third user
+        var user2 = new User
+        {
+            Username = "user3",
+            Email = "user3@example.com",
+            IsPremium = false,
+            ShareWatches = true,
+            ShareRatings = true,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+        context.Users.Add(user2);
+        await context.SaveChangesAsync();
 
         // Update privacy settings
         user1.ShareWatches = true;
         user1.ShareRatings = true;
-        user2.ShareWatches = true;
-        user2.ShareRatings = true;
         await context.SaveChangesAsync();
 
         // Create a group
@@ -45,32 +57,40 @@ public class GroupFeedServiceTests
         );
         await context.SaveChangesAsync();
 
+        // Create a new movie to avoid conflict with seeded movie
+        var movie = new Movie
+        {
+            TmdbId = 999,
+            Title = "Test Movie",
+            Year = 2024,
+            CreatedAt = DateTime.UtcNow
+        };
+        context.Movies.Add(movie);
+        await context.SaveChangesAsync();
+
         // Create watches and share with group
         var watch1 = new Watch
         {
             UserId = user1.Id,
-            MovieId = 1,
+            MovieId = movie.Id,
             WatchedDate = DateTime.UtcNow,
             Rating = 9,
-            IsPrivate = false,
             CreatedAt = DateTime.UtcNow
         };
         var watch2 = new Watch
         {
             UserId = user2.Id,
-            MovieId = 1,
+            MovieId = movie.Id,
             WatchedDate = DateTime.UtcNow.AddDays(-1),
             Rating = 8,
-            IsPrivate = false,
             CreatedAt = DateTime.UtcNow
         };
         context.Watches.AddRange(watch1, watch2);
         await context.SaveChangesAsync();
 
-        // Share watches with group
-        context.WatchGroups.AddRange(
-            new WatchGroup { WatchId = watch1.Id, GroupId = group.Id, SharedAt = DateTime.UtcNow },
-            new WatchGroup { WatchId = watch2.Id, GroupId = group.Id, SharedAt = DateTime.UtcNow }
+        // Share movie with group (both watches are for the same movie)
+        context.MovieGroups.Add(
+            new MovieGroup { MovieId = movie.Id, GroupId = group.Id, SharedAt = DateTime.UtcNow }
         );
         await context.SaveChangesAsync();
 
@@ -123,8 +143,21 @@ public class GroupFeedServiceTests
         var logger = Substitute.For<ILogger<GroupFeedService>>();
         var service = new GroupFeedService(context, logger);
 
-        var user1 = context.Users.First();
-        var user2 = context.Users.Skip(1).First();
+        // Use second user to avoid conflict with seeded watch
+        var user1 = context.Users.Skip(1).First();
+
+        // Create a third user
+        var user2 = new User
+        {
+            Username = "user3",
+            Email = "user3@example.com",
+            IsPremium = false,
+            ShareWatches = true,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+        context.Users.Add(user2);
+        await context.SaveChangesAsync();
 
         // Update privacy settings
         user1.ShareWatches = true;
@@ -147,39 +180,42 @@ public class GroupFeedServiceTests
         );
         await context.SaveChangesAsync();
 
-        // Create watches - one private, one public
+        // Create two movies - one public (shared with group), one private
+        var publicMovie = new Movie { TmdbId = 100, Title = "Public Movie", Year = 2020, CreatedAt = DateTime.UtcNow };
+        var privateMovie = new Movie { TmdbId = 101, Title = "Private Movie", Year = 2021, CreatedAt = DateTime.UtcNow, IsPrivate = true };
+        context.Movies.AddRange(publicMovie, privateMovie);
+        await context.SaveChangesAsync();
+
+        // Create watches for both movies
         var publicWatch = new Watch
         {
             UserId = user1.Id,
-            MovieId = 1,
+            MovieId = publicMovie.Id,
             WatchedDate = DateTime.UtcNow,
-            IsPrivate = false,
             CreatedAt = DateTime.UtcNow
         };
         var privateWatch = new Watch
         {
             UserId = user1.Id,
-            MovieId = 1,
+            MovieId = privateMovie.Id,
             WatchedDate = DateTime.UtcNow.AddDays(-1),
-            IsPrivate = true,
             CreatedAt = DateTime.UtcNow
         };
         context.Watches.AddRange(publicWatch, privateWatch);
         await context.SaveChangesAsync();
 
-        // Share both with group
-        context.WatchGroups.AddRange(
-            new WatchGroup { WatchId = publicWatch.Id, GroupId = group.Id, SharedAt = DateTime.UtcNow },
-            new WatchGroup { WatchId = privateWatch.Id, GroupId = group.Id, SharedAt = DateTime.UtcNow }
+        // Share only the public movie with group
+        context.MovieGroups.Add(
+            new MovieGroup { MovieId = publicMovie.Id, GroupId = group.Id, SharedAt = DateTime.UtcNow }
         );
         await context.SaveChangesAsync();
 
         // Act
         var result = await service.GetGroupFeedAsync(group.Id, user2.Id);
 
-        // Assert
+        // Assert - only public movie should appear
         result.Should().HaveCount(1);
-        result.First().IsRewatch.Should().BeFalse();
+        result.First().MovieId.Should().Be(publicMovie.Id);
     }
 
     [Fact]
@@ -190,7 +226,8 @@ public class GroupFeedServiceTests
         var logger = Substitute.For<ILogger<GroupFeedService>>();
         var service = new GroupFeedService(context, logger);
 
-        var user = context.Users.First();
+        // Use second user to avoid conflict with seeded data
+        var user = context.Users.Skip(1).First();
         user.ShareWatches = true;
         await context.SaveChangesAsync();
 
@@ -210,22 +247,31 @@ public class GroupFeedServiceTests
         );
         await context.SaveChangesAsync();
 
-        // Create 5 watches
+        // Create 5 different movies and watches for pagination test
         for (int i = 0; i < 5; i++)
         {
+            var movie = new Movie
+            {
+                TmdbId = 1000 + i,
+                Title = $"Movie {i}",
+                Year = 2020 + i,
+                CreatedAt = DateTime.UtcNow
+            };
+            context.Movies.Add(movie);
+            await context.SaveChangesAsync();
+
             var watch = new Watch
             {
                 UserId = user.Id,
-                MovieId = 1,
+                MovieId = movie.Id,
                 WatchedDate = DateTime.UtcNow.AddDays(-i),
-                IsPrivate = false,
                 CreatedAt = DateTime.UtcNow
             };
             context.Watches.Add(watch);
             await context.SaveChangesAsync();
 
-            context.WatchGroups.Add(
-                new WatchGroup { WatchId = watch.Id, GroupId = group.Id, SharedAt = DateTime.UtcNow }
+            context.MovieGroups.Add(
+                new MovieGroup { MovieId = movie.Id, GroupId = group.Id, SharedAt = DateTime.UtcNow }
             );
         }
         await context.SaveChangesAsync();
@@ -274,22 +320,32 @@ public class GroupFeedServiceTests
         );
         await context.SaveChangesAsync();
 
+        // Create a new movie to avoid conflict with seeded movie
+        var movie = new Movie
+        {
+            TmdbId = 999,
+            Title = "Privacy Test Movie",
+            Year = 2024,
+            CreatedAt = DateTime.UtcNow
+        };
+        context.Movies.Add(movie);
+        await context.SaveChangesAsync();
+
         // Create watch with rating and notes
         var watch = new Watch
         {
             UserId = owner.Id,
-            MovieId = 1,
+            MovieId = movie.Id,
             WatchedDate = DateTime.UtcNow,
             Rating = 9,
             Notes = "Private thoughts",
-            IsPrivate = false,
             CreatedAt = DateTime.UtcNow
         };
         context.Watches.Add(watch);
         await context.SaveChangesAsync();
 
-        context.WatchGroups.Add(
-            new WatchGroup { WatchId = watch.Id, GroupId = group.Id, SharedAt = DateTime.UtcNow }
+        context.MovieGroups.Add(
+            new MovieGroup { MovieId = movie.Id, GroupId = group.Id, SharedAt = DateTime.UtcNow }
         );
         await context.SaveChangesAsync();
 
@@ -344,15 +400,21 @@ public class GroupFeedServiceTests
         );
         await context.SaveChangesAsync();
 
+        // Create different movies to avoid conflicts with seeded data
+        var movie1 = new Movie { TmdbId = 1001, Title = "Movie 1", Year = 2024, CreatedAt = DateTime.UtcNow };
+        var movie2 = new Movie { TmdbId = 1002, Title = "Movie 2", Year = 2024, CreatedAt = DateTime.UtcNow };
+        context.Movies.AddRange(movie1, movie2);
+        await context.SaveChangesAsync();
+
         // Create watches in each group
-        var watch1 = new Watch { UserId = otherUser1.Id, MovieId = 1, WatchedDate = DateTime.UtcNow, IsPrivate = false, CreatedAt = DateTime.UtcNow };
-        var watch2 = new Watch { UserId = otherUser2.Id, MovieId = 1, WatchedDate = DateTime.UtcNow.AddDays(-1), IsPrivate = false, CreatedAt = DateTime.UtcNow };
+        var watch1 = new Watch { UserId = otherUser1.Id, MovieId = movie1.Id, WatchedDate = DateTime.UtcNow, CreatedAt = DateTime.UtcNow };
+        var watch2 = new Watch { UserId = otherUser2.Id, MovieId = movie2.Id, WatchedDate = DateTime.UtcNow.AddDays(-1), CreatedAt = DateTime.UtcNow };
         context.Watches.AddRange(watch1, watch2);
         await context.SaveChangesAsync();
 
-        context.WatchGroups.AddRange(
-            new WatchGroup { WatchId = watch1.Id, GroupId = group1.Id, SharedAt = DateTime.UtcNow },
-            new WatchGroup { WatchId = watch2.Id, GroupId = group2.Id, SharedAt = DateTime.UtcNow }
+        context.MovieGroups.AddRange(
+            new MovieGroup { MovieId = movie1.Id, GroupId = group1.Id, SharedAt = DateTime.UtcNow },
+            new MovieGroup { MovieId = movie2.Id, GroupId = group2.Id, SharedAt = DateTime.UtcNow }
         );
         await context.SaveChangesAsync();
 
@@ -421,15 +483,20 @@ public class GroupFeedServiceTests
         );
         await context.SaveChangesAsync();
 
+        // Create a new movie to avoid conflict with seeded movie
+        var movie = new Movie { TmdbId = 1003, Title = "Duplicate Test Movie", Year = 2024, CreatedAt = DateTime.UtcNow };
+        context.Movies.Add(movie);
+        await context.SaveChangesAsync();
+
         // Create one watch shared with both groups
-        var watch = new Watch { UserId = otherUser.Id, MovieId = 1, WatchedDate = DateTime.UtcNow, IsPrivate = false, CreatedAt = DateTime.UtcNow };
+        var watch = new Watch { UserId = otherUser.Id, MovieId = movie.Id, WatchedDate = DateTime.UtcNow, CreatedAt = DateTime.UtcNow };
         context.Watches.Add(watch);
         await context.SaveChangesAsync();
 
-        // Share same watch with both groups
-        context.WatchGroups.AddRange(
-            new WatchGroup { WatchId = watch.Id, GroupId = group1.Id, SharedAt = DateTime.UtcNow },
-            new WatchGroup { WatchId = watch.Id, GroupId = group2.Id, SharedAt = DateTime.UtcNow }
+        // Share same movie with both groups
+        context.MovieGroups.AddRange(
+            new MovieGroup { MovieId = movie.Id, GroupId = group1.Id, SharedAt = DateTime.UtcNow },
+            new MovieGroup { MovieId = movie.Id, GroupId = group2.Id, SharedAt = DateTime.UtcNow }
         );
         await context.SaveChangesAsync();
 
@@ -448,11 +515,23 @@ public class GroupFeedServiceTests
         var logger = Substitute.For<ILogger<GroupFeedService>>();
         var service = new GroupFeedService(context, logger);
 
-        var user1 = context.Users.First();
-        var user2 = context.Users.Skip(1).First();
+        // Use second user to avoid conflict with seeded data
+        var user1 = context.Users.Skip(1).First();
+
+        // Create a third user
+        var user2 = new User
+        {
+            Username = "user3",
+            Email = "user3@example.com",
+            IsPremium = false,
+            ShareWatches = true,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+        context.Users.Add(user2);
+        await context.SaveChangesAsync();
 
         user1.ShareWatches = true;
-        user2.ShareWatches = true;
         await context.SaveChangesAsync();
 
         // Create a group
@@ -472,34 +551,27 @@ public class GroupFeedServiceTests
         );
         await context.SaveChangesAsync();
 
-        // Add a second movie
-        var movie2 = new Movie
-        {
-            TmdbId = 551,
-            Title = "The Matrix",
-            Year = 1999,
-            CreatedAt = DateTime.UtcNow
-        };
-        context.Movies.Add(movie2);
+        // Create new movies to avoid conflicts
+        var movie1 = new Movie { TmdbId = 1001, Title = "Movie 1", Year = 2024, CreatedAt = DateTime.UtcNow };
+        var movie2 = new Movie { TmdbId = 1002, Title = "Movie 2", Year = 2024, CreatedAt = DateTime.UtcNow };
+        context.Movies.AddRange(movie1, movie2);
         await context.SaveChangesAsync();
 
         // Create watches for both movies
         var watches = new[]
         {
-            new Watch { UserId = user1.Id, MovieId = 1, WatchedDate = DateTime.UtcNow, Rating = 9, IsPrivate = false, CreatedAt = DateTime.UtcNow },
-            new Watch { UserId = user2.Id, MovieId = 1, WatchedDate = DateTime.UtcNow.AddDays(-1), Rating = 10, IsPrivate = false, CreatedAt = DateTime.UtcNow },
-            new Watch { UserId = user1.Id, MovieId = movie2.Id, WatchedDate = DateTime.UtcNow.AddDays(-2), Rating = 8, IsPrivate = false, CreatedAt = DateTime.UtcNow }
+            new Watch { UserId = user1.Id, MovieId = movie1.Id, WatchedDate = DateTime.UtcNow, Rating = 9, CreatedAt = DateTime.UtcNow },
+            new Watch { UserId = user2.Id, MovieId = movie1.Id, WatchedDate = DateTime.UtcNow.AddDays(-1), Rating = 10, CreatedAt = DateTime.UtcNow },
+            new Watch { UserId = user1.Id, MovieId = movie2.Id, WatchedDate = DateTime.UtcNow.AddDays(-2), Rating = 8, CreatedAt = DateTime.UtcNow }
         };
         context.Watches.AddRange(watches);
         await context.SaveChangesAsync();
 
-        // Share all watches with group
-        foreach (var watch in watches)
-        {
-            context.WatchGroups.Add(
-                new WatchGroup { WatchId = watch.Id, GroupId = group.Id, SharedAt = DateTime.UtcNow }
-            );
-        }
+        // Share both movies with group (not each watch individually)
+        context.MovieGroups.AddRange(
+            new MovieGroup { MovieId = movie1.Id, GroupId = group.Id, SharedAt = DateTime.UtcNow },
+            new MovieGroup { MovieId = movie2.Id, GroupId = group.Id, SharedAt = DateTime.UtcNow }
+        );
         await context.SaveChangesAsync();
 
         // Act

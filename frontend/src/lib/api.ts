@@ -9,8 +9,6 @@ import type {
     Watch,
     CreateWatchRequest,
     UpdateWatchRequest,
-    BulkUpdateWatchesRequest,
-    BulkUpdateResult,
     RegisterRequest,
     LoginRequest,
     AuthResponse,
@@ -75,6 +73,10 @@ export const movieApi = {
     // GET: api/movies/tmdb/{tmdbId}/my-status — authenticated
     getMyStatus: (tmdbId: number) =>
         api.get<MovieUserStatus>(`/api/movies/tmdb/${tmdbId}/my-status`),
+
+    // PUT: api/movies/{movieId}/privacy
+    setPrivacy: (movieId: number, isPrivate: boolean, groupIds: number[]) =>
+        api.put<void>(`/api/movies/${movieId}/privacy`, { isPrivate, groupIds }),
 };
 
 // Watchlist endpoints
@@ -147,10 +149,6 @@ export const watchApi = {
     // DELETE: api/watches/{id}
     deleteWatch: (id: number) =>
         api.delete<void>(`/api/watches/${id}`),
-
-    // PUT: api/watches/bulk
-    bulkUpdate: (data: BulkUpdateWatchesRequest) =>
-        api.put<BulkUpdateResult>('/api/watches/bulk', data),
 
     // GET: api/watches/recommendations?page={page}&pageSize={pageSize}
     getRecommendations: (page: number = 1, pageSize: number = 20) =>

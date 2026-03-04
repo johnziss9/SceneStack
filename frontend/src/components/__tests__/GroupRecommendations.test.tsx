@@ -497,7 +497,13 @@ describe('GroupRecommendations', () => {
         });
 
         it('should add movie to wishlist when bookmark button is clicked', async () => {
-            mockWatchlistApi.addToWatchlist.mockResolvedValue({ movieId: 100 });
+            mockWatchlistApi.addToWatchlist.mockResolvedValue({
+                id: 1,
+                movieId: 100,
+                movie: { id: 100, tmdbId: 1, title: 'Test Movie', year: 2024, posterPath: '/test.jpg' },
+                priority: 0,
+                addedAt: new Date().toISOString(),
+            });
 
             render(<GroupRecommendations groupId={1} />);
 
@@ -518,8 +524,9 @@ describe('GroupRecommendations', () => {
             mockMovieApi.getMyStatus.mockResolvedValue({
                 onWatchlist: true,
                 localMovieId: 100,
-                watched: false,
                 watchCount: 0,
+                latestRating: null,
+                watchlistItemId: 1,
             });
             mockWatchlistApi.removeFromWatchlist.mockResolvedValue();
 
@@ -645,7 +652,7 @@ describe('GroupRecommendations', () => {
                         ...mockRecommendations.items[0],
                         movie: {
                             ...mockRecommendations.items[0].movie,
-                            poster_path: null,
+                            poster_path: undefined,
                         },
                     },
                 ],
@@ -674,7 +681,7 @@ describe('GroupRecommendations', () => {
                         ...mockRecommendations.items[0],
                         movie: {
                             ...mockRecommendations.items[0].movie,
-                            release_date: null,
+                            release_date: undefined,
                         },
                     },
                 ],

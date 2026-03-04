@@ -20,7 +20,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<Group> Groups { get; set; }
     public DbSet<GroupMember> GroupMembers { get; set; }
     public DbSet<GroupMemberHistory> GroupMemberHistories { get; set; }
-    public DbSet<WatchGroup> WatchGroups { get; set; }
+    public DbSet<MovieGroup> MovieGroups { get; set; }
     public DbSet<WatchlistItem> WatchlistItems { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -202,25 +202,25 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
                 .IsRequired(false);  // Actor is already nullable
         });
 
-        // Configure WatchGroup (many-to-many join table for Watch <-> Group)
-        modelBuilder.Entity<WatchGroup>(entity =>
+        // Configure MovieGroup (many-to-many join table for Movie <-> Group)
+        modelBuilder.Entity<MovieGroup>(entity =>
         {
             // Composite primary key
-            entity.HasKey(wg => new { wg.WatchId, wg.GroupId });
+            entity.HasKey(mg => new { mg.MovieId, mg.GroupId });
 
-            entity.HasIndex(e => e.WatchId);
+            entity.HasIndex(e => e.MovieId);
             entity.HasIndex(e => e.GroupId);
 
             // Define relationships
-            entity.HasOne(wg => wg.Watch)
-                .WithMany(w => w.WatchGroups)
-                .HasForeignKey(wg => wg.WatchId)
-                .OnDelete(DeleteBehavior.Cascade)  // Delete link if watch is deleted
+            entity.HasOne(mg => mg.Movie)
+                .WithMany(m => m.MovieGroups)
+                .HasForeignKey(mg => mg.MovieId)
+                .OnDelete(DeleteBehavior.Cascade)  // Delete link if movie is deleted
                 .IsRequired(false);  // Make optional to work with query filters
 
-            entity.HasOne(wg => wg.Group)
-                .WithMany(g => g.WatchGroups)
-                .HasForeignKey(wg => wg.GroupId)
+            entity.HasOne(mg => mg.Group)
+                .WithMany(g => g.MovieGroups)
+                .HasForeignKey(mg => mg.GroupId)
                 .OnDelete(DeleteBehavior.Cascade)  // Delete link if group is deleted
                 .IsRequired(false);  // Make optional to work with query filters
         });

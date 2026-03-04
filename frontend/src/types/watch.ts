@@ -12,8 +12,6 @@ export interface Watch {
     watchLocation?: string;
     watchedWith?: string;
     isRewatch: boolean;
-    isPrivate: boolean; // Privacy flag
-    groupIds?: number[]; // Groups this watch is shared with
     createdAt: string; // ISO date string
     movie: Movie;
     user: User;
@@ -29,8 +27,6 @@ export interface WatchEntry {
     watchLocation?: string | null;
     watchedWith?: string | null;
     isRewatch: boolean;
-    isPrivate: boolean;
-    groupIds?: number[];
     movie: Movie;  // Navigation property
 }
 
@@ -75,24 +71,6 @@ export interface UpdateWatchRequest {
     watchLocation?: string;
     watchedWith?: string;
     isRewatch: boolean;
-    isPrivate?: boolean;
-    groupIds?: number[];
-}
-
-// Matches BulkUpdateWatchesRequest from backend
-export interface BulkUpdateWatchesRequest {
-    watchIds: number[];
-    isPrivate: boolean;
-    groupIds?: number[];
-    groupOperation: 'add' | 'replace';
-}
-
-// Matches BulkUpdateResult from backend
-export interface BulkUpdateResult {
-    success: boolean;
-    updated: number;
-    failed: number;
-    errors: string[];
 }
 
 // Query params for GET /api/watches/grouped

@@ -101,7 +101,7 @@ describe('Navigation', () => {
             mockUseAuth.mockReturnValue({
                 user: {
                     id: 1,
-                    username: 'testuser', isPremium: false,
+                    username: 'testuser',
                     email: 'test@example.com',
                 },
                 loading: false,

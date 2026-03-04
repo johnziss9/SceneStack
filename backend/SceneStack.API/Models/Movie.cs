@@ -27,7 +27,11 @@ public class Movie
     public bool IsDeleted { get; set; } = false;
     public DateTime? DeletedAt { get; set; }
 
+    // Privacy settings (set on first watch, applies to all watches of this movie)
+    public bool IsPrivate { get; set; } = false;
+
     // Navigation properties
     public ICollection<Watch> Watches { get; set; } = new List<Watch>();
     public ICollection<AiInsight> AiInsights { get; set; } = new List<AiInsight>();
+    public ICollection<MovieGroup> MovieGroups { get; set; } = new List<MovieGroup>();
 }

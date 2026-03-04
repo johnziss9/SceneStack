@@ -14,5 +14,5 @@ public class Group
     // Navigation properties
     public User CreatedBy { get; set; } = null!;
     public ICollection<GroupMember> Members { get; set; } = new List<GroupMember>();
-    public ICollection<WatchGroup> WatchGroups { get; set; } = new List<WatchGroup>();
+    public ICollection<MovieGroup> MovieGroups { get; set; } = new List<MovieGroup>();
 }

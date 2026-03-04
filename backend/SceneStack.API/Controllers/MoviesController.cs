@@ -85,6 +85,15 @@ public class MoviesController : ControllerBase
         return Ok(status);
     }
 
+    // PUT: api/movies/5/privacy
+    // Updates privacy settings for a movie
+    [HttpPut("{id}/privacy")]
+    public async Task<IActionResult> UpdateMoviePrivacy(int id, UpdateMoviePrivacyRequest request)
+    {
+        await _movieService.SetPrivacyAsync(id, request.IsPrivate, request.GroupIds);
+        return NoContent();
+    }
+
     // GET: api/movies/5
     [HttpGet("{id}")]
     public async Task<ActionResult<Movie>> GetMovie(int id)

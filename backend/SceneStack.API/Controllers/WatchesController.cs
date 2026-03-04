@@ -169,18 +169,20 @@ public class WatchesController : ControllerBase
                 Notes = request.Notes,
                 WatchLocation = request.WatchLocation,
                 WatchedWith = request.WatchedWith,
-                IsRewatch = request.IsRewatch,
-                IsPrivate = request.IsPrivate
+                IsRewatch = request.IsRewatch
             };
 
-            var createdWatch = await _watchService.CreateAsync(watch, request.GroupIds);
+            var createdWatch = await _watchService.CreateAsync(watch, request.IsPrivate, request.GroupIds);
             _logger.LogInformation("Successfully created watch with ID: {WatchId}", createdWatch.Id);
 
             // Invalidate recommendations cache for this user
             InvalidateUserRecommendationsCache(userId);
 
             // Invalidate recommendations cache for all affected groups
-            InvalidateGroupRecommendationsCache(request.GroupIds);
+            if (request.GroupIds != null)
+            {
+                InvalidateGroupRecommendationsCache(request.GroupIds);
+            }
 
             return CreatedAtAction(nameof(GetWatch), new { id = createdWatch.Id }, WatchMapper.ToResponse(createdWatch));
         }
@@ -197,13 +199,6 @@ public class WatchesController : ControllerBase
     {
         var userId = User.GetUserId();
 
-        // Fetch the existing watch to get old group IDs before updating
-        var existingWatch = await _watchService.GetByIdAsync(id);
-        if (existingWatch == null)
-            return NotFound();
-
-        var oldGroupIds = existingWatch.WatchGroups.Select(wg => wg.GroupId).ToList();
-
         var watch = new Watch
         {
             WatchedDate = DateTime.SpecifyKind(request.WatchedDate, DateTimeKind.Utc),
@@ -211,26 +206,16 @@ public class WatchesController : ControllerBase
             Notes = request.Notes,
             WatchLocation = request.WatchLocation,
             WatchedWith = request.WatchedWith,
-            IsRewatch = request.IsRewatch,
-            IsPrivate = request.IsPrivate
+            IsRewatch = request.IsRewatch
         };
 
-        var updatedWatch = await _watchService.UpdateAsync(id, watch, request.GroupIds);
+        var updatedWatch = await _watchService.UpdateAsync(id, watch);
 
         if (updatedWatch == null)
             return NotFound();
 
         // Invalidate recommendations cache for this user
         InvalidateUserRecommendationsCache(userId);
-
-        // Invalidate cache for old groups (in case watch was removed from them)
-        InvalidateGroupRecommendationsCache(oldGroupIds);
-
-        // Invalidate cache for new groups (in case watch was added to them)
-        if (request.GroupIds != null)
-        {
-            InvalidateGroupRecommendationsCache(request.GroupIds);
-        }
 
         return Ok(WatchMapper.ToResponse(updatedWatch));
     }
@@ -241,13 +226,6 @@ public class WatchesController : ControllerBase
     {
         var userId = User.GetUserId();
 
-        // Fetch the watch to get group IDs before deleting
-        var existingWatch = await _watchService.GetByIdAsync(id);
-        if (existingWatch == null)
-            return NotFound();
-
-        var groupIds = existingWatch.WatchGroups.Select(wg => wg.GroupId).ToList();
-
         var result = await _watchService.DeleteAsync(id);
 
         if (!result)
@@ -255,9 +233,6 @@ public class WatchesController : ControllerBase
 
         // Invalidate recommendations cache for this user
         InvalidateUserRecommendationsCache(userId);
-
-        // Invalidate cache for all groups this watch was shared with
-        InvalidateGroupRecommendationsCache(groupIds);
 
         return NoContent();
     }
@@ -293,129 +268,6 @@ public class WatchesController : ControllerBase
         {
             _logger.LogError(ex, "Error getting group feed for group {GroupId}", groupId);
             return StatusCode(500, $"Error getting group feed: {ex.Message}");
-        }
-    }
-
-    /// <summary>
-    /// Bulk update privacy and group sharing for multiple watches
-    /// </summary>
-    /// <param name="request">Bulk update request with watch IDs, privacy setting, and group IDs</param>
-    /// <returns>Bulk update result with success/failure counts</returns>
-    // PUT: api/watches/bulk
-    [HttpPut("bulk")]
-    public async Task<ActionResult<BulkUpdateResult>> BulkUpdateWatches(BulkUpdateWatchesRequest request)
-    {
-        var userId = User.GetUserId();
-        _logger.LogInformation(
-            "User {UserId} bulk updating {Count} watches. IsPrivate: {IsPrivate}, GroupOperation: {GroupOperation}",
-            userId,
-            request.WatchIds.Count,
-            request.IsPrivate,
-            request.GroupOperation);
-
-        // Validation
-        if (request.WatchIds == null || !request.WatchIds.Any())
-        {
-            return BadRequest(new BulkUpdateResult
-            {
-                Success = false,
-                Updated = 0,
-                Failed = 0,
-                Errors = new List<string> { "WatchIds cannot be empty" }
-            });
-        }
-
-        if (string.IsNullOrEmpty(request.GroupOperation))
-        {
-            return BadRequest(new BulkUpdateResult
-            {
-                Success = false,
-                Updated = 0,
-                Failed = 0,
-                Errors = new List<string> { "GroupOperation is required (must be 'add' or 'replace')" }
-            });
-        }
-
-        try
-        {
-            // Fetch all watches to get their old group IDs before updating
-            var existingWatches = new List<Watch>();
-            foreach (var watchId in request.WatchIds)
-            {
-                var watch = await _watchService.GetByIdAsync(watchId);
-                if (watch != null)
-                {
-                    existingWatches.Add(watch);
-                }
-            }
-
-            var oldGroupIds = existingWatches
-                .SelectMany(w => w.WatchGroups.Select(wg => wg.GroupId))
-                .Distinct()
-                .ToList();
-
-            var result = await _watchService.BulkUpdateAsync(
-                userId,
-                request.WatchIds,
-                request.IsPrivate,
-                request.GroupIds,
-                request.GroupOperation);
-
-            if (!result.Success)
-            {
-                _logger.LogWarning(
-                    "Bulk update partially failed for user {UserId}. Updated: {Updated}, Failed: {Failed}",
-                    userId,
-                    result.Updated,
-                    result.Failed);
-
-                // Invalidate cache even for partial updates, as some watches were modified
-                if (result.Updated > 0)
-                {
-                    InvalidateUserRecommendationsCache(userId);
-
-                    // Invalidate old groups
-                    InvalidateGroupRecommendationsCache(oldGroupIds);
-
-                    // Invalidate new groups
-                    if (request.GroupIds != null)
-                    {
-                        InvalidateGroupRecommendationsCache(request.GroupIds);
-                    }
-                }
-
-                return BadRequest(result);
-            }
-
-            _logger.LogInformation(
-                "Successfully bulk updated {Count} watches for user {UserId}",
-                result.Updated,
-                userId);
-
-            // Invalidate recommendations cache for this user
-            InvalidateUserRecommendationsCache(userId);
-
-            // Invalidate cache for old groups (in case watches were removed from them)
-            InvalidateGroupRecommendationsCache(oldGroupIds);
-
-            // Invalidate cache for new groups (in case watches were added to them)
-            if (request.GroupIds != null)
-            {
-                InvalidateGroupRecommendationsCache(request.GroupIds);
-            }
-
-            return Ok(result);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error in bulk update for user {UserId}", userId);
-            return StatusCode(500, new BulkUpdateResult
-            {
-                Success = false,
-                Updated = 0,
-                Failed = request.WatchIds.Count,
-                Errors = new List<string> { $"Internal server error: {ex.Message}" }
-            });
         }
     }
 

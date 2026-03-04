@@ -96,12 +96,11 @@ describe('EditWatchDialog', () => {
 
         // Mock authenticated user
         mockUseAuth.mockReturnValue({
-            user: { id: 1, username: 'testuser', email: 'test@example.com', isPremium: false },
+            user: { id: 1, username: 'testuser', email: 'test@example.com' },
             loading: false,
             login: jest.fn(),
             register: jest.fn(),
             logout: jest.fn(),
-            refreshUser: jest.fn(),
         })
 
         // Mock user groups by default
@@ -389,18 +388,14 @@ describe('EditWatchDialog', () => {
         )
 
         const submitButton = screen.getByRole('button', { name: /save changes/i })
+        const cancelButton = screen.getByRole('button', { name: /cancel/i })
+
         await user.click(submitButton)
 
-        // Wait for "Saving..." text to appear, which indicates isSubmitting is true
         await waitFor(() => {
-            expect(screen.getByRole('button', { name: /saving/i })).toBeInTheDocument()
+            expect(submitButton).toBeDisabled()
+            expect(cancelButton).toBeDisabled()
         })
-
-        // Now check that both buttons are disabled
-        const savingButton = screen.getByRole('button', { name: /saving/i })
-        const cancelButton = screen.getByRole('button', { name: /cancel/i })
-        expect(savingButton).toBeDisabled()
-        expect(cancelButton).toBeDisabled()
     })
 
     it('calls onOpenChange when cancel button is clicked', async () => {
@@ -473,9 +468,9 @@ describe('EditWatchDialog', () => {
             />
         )
 
-        // Wait for form to render
+        // Wait for groups to load (in secondary modal)
         await waitFor(() => {
-            expect(screen.getByLabelText(/watched with/i)).toBeInTheDocument()
+            expect(screen.getByRole('button', { name: /specific groups/i })).toBeInTheDocument()
         })
 
         // Clear optional text fields (rating slider can't be cleared to undefined)
@@ -494,6 +489,230 @@ describe('EditWatchDialog', () => {
                 expect.objectContaining({
                     notes: undefined,
                     watchedWith: undefined,
+                })
+            )
+        })
+    })
+
+    // Privacy & Sharing Tests
+    it('fetches user groups when dialog opens', async () => {
+        render(
+            <EditWatchDialog
+                watch={mockWatch}
+                open={true}
+                onOpenChange={mockOnOpenChange}
+                onSuccess={mockOnSuccess}
+            />
+        )
+
+        await waitFor(() => {
+            expect(groupApi.getUserGroups).toHaveBeenCalledTimes(1)
+        })
+    })
+
+    it('displays user groups for sharing', async () => {
+        const user = userEvent.setup()
+        render(
+            <EditWatchDialog
+                watch={mockWatch}
+                open={true}
+                onOpenChange={mockOnOpenChange}
+                onSuccess={mockOnSuccess}
+            />
+        )
+
+        // Click "Specific Groups" button to open secondary modal
+        const specificGroupsButton = await screen.findByRole('button', { name: /specific groups/i })
+        await user.click(specificGroupsButton)
+
+        await waitFor(() => {
+            expect(screen.getByText('Friday Movie Night')).toBeInTheDocument()
+            expect(screen.getByText('Classic Cinema')).toBeInTheDocument()
+        })
+    })
+
+    it('pre-fills privacy mode based on watch data', async () => {
+        const privateWatch: Watch = {
+            ...mockWatch,
+            isPrivate: true,
+        }
+
+        render(
+            <EditWatchDialog
+                watch={privateWatch}
+                open={true}
+                onOpenChange={mockOnOpenChange}
+                onSuccess={mockOnSuccess}
+            />
+        )
+
+        // Privacy is now a button-based selection, "Private" button should be selected
+        await waitFor(() => {
+            const privateButton = screen.getByRole('button', { name: /private.*only you can see this/i })
+            expect(privateButton).toHaveClass('border-primary')
+        })
+    })
+
+    it('pre-fills group selections when watch is shared with specific groups', async () => {
+        const user = userEvent.setup()
+        const sharedWatch: Watch = {
+            ...mockWatch,
+            isPrivate: false,
+            groupIds: [1], // Shared with Friday Movie Night
+        }
+
+        render(
+            <EditWatchDialog
+                watch={sharedWatch}
+                open={true}
+                onOpenChange={mockOnOpenChange}
+                onSuccess={mockOnSuccess}
+            />
+        )
+
+        // "Specific Groups" card should be selected
+        await waitFor(() => {
+            const specificGroupsCard = screen.getByRole('button', { name: /specific groups/i })
+            expect(specificGroupsCard).toHaveClass('border-primary')
+        })
+
+        // Click "Specific Groups" button to open secondary modal and verify selection
+        const specificGroupsButton = await screen.findByRole('button', { name: /specific groups/i })
+        await user.click(specificGroupsButton)
+
+        await waitFor(() => {
+            const groupCheckbox = screen.getByRole('checkbox', { name: /Friday Movie Night/i })
+            expect(groupCheckbox).toBeChecked()
+        })
+    })
+
+    it('pre-selects "All my groups" when watch is shared with all groups', async () => {
+        const sharedWatch: Watch = {
+            ...mockWatch,
+            isPrivate: false,
+            groupIds: [1, 2], // Shared with all groups
+        }
+
+        render(
+            <EditWatchDialog
+                watch={sharedWatch}
+                open={true}
+                onOpenChange={mockOnOpenChange}
+                onSuccess={mockOnSuccess}
+            />
+        )
+
+        // "All My Groups" card should be selected in the main dialog
+        await waitFor(() => {
+            const allMyGroupsCard = screen.getByRole('button', { name: /all my groups/i })
+            expect(allMyGroupsCard).toHaveClass('border-primary')
+        })
+    })
+
+    it('updates privacy to private', async () => {
+        const user = userEvent.setup()
+        const publicWatch: Watch = {
+            ...mockWatch,
+            isPrivate: false,
+            groupIds: [1],
+        }
+        ;(watchApi.updateWatch as jest.Mock).mockResolvedValue(mockWatch)
+
+        render(
+            <EditWatchDialog
+                watch={publicWatch}
+                open={true}
+                onOpenChange={mockOnOpenChange}
+                onSuccess={mockOnSuccess}
+            />
+        )
+
+        // Wait for privacy buttons to be available and click "Private" button
+        const privateButton = await screen.findByRole('button', { name: /private.*only you can see this/i })
+        await user.click(privateButton)
+
+        const submitButton = screen.getByRole('button', { name: /save changes/i })
+        await user.click(submitButton)
+
+        await waitFor(() => {
+            expect(watchApi.updateWatch).toHaveBeenCalledWith(
+                1,
+                expect.objectContaining({
+                    isPrivate: true,
+                })
+            )
+        })
+    })
+
+    it('updates sharing from private to specific groups', async () => {
+        const user = userEvent.setup()
+        ;(watchApi.updateWatch as jest.Mock).mockResolvedValue(mockWatch)
+
+        render(
+            <EditWatchDialog
+                watch={mockWatch}
+                open={true}
+                onOpenChange={mockOnOpenChange}
+                onSuccess={mockOnSuccess}
+            />
+        )
+
+        // Click "Specific Groups" card button
+        const specificGroupsButton = await screen.findByRole('button', { name: /specific groups/i })
+        await user.click(specificGroupsButton)
+
+        await waitFor(() => {
+            expect(screen.getByText('Friday Movie Night')).toBeInTheDocument()
+        })
+
+        // Select a group
+        const groupCheckbox = screen.getByRole('checkbox', { name: /Friday Movie Night/i })
+        await user.click(groupCheckbox)
+
+        // Close secondary modal (click confirm button)
+        const confirmButton = screen.getByRole('button', { name: /confirm/i })
+        await user.click(confirmButton)
+
+        const submitButton = screen.getByRole('button', { name: /save changes/i })
+        await user.click(submitButton)
+
+        await waitFor(() => {
+            expect(watchApi.updateWatch).toHaveBeenCalledWith(
+                1,
+                expect.objectContaining({
+                    isPrivate: false,
+                    groupIds: [1],
+                })
+            )
+        })
+    })
+
+    it('updates sharing to all groups', async () => {
+        const user = userEvent.setup()
+        ;(watchApi.updateWatch as jest.Mock).mockResolvedValue(mockWatch)
+
+        render(
+            <EditWatchDialog
+                watch={mockWatch}
+                open={true}
+                onOpenChange={mockOnOpenChange}
+                onSuccess={mockOnSuccess}
+            />
+        )
+
+        // Click "All My Groups" card button directly (no need to open secondary modal)
+        const allMyGroupsButton = await screen.findByRole('button', { name: /all my groups/i })
+        await user.click(allMyGroupsButton)
+
+        const submitButton = screen.getByRole('button', { name: /save changes/i })
+        await user.click(submitButton)
+
+        await waitFor(() => {
+            expect(watchApi.updateWatch).toHaveBeenCalledWith(
+                1,
+                expect.objectContaining({
+                    isPrivate: false,
+                    groupIds: [1, 2], // All group IDs
                 })
             )
         })
@@ -552,9 +771,9 @@ describe('EditWatchDialog', () => {
             />
         )
 
-        // Wait for form to render
+        // Wait for groups button to be available
         await waitFor(() => {
-            expect(screen.getAllByRole('combobox').length).toBeGreaterThan(0)
+            expect(screen.getByRole('button', { name: /specific groups/i })).toBeInTheDocument()
         })
 
         // Select "Other" location - use the label to find the location combobox specifically
@@ -591,9 +810,9 @@ describe('EditWatchDialog', () => {
             />
         )
 
-        // Wait for form to render
+        // Wait for groups button to be available
         await waitFor(() => {
-            expect(screen.getAllByRole('combobox').length).toBeGreaterThan(0)
+            expect(screen.getByRole('button', { name: /specific groups/i })).toBeInTheDocument()
         })
 
         // Select "Other" location - use the second combobox (location)
@@ -619,4 +838,20 @@ describe('EditWatchDialog', () => {
         })
     })
 
+    it('displays message when user has no groups', async () => {
+        ;(groupApi.getUserGroups as jest.Mock).mockResolvedValue([])
+
+        render(
+            <EditWatchDialog
+                watch={mockWatch}
+                open={true}
+                onOpenChange={mockOnOpenChange}
+                onSuccess={mockOnSuccess}
+            />
+        )
+
+        await waitFor(() => {
+            expect(screen.getByText(/You're not a member of any groups yet/i)).toBeInTheDocument()
+        })
+    })
 })

@@ -14,7 +14,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { groupApi } from "@/lib/api";
+import { groupApi, movieApi } from "@/lib/api";
 import type { GroupBasicInfo } from "@/types";
 import { BulkMakePrivateDialog } from "./BulkMakePrivateDialog";
 import { BulkShareWithGroupsDialog } from "./BulkShareWithGroupsDialog";
@@ -344,37 +344,28 @@ export function WatchList() {
             setIsProcessing(true);
             setProcessedCount(0);
 
-            const watchIds = sortedWatches
-                .filter(gw => selectedMovieIds.has(gw.movieId))
-                .flatMap(gw => gw.watches.map(w => w.id));
+            const selectedMovies = sortedWatches
+                .filter(gw => selectedMovieIds.has(gw.movieId));
 
-            const totalCount = selectedMovieIds.size;
+            const totalCount = selectedMovies.length;
 
-            // Simulate progress for better UX
-            const progressInterval = setInterval(() => {
-                setProcessedCount(prev => {
-                    if (prev < totalCount - 1) {
-                        return prev + 1;
-                    }
-                    return prev;
-                });
-            }, 100);
-
-            const result = await watchApi.bulkUpdate({ watchIds, isPrivate: true, groupIds: [], groupOperation: "replace" });
-
-            clearInterval(progressInterval);
-            setProcessedCount(totalCount);
+            // Update each movie's privacy individually
+            for (let i = 0; i < selectedMovies.length; i++) {
+                const gw = selectedMovies[i];
+                try {
+                    await movieApi.setPrivacy(gw.movieId, true, []);
+                    setProcessedCount(i + 1);
+                } catch (error) {
+                    console.error(`Failed to update movie ${gw.movieId}:`, error);
+                }
+            }
 
             // Brief pause to show 100% before closing
             await new Promise(resolve => setTimeout(resolve, 300));
 
-            if (result.success) {
-                toast.success(`Made ${result.updated} ${result.updated === 1 ? "movie" : "movies"} private`);
-                await fetchWatches(filtersForFetch, 1, false);
-                exitBulkMode();
-            } else {
-                toast.error("Some movies failed to update", { description: result.errors.join(", ") });
-            }
+            toast.success(`Made ${totalCount} ${totalCount === 1 ? "movie" : "movies"} private`);
+            await fetchWatches(filtersForFetch, 1, false);
+            exitBulkMode();
         } catch {
             toast.error("Failed to update movies");
         } finally {
@@ -388,37 +379,33 @@ export function WatchList() {
             setIsProcessing(true);
             setProcessedCount(0);
 
-            const watchIds = sortedWatches
-                .filter(gw => selectedMovieIds.has(gw.movieId))
-                .flatMap(gw => gw.watches.map(w => w.id));
+            const selectedMovies = sortedWatches
+                .filter(gw => selectedMovieIds.has(gw.movieId));
 
-            const totalCount = selectedMovieIds.size;
+            const totalCount = selectedMovies.length;
 
-            // Simulate progress for better UX
-            const progressInterval = setInterval(() => {
-                setProcessedCount(prev => {
-                    if (prev < totalCount - 1) {
-                        return prev + 1;
-                    }
-                    return prev;
-                });
-            }, 100);
+            // Update each movie's privacy individually
+            for (let i = 0; i < selectedMovies.length; i++) {
+                const gw = selectedMovies[i];
+                try {
+                    // Determine final group IDs based on operation
+                    const finalGroupIds = operation === "replace"
+                        ? groupIds
+                        : [...new Set([...(gw.movie.groupIds || []), ...groupIds])];
 
-            const result = await watchApi.bulkUpdate({ watchIds, isPrivate: false, groupIds, groupOperation: operation });
-
-            clearInterval(progressInterval);
-            setProcessedCount(totalCount);
+                    await movieApi.setPrivacy(gw.movieId, false, finalGroupIds);
+                    setProcessedCount(i + 1);
+                } catch (error) {
+                    console.error(`Failed to update movie ${gw.movieId}:`, error);
+                }
+            }
 
             // Brief pause to show 100% before closing
             await new Promise(resolve => setTimeout(resolve, 300));
 
-            if (result.success) {
-                toast.success(`Updated sharing for ${result.updated} ${result.updated === 1 ? "movie" : "movies"}`);
-                await fetchWatches(filtersForFetch, 1, false);
-                exitBulkMode();
-            } else {
-                toast.error("Some movies failed to update", { description: result.errors.join(", ") });
-            }
+            toast.success(`Updated sharing for ${totalCount} ${totalCount === 1 ? "movie" : "movies"}`);
+            await fetchWatches(filtersForFetch, 1, false);
+            exitBulkMode();
         } catch {
             toast.error("Failed to update movies");
         } finally {
@@ -430,8 +417,8 @@ export function WatchList() {
     // Client-side privacy filter (applied after server fetch)
     const filteredWatches = groupedWatches.filter(gw => {
         if (filters.privacyFilter === "all") return true;
-        if (filters.privacyFilter === "private") return gw.watches.some(w => w.isPrivate);
-        if (filters.privacyFilter === "shared") return gw.watches.some(w => !w.isPrivate && w.groupIds && w.groupIds.length > 0);
+        if (filters.privacyFilter === "private") return gw.movie.isPrivate;
+        if (filters.privacyFilter === "shared") return !gw.movie.isPrivate && gw.movie.groupIds && gw.movie.groupIds.length > 0;
         return true;
     });
 

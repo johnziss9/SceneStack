@@ -5,9 +5,7 @@ export type {
     WatchEntry,
     GroupedWatch,
     CreateWatchRequest,
-    UpdateWatchRequest,
-    BulkUpdateWatchesRequest,
-    BulkUpdateResult
+    UpdateWatchRequest
 } from './watch';
 export type { RegisterRequest, LoginRequest, AuthResponse } from './auth';
 export type {

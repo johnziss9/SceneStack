@@ -30,12 +30,12 @@ const mockStats: GroupStatsType = {
     averageGroupRating: 8.2,
     mostActiveMember: 'alice',
     memberStats: [
-        { userId: 1, username: 'alice', watchCount: 6, averageRating: 8.5 },
-        { userId: 2, username: 'bob', watchCount: 4, averageRating: 7.8 },
+        { userId: 1, username: 'alice', watchCount: 6, averageRating: 8.5, isDeactivated: false },
+        { userId: 2, username: 'bob', watchCount: 4, averageRating: 7.8, isDeactivated: false },
     ],
     sharedMovies: [
         {
-            movie: { id: 1, tmdbId: 550, title: 'Fight Club', year: 1999, posterPath: '/poster.jpg', synopsis: '' },
+            movie: { id: 1, tmdbId: 550, title: 'Fight Club', year: 1999, posterPath: '/poster.jpg' },
             watchedByCount: 2,
             watchedByUsernames: ['alice', 'bob'],
         },
@@ -108,7 +108,7 @@ describe('GroupStats', () => {
         const emptyStats: GroupStatsType = {
             ...mockStats,
             totalWatches: 0,
-            memberStats: [{ userId: 1, username: 'alice', watchCount: 0, averageRating: null }],
+            memberStats: [{ userId: 1, username: 'alice', watchCount: 0, averageRating: null, isDeactivated: false }],
             sharedMovies: [],
         }
         ;(groupApi.getGroupStats as jest.Mock).mockResolvedValue(emptyStats)

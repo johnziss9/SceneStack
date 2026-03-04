@@ -7,6 +7,8 @@ export interface Movie {
     posterPath?: string | null;
     synopsis?: string | null;
     aiSynopsis?: string | null;
+    isPrivate?: boolean;
+    groupIds?: number[];
 }
 
 // Enriched movie detail — matches MovieDetailResponse from backend

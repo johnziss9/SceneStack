@@ -93,11 +93,12 @@ describe('WatchList', () => {
 
         // Mock authenticated user
         mockUseAuth.mockReturnValue({
-            user: { id: 1, username: 'testuser', email: 'test@example.com' },
+            user: { id: 1, username: 'testuser', email: 'test@example.com', isPremium: false },
             loading: false,
             login: jest.fn(),
             register: jest.fn(),
             logout: jest.fn(),
+            refreshUser: jest.fn(),
         })
 
         // Mock user groups by default
@@ -114,6 +115,8 @@ describe('WatchList', () => {
                 year: 1999,
                 posterPath: '/path1.jpg',
                 synopsis: 'A movie...',
+                isPrivate: false,
+                groupIds: [1], // Movie shared with Friday Movie Night
             },
             watchCount: 2,
             averageRating: 8.5,
@@ -121,25 +124,43 @@ describe('WatchList', () => {
             watches: [
                 {
                     id: 1,
+                    movieId: 1,
                     watchedDate: '2024-12-30',
                     rating: 9,
                     notes: 'Great!',
                     watchLocation: 'Cinema',
                     watchedWith: 'Friends',
                     isRewatch: false,
-                    isPrivate: false,
-                    groupIds: [1], // Shared with Friday Movie Night
+                    movie: {
+                        id: 1,
+                        tmdbId: 550,
+                        title: 'Fight Club',
+                        year: 1999,
+                        posterPath: '/path1.jpg',
+                        synopsis: 'A movie...',
+                        isPrivate: false,
+                        groupIds: [1],
+                    },
                 },
                 {
                     id: 2,
+                    movieId: 1,
                     watchedDate: '2024-11-15',
                     rating: 8,
                     notes: 'Good',
                     watchLocation: 'Home',
                     watchedWith: null,
                     isRewatch: true,
-                    isPrivate: true,
-                    groupIds: [],
+                    movie: {
+                        id: 1,
+                        tmdbId: 550,
+                        title: 'Fight Club',
+                        year: 1999,
+                        posterPath: '/path1.jpg',
+                        synopsis: 'A movie...',
+                        isPrivate: false,
+                        groupIds: [1],
+                    },
                 },
             ],
         },
@@ -152,6 +173,8 @@ describe('WatchList', () => {
                 year: 1999,
                 posterPath: '/path2.jpg',
                 synopsis: 'Another movie...',
+                isPrivate: false,
+                groupIds: [1, 2], // Movie shared with both groups
             },
             watchCount: 1,
             averageRating: 9.0,
@@ -159,14 +182,23 @@ describe('WatchList', () => {
             watches: [
                 {
                     id: 3,
+                    movieId: 2,
                     watchedDate: '2024-12-28',
                     rating: 9,
                     notes: 'Amazing!',
                     watchLocation: 'Cinema',
                     watchedWith: 'Solo',
                     isRewatch: false,
-                    isPrivate: false,
-                    groupIds: [1, 2], // Shared with both groups
+                    movie: {
+                        id: 2,
+                        tmdbId: 551,
+                        title: 'The Matrix',
+                        year: 1999,
+                        posterPath: '/path2.jpg',
+                        synopsis: 'Another movie...',
+                        isPrivate: false,
+                        groupIds: [1, 2],
+                    },
                 },
             ],
         },
@@ -368,6 +400,8 @@ describe('WatchList', () => {
                 year: 2000 + i,
                 posterPath: `/path${i}.jpg`,
                 synopsis: 'A movie...',
+                isPrivate: true,
+                groupIds: [],
             },
             watchCount: 1,
             averageRating: 8.0,
@@ -375,11 +409,20 @@ describe('WatchList', () => {
             watches: [
                 {
                     id: i + 1,
+                    movieId: i + 1,
                     watchedDate: '2024-12-01',
                     rating: 8,
                     isRewatch: false,
-                    isPrivate: true,
-                    groupIds: [],
+                    movie: {
+                        id: i + 1,
+                        tmdbId: 500 + i,
+                        title: `Movie ${i + 1}`,
+                        year: 2000 + i,
+                        posterPath: `/path${i}.jpg`,
+                        synopsis: 'A movie...',
+                        isPrivate: true,
+                        groupIds: [],
+                    },
                 },
             ],
         }))
@@ -738,11 +781,18 @@ describe('WatchList', () => {
         const user = userEvent.setup()
         const page2Watches: GroupedWatch[] = [{
             movieId: 3,
-            movie: { id: 3, tmdbId: 552, title: 'Inception', year: 2010, posterPath: null, synopsis: '' },
+            movie: { id: 3, tmdbId: 552, title: 'Inception', year: 2010, posterPath: null, synopsis: '', isPrivate: false, groupIds: [] },
             watchCount: 1,
             averageRating: 10,
             latestRating: 10,
-            watches: [{ id: 4, watchedDate: '2024-12-01', rating: 10, isRewatch: false, isPrivate: false, groupIds: [] }],
+            watches: [{
+                id: 4,
+                movieId: 3,
+                watchedDate: '2024-12-01',
+                rating: 10,
+                isRewatch: false,
+                movie: { id: 3, tmdbId: 552, title: 'Inception', year: 2010, posterPath: null, synopsis: '', isPrivate: false, groupIds: [] }
+            }],
         }]
 
         ;(watchApi.getGroupedWatches as jest.Mock)

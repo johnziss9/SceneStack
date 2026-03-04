@@ -13,6 +13,8 @@ const baseStats: UserStats = {
     watchesByDecade: [],
     watchesByLocation: [],
     topRewatched: [],
+    topRatedMovies: [],
+    favoriteGenres: [],
 }
 
 describe('StatsOverview', () => {

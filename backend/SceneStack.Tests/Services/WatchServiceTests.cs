@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using SceneStack.API.DTOs;
+using SceneStack.API.Interfaces;
 using SceneStack.API.Models;
 using SceneStack.API.Services;
 using SceneStack.Tests.Helpers;
@@ -17,7 +18,8 @@ public class WatchServiceTests
         // Arrange
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var logger = Substitute.For<ILogger<WatchService>>();
-        var service = new WatchService(context, logger);
+        var movieService = Substitute.For<IMovieService>();
+        var service = new WatchService(context, movieService, logger);
 
         // Create a test user first
         var user = new User
@@ -62,7 +64,8 @@ public class WatchServiceTests
         // Arrange
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var logger = Substitute.For<ILogger<WatchService>>();
-        var service = new WatchService(context, logger);
+        var movieService = Substitute.For<IMovieService>();
+        var service = new WatchService(context, movieService, logger);
 
         // Act
         var result = await service.GetByIdAsync(999);
@@ -77,7 +80,8 @@ public class WatchServiceTests
         // Arrange
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var logger = Substitute.For<ILogger<WatchService>>();
-        var service = new WatchService(context, logger);
+        var movieService = Substitute.For<IMovieService>();
+        var service = new WatchService(context, movieService, logger);
 
         // Create a test user first
         var user = new User
@@ -119,7 +123,8 @@ public class WatchServiceTests
         // Arrange
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var logger = Substitute.For<ILogger<WatchService>>();
-        var service = new WatchService(context, logger);
+        var movieService = Substitute.For<IMovieService>();
+        var service = new WatchService(context, movieService, logger);
 
         // Create a test user first
         var user = new User
@@ -155,7 +160,8 @@ public class WatchServiceTests
         // Arrange
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var logger = Substitute.For<ILogger<WatchService>>();
-        var service = new WatchService(context, logger);
+        var movieService = Substitute.For<IMovieService>();
+        var service = new WatchService(context, movieService, logger);
 
         // Create two users
         var user1 = new User
@@ -200,7 +206,8 @@ public class WatchServiceTests
         // Arrange
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var logger = Substitute.For<ILogger<WatchService>>();
-        var service = new WatchService(context, logger);
+        var movieService = Substitute.For<IMovieService>();
+        var service = new WatchService(context, movieService, logger);
 
         // Create a test user first
         var user = new User
@@ -228,7 +235,7 @@ public class WatchServiceTests
         };
 
         // Act
-        var result = await service.CreateAsync(newWatch, new List<int>());
+        var result = await service.CreateAsync(newWatch, false, new List<int>());
 
         // Assert
         result.Should().NotBeNull();
@@ -249,7 +256,8 @@ public class WatchServiceTests
         // Arrange
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var logger = Substitute.For<ILogger<WatchService>>();
-        var service = new WatchService(context, logger);
+        var movieService = Substitute.For<IMovieService>();
+        var service = new WatchService(context, movieService, logger);
 
         // Create a test user first
         var user = new User
@@ -308,7 +316,8 @@ public class WatchServiceTests
         // Arrange
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var logger = Substitute.For<ILogger<WatchService>>();
-        var service = new WatchService(context, logger);
+        var movieService = Substitute.For<IMovieService>();
+        var service = new WatchService(context, movieService, logger);
 
         var updatedWatch = new Watch
         {
@@ -330,7 +339,8 @@ public class WatchServiceTests
         // Arrange
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var logger = Substitute.For<ILogger<WatchService>>();
-        var service = new WatchService(context, logger);
+        var movieService = Substitute.For<IMovieService>();
+        var service = new WatchService(context, movieService, logger);
 
         // Create a test user first
         var user = new User
@@ -377,7 +387,8 @@ public class WatchServiceTests
         // Arrange
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var logger = Substitute.For<ILogger<WatchService>>();
-        var service = new WatchService(context, logger);
+        var movieService = Substitute.For<IMovieService>();
+        var service = new WatchService(context, movieService, logger);
 
         // Act
         var result = await service.DeleteAsync(999);
@@ -392,7 +403,8 @@ public class WatchServiceTests
         // Arrange
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var logger = Substitute.For<ILogger<WatchService>>();
-        var service = new WatchService(context, logger);
+        var movieService = Substitute.For<IMovieService>();
+        var service = new WatchService(context, movieService, logger);
 
         // Create a test user first
         var user = new User
@@ -433,7 +445,8 @@ public class WatchServiceTests
         // Arrange
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var logger = Substitute.For<ILogger<WatchService>>();
-        var service = new WatchService(context, logger);
+        var movieService = Substitute.For<IMovieService>();
+        var service = new WatchService(context, movieService, logger);
 
         // Create a test user first
         var user = new User
@@ -500,9 +513,11 @@ public class WatchServiceTests
         // Arrange
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var logger = Substitute.For<ILogger<WatchService>>();
-        var service = new WatchService(context, logger);
+        var movieService = Substitute.For<IMovieService>();
+        var service = new WatchService(context, movieService, logger);
 
-        var user = context.Users.First();
+        // Use second user to avoid conflict with seeded data
+        var user = context.Users.Skip(1).First();
 
         // Create a group
         var group = new Group
@@ -515,20 +530,26 @@ public class WatchServiceTests
         context.Groups.Add(group);
         await context.SaveChangesAsync();
 
-        // Create watches
-        var watch1 = new Watch { UserId = user.Id, MovieId = 1, WatchedDate = DateTime.UtcNow, CreatedAt = DateTime.UtcNow };
-        var watch2 = new Watch { UserId = user.Id, MovieId = 1, WatchedDate = DateTime.UtcNow.AddDays(-1), CreatedAt = DateTime.UtcNow };
+        // Create two new movies
+        var movie1 = new Movie { TmdbId = 1001, Title = "Movie 1", Year = 2024, CreatedAt = DateTime.UtcNow };
+        var movie2 = new Movie { TmdbId = 1002, Title = "Movie 2", Year = 2024, CreatedAt = DateTime.UtcNow };
+        context.Movies.AddRange(movie1, movie2);
+        await context.SaveChangesAsync();
+
+        // Create watches for different movies
+        var watch1 = new Watch { UserId = user.Id, MovieId = movie1.Id, WatchedDate = DateTime.UtcNow, CreatedAt = DateTime.UtcNow };
+        var watch2 = new Watch { UserId = user.Id, MovieId = movie2.Id, WatchedDate = DateTime.UtcNow.AddDays(-1), CreatedAt = DateTime.UtcNow };
         context.Watches.AddRange(watch1, watch2);
         await context.SaveChangesAsync();
 
-        // Share only watch1 with group
-        context.WatchGroups.Add(new WatchGroup { WatchId = watch1.Id, GroupId = group.Id, SharedAt = DateTime.UtcNow });
+        // Share only movie1 with group
+        context.MovieGroups.Add(new MovieGroup { MovieId = movie1.Id, GroupId = group.Id, SharedAt = DateTime.UtcNow });
         await context.SaveChangesAsync();
 
         // Act
         var result = await service.GetAllAsync(userId: null, groupId: group.Id);
 
-        // Assert
+        // Assert - only watches for movie 1 should be returned
         result.Should().HaveCount(1);
         result.First().Id.Should().Be(watch1.Id);
     }
@@ -539,9 +560,13 @@ public class WatchServiceTests
         // Arrange
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var logger = Substitute.For<ILogger<WatchService>>();
-        var service = new WatchService(context, logger);
+        var movieServiceLogger = Substitute.For<ILogger<MovieService>>();
+        var tmdbService = Substitute.For<ITmdbService>();
+        var movieService = new MovieService(context, tmdbService, movieServiceLogger);
+        var service = new WatchService(context, movieService, logger);
 
-        var user = context.Users.First();
+        // Use the second user (freeUser) to avoid conflict with seeded testWatch
+        var user = context.Users.Skip(1).First();
 
         // Create groups
         var group1 = new Group { Name = "Group 1", CreatedById = user.Id, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow };
@@ -556,10 +581,13 @@ public class WatchServiceTests
         );
         await context.SaveChangesAsync();
 
+        // Use the seeded movie - this will be the second user's first watch of it
+        var movie = await context.Movies.FirstAsync();
+
         var newWatch = new Watch
         {
             UserId = user.Id,
-            MovieId = 1,
+            MovieId = movie.Id,
             WatchedDate = DateTime.UtcNow,
             Rating = 9,
             CreatedAt = DateTime.UtcNow
@@ -567,19 +595,32 @@ public class WatchServiceTests
 
         var groupIds = new List<int> { group1.Id, group2.Id };
 
+        // Debug: Check if this is the first watch for this user+movie combo
+        var existingWatches = await context.Watches.Where(w => w.UserId == user.Id && w.MovieId == movie.Id).ToListAsync();
+        existingWatches.Should().BeEmpty($"User {user.Id} should have no existing watches for movie {movie.Id} before creating the new watch");
+
         // Act
-        var result = await service.CreateAsync(newWatch, groupIds);
+        var result = await service.CreateAsync(newWatch, false, groupIds);
 
         // Assert
         result.Should().NotBeNull();
 
-        // Verify watch is associated with both groups
-        var watchGroups = await context.WatchGroups
-            .Where(wg => wg.WatchId == result.Id)
-            .ToListAsync();
-        watchGroups.Should().HaveCount(2);
-        watchGroups.Should().Contain(wg => wg.GroupId == group1.Id);
-        watchGroups.Should().Contain(wg => wg.GroupId == group2.Id);
+        // Debug: Verify the watch was created and check isFirstWatch
+        var allWatchesForUserMovie = await context.Watches.Where(w => w.UserId == result.UserId && w.MovieId == result.MovieId).ToListAsync();
+        allWatchesForUserMovie.Should().HaveCount(1, $"Should be exactly 1 watch for user {result.UserId} + movie {result.MovieId}");
+
+        // Verify movie is associated with both groups
+        var allMovieGroups = await context.MovieGroups.ToListAsync();
+        var movieGroups = allMovieGroups.Where(mg => mg.MovieId == result.MovieId).ToList();
+
+        // Debug: check if movie exists and has privacy set
+        var movieCheck = await context.Movies.FindAsync(result.MovieId);
+        movieCheck.Should().NotBeNull();
+        movieCheck!.IsPrivate.Should().BeFalse($"Movie {result.MovieId} should have IsPrivate set to false");
+
+        movieGroups.Should().HaveCount(2, $"Movie {result.MovieId} should be shared with 2 groups. All MovieGroups in DB: {allMovieGroups.Count}");
+        movieGroups.Should().Contain(mg => mg.GroupId == group1.Id);
+        movieGroups.Should().Contain(mg => mg.GroupId == group2.Id);
     }
 
     [Fact]
@@ -588,10 +629,25 @@ public class WatchServiceTests
         // Arrange
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var logger = Substitute.For<ILogger<WatchService>>();
-        var service = new WatchService(context, logger);
+        var movieServiceLogger = Substitute.For<ILogger<MovieService>>();
+        var tmdbService = Substitute.For<ITmdbService>();
+        var movieService = new MovieService(context, tmdbService, movieServiceLogger);
+        var service = new WatchService(context, movieService, logger);
 
-        var user = context.Users.First();
-        var otherUser = context.Users.Skip(1).First();
+        // Use the second user (freeUser) to avoid conflict with seeded testWatch
+        var user = context.Users.Skip(1).First();
+
+        // Create a third user for this test
+        var otherUser = new User
+        {
+            Username = "otheruser",
+            Email = "other@example.com",
+            IsPremium = false,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+        context.Users.Add(otherUser);
+        await context.SaveChangesAsync();
 
         // Create groups
         var userGroup = new Group { Name = "User Group", CreatedById = user.Id, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow };
@@ -606,10 +662,13 @@ public class WatchServiceTests
         );
         await context.SaveChangesAsync();
 
+        // Use the seeded movie - this will be the second user's first watch of it
+        var movie = await context.Movies.FirstAsync();
+
         var newWatch = new Watch
         {
             UserId = user.Id,
-            MovieId = 1,
+            MovieId = movie.Id,
             WatchedDate = DateTime.UtcNow,
             CreatedAt = DateTime.UtcNow
         };
@@ -618,16 +677,16 @@ public class WatchServiceTests
         var groupIds = new List<int> { userGroup.Id, otherGroup.Id };
 
         // Act
-        var result = await service.CreateAsync(newWatch, groupIds);
+        var result = await service.CreateAsync(newWatch, false, groupIds);
 
         // Assert
-        var watchGroups = await context.WatchGroups
-            .Where(wg => wg.WatchId == result.Id)
+        var movieGroups = await context.MovieGroups
+            .Where(mg => mg.MovieId == result.MovieId)
             .ToListAsync();
 
         // Should only be associated with userGroup
-        watchGroups.Should().HaveCount(1);
-        watchGroups.First().GroupId.Should().Be(userGroup.Id);
+        movieGroups.Should().HaveCount(1);
+        movieGroups.First().GroupId.Should().Be(userGroup.Id);
     }
 
     [Fact]
@@ -636,14 +695,27 @@ public class WatchServiceTests
         // Arrange
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var logger = Substitute.For<ILogger<WatchService>>();
-        var service = new WatchService(context, logger);
+        var movieService = Substitute.For<IMovieService>();
+        var service = new WatchService(context, movieService, logger);
 
-        var user1 = context.Users.First();
-        var user2 = context.Users.Skip(1).First();
+        // Use second user to avoid conflict with seeded watch
+        var user1 = context.Users.Skip(1).First();
+
+        // Create a third user
+        var user2 = new User
+        {
+            Username = "user3",
+            Email = "user3@example.com",
+            IsPremium = false,
+            ShareWatches = true,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+        context.Users.Add(user2);
+        await context.SaveChangesAsync();
 
         // Update privacy settings
         user1.ShareWatches = true;
-        user2.ShareWatches = true;
         await context.SaveChangesAsync();
 
         // Create a group
@@ -663,15 +735,20 @@ public class WatchServiceTests
         );
         await context.SaveChangesAsync();
 
+        // Create a new movie to avoid conflict
+        var movie = new Movie { TmdbId = 1003, Title = "Test Movie", Year = 2024, CreatedAt = DateTime.UtcNow };
+        context.Movies.Add(movie);
+        await context.SaveChangesAsync();
+
         // Create watches and share with group
-        var watch1 = new Watch { UserId = user1.Id, MovieId = 1, WatchedDate = DateTime.UtcNow, IsPrivate = false, CreatedAt = DateTime.UtcNow };
-        var watch2 = new Watch { UserId = user2.Id, MovieId = 1, WatchedDate = DateTime.UtcNow.AddDays(-1), IsPrivate = false, CreatedAt = DateTime.UtcNow };
+        var watch1 = new Watch { UserId = user1.Id, MovieId = movie.Id, WatchedDate = DateTime.UtcNow, CreatedAt = DateTime.UtcNow };
+        var watch2 = new Watch { UserId = user2.Id, MovieId = movie.Id, WatchedDate = DateTime.UtcNow.AddDays(-1), CreatedAt = DateTime.UtcNow };
         context.Watches.AddRange(watch1, watch2);
         await context.SaveChangesAsync();
 
-        context.WatchGroups.AddRange(
-            new WatchGroup { WatchId = watch1.Id, GroupId = group.Id, SharedAt = DateTime.UtcNow },
-            new WatchGroup { WatchId = watch2.Id, GroupId = group.Id, SharedAt = DateTime.UtcNow }
+        // Share movie with group (both watches are for the same movie)
+        context.MovieGroups.Add(
+            new MovieGroup { MovieId = movie.Id, GroupId = group.Id, SharedAt = DateTime.UtcNow }
         );
         await context.SaveChangesAsync();
 
@@ -688,7 +765,8 @@ public class WatchServiceTests
         // Arrange
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var logger = Substitute.For<ILogger<WatchService>>();
-        var service = new WatchService(context, logger);
+        var movieService = Substitute.For<IMovieService>();
+        var service = new WatchService(context, movieService, logger);
 
         var user1 = context.Users.First();
         var user2 = context.Users.Skip(1).First();
@@ -722,10 +800,12 @@ public class WatchServiceTests
         // Arrange
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var logger = Substitute.For<ILogger<WatchService>>();
-        var service = new WatchService(context, logger);
+        var movieService = Substitute.For<IMovieService>();
+        var service = new WatchService(context, movieService, logger);
 
-        var user1 = context.Users.First();
-        var user2 = context.Users.Skip(1).First();
+        // Use second user to avoid conflict with seeded data
+        var user1 = context.Users.Skip(1).First();
+        var user2 = context.Users.First();
 
         user1.ShareWatches = true;
         await context.SaveChangesAsync();
@@ -747,16 +827,21 @@ public class WatchServiceTests
         );
         await context.SaveChangesAsync();
 
-        // Create watches - one private, one public
-        var publicWatch = new Watch { UserId = user1.Id, MovieId = 1, WatchedDate = DateTime.UtcNow, IsPrivate = false, CreatedAt = DateTime.UtcNow };
-        var privateWatch = new Watch { UserId = user1.Id, MovieId = 1, WatchedDate = DateTime.UtcNow.AddDays(-1), IsPrivate = true, CreatedAt = DateTime.UtcNow };
+        // Create two movies - one public (shared), one private
+        var publicMovie = new Movie { TmdbId = 1001, Title = "Public Movie", Year = 2024, CreatedAt = DateTime.UtcNow };
+        var privateMovie = new Movie { TmdbId = 1002, Title = "Private Movie", Year = 2024, CreatedAt = DateTime.UtcNow, IsPrivate = true };
+        context.Movies.AddRange(publicMovie, privateMovie);
+        await context.SaveChangesAsync();
+
+        // Create watches for both movies
+        var publicWatch = new Watch { UserId = user1.Id, MovieId = publicMovie.Id, WatchedDate = DateTime.UtcNow, CreatedAt = DateTime.UtcNow };
+        var privateWatch = new Watch { UserId = user1.Id, MovieId = privateMovie.Id, WatchedDate = DateTime.UtcNow.AddDays(-1), CreatedAt = DateTime.UtcNow };
         context.Watches.AddRange(publicWatch, privateWatch);
         await context.SaveChangesAsync();
 
-        // Share both with group
-        context.WatchGroups.AddRange(
-            new WatchGroup { WatchId = publicWatch.Id, GroupId = group.Id, SharedAt = DateTime.UtcNow },
-            new WatchGroup { WatchId = privateWatch.Id, GroupId = group.Id, SharedAt = DateTime.UtcNow }
+        // Share only the public movie with group
+        context.MovieGroups.Add(
+            new MovieGroup { MovieId = publicMovie.Id, GroupId = group.Id, SharedAt = DateTime.UtcNow }
         );
         await context.SaveChangesAsync();
 
@@ -764,8 +849,7 @@ public class WatchServiceTests
         var result = await service.GetGroupFeedAsync(group.Id, user2.Id);
 
         // Assert
-        result.Should().HaveCount(1); // Only public watch
-        result.First().IsPrivate.Should().BeFalse();
+        result.Should().HaveCount(1); // Only non-private movie
     }
 
     [Fact(Skip = "EF.Functions.ILike requires PostgreSQL - not supported in in-memory database")]
@@ -774,7 +858,8 @@ public class WatchServiceTests
         // Arrange
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var logger = Substitute.For<ILogger<WatchService>>();
-        var service = new WatchService(context, logger);
+        var movieService = Substitute.For<IMovieService>();
+        var service = new WatchService(context, movieService, logger);
 
         // Use the second user (freeuser) who has no seeded watches
         var user = context.Users.Skip(1).First();
@@ -806,7 +891,8 @@ public class WatchServiceTests
         // Arrange
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var logger = Substitute.For<ILogger<WatchService>>();
-        var service = new WatchService(context, logger);
+        var movieService = Substitute.For<IMovieService>();
+        var service = new WatchService(context, movieService, logger);
 
         var user = context.Users.Skip(1).First();
 
@@ -838,7 +924,8 @@ public class WatchServiceTests
         // Arrange
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var logger = Substitute.For<ILogger<WatchService>>();
-        var service = new WatchService(context, logger);
+        var movieService = Substitute.For<IMovieService>();
+        var service = new WatchService(context, movieService, logger);
 
         var user = context.Users.Skip(1).First();
 
@@ -870,7 +957,8 @@ public class WatchServiceTests
         // Arrange
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var logger = Substitute.For<ILogger<WatchService>>();
-        var service = new WatchService(context, logger);
+        var movieService = Substitute.For<IMovieService>();
+        var service = new WatchService(context, movieService, logger);
 
         var user = context.Users.Skip(1).First();
 
@@ -904,7 +992,8 @@ public class WatchServiceTests
         // Arrange
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var logger = Substitute.For<ILogger<WatchService>>();
-        var service = new WatchService(context, logger);
+        var movieService = Substitute.For<IMovieService>();
+        var service = new WatchService(context, movieService, logger);
 
         var user = context.Users.Skip(1).First();
 
@@ -938,7 +1027,8 @@ public class WatchServiceTests
         // Arrange
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var logger = Substitute.For<ILogger<WatchService>>();
-        var service = new WatchService(context, logger);
+        var movieService = Substitute.For<IMovieService>();
+        var service = new WatchService(context, movieService, logger);
 
         var user = context.Users.Skip(1).First();
 
@@ -972,7 +1062,8 @@ public class WatchServiceTests
         // Arrange
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var logger = Substitute.For<ILogger<WatchService>>();
-        var service = new WatchService(context, logger);
+        var movieService = Substitute.For<IMovieService>();
+        var service = new WatchService(context, movieService, logger);
 
         var user = context.Users.Skip(1).First();
 
@@ -1008,7 +1099,8 @@ public class WatchServiceTests
         // Arrange
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var logger = Substitute.For<ILogger<WatchService>>();
-        var service = new WatchService(context, logger);
+        var movieService = Substitute.For<IMovieService>();
+        var service = new WatchService(context, movieService, logger);
 
         var user = context.Users.Skip(1).First();
 
@@ -1041,7 +1133,8 @@ public class WatchServiceTests
         // Arrange
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var logger = Substitute.For<ILogger<WatchService>>();
-        var service = new WatchService(context, logger);
+        var movieService = Substitute.For<IMovieService>();
+        var service = new WatchService(context, movieService, logger);
 
         var user = context.Users.Skip(1).First();
 
@@ -1076,7 +1169,8 @@ public class WatchServiceTests
         // Arrange
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var logger = Substitute.For<ILogger<WatchService>>();
-        var service = new WatchService(context, logger);
+        var movieService = Substitute.For<IMovieService>();
+        var service = new WatchService(context, movieService, logger);
 
         var user = context.Users.Skip(1).First();
 
@@ -1114,7 +1208,8 @@ public class WatchServiceTests
         // Arrange
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var logger = Substitute.For<ILogger<WatchService>>();
-        var service = new WatchService(context, logger);
+        var movieService = Substitute.For<IMovieService>();
+        var service = new WatchService(context, movieService, logger);
 
         var user = context.Users.Skip(1).First();
 
@@ -1155,7 +1250,8 @@ public class WatchServiceTests
         // Arrange
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var logger = Substitute.For<ILogger<WatchService>>();
-        var service = new WatchService(context, logger);
+        var movieService = Substitute.For<IMovieService>();
+        var service = new WatchService(context, movieService, logger);
 
         var user = context.Users.Skip(1).First();
 
@@ -1190,7 +1286,8 @@ public class WatchServiceTests
         // Arrange
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var logger = Substitute.For<ILogger<WatchService>>();
-        var service = new WatchService(context, logger);
+        var movieService = Substitute.For<IMovieService>();
+        var service = new WatchService(context, movieService, logger);
 
         var user = context.Users.Skip(1).First();
 

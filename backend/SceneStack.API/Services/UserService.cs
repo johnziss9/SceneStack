@@ -166,8 +166,8 @@ public class UserService : IUserService
         var watches = await _context.Watches
             .Where(w => w.UserId == userId)
             .Include(w => w.Movie)
-            .Include(w => w.WatchGroups)
-                .ThenInclude(wg => wg.Group)
+                .ThenInclude(m => m.MovieGroups)
+                    .ThenInclude(mg => mg.Group)
             .OrderByDescending(w => w.WatchedDate)
             .Select(w => new
             {
@@ -178,8 +178,8 @@ public class UserService : IUserService
                 Rating = w.Rating,
                 Location = w.WatchLocation,
                 IsRewatch = w.IsRewatch,
-                Privacy = w.IsPrivate ? "Private" : "Shared",
-                SharedWithGroups = string.Join("; ", w.WatchGroups.Select(wg => wg.Group.Name)),
+                Privacy = w.Movie.IsPrivate ? "Private" : "Shared",
+                SharedWithGroups = string.Join("; ", w.Movie.MovieGroups.Select(mg => mg.Group.Name)),
                 Notes = w.Notes
             })
             .ToListAsync();

@@ -104,15 +104,14 @@ public class GroupRecommendationsService : IGroupRecommendationsService
             };
         }
 
-        // Get only watches that are actually shared with this group (via WatchGroup join table)
-        var watchGroups = await _context.WatchGroups
-            .Where(wg => wg.GroupId == groupId)
-            .Include(wg => wg.Watch)
-            .ThenInclude(w => w.Movie)
-            .Where(wg => !wg.Watch.IsDeleted && !wg.Watch.Movie.IsDeleted)
+        // Get only watches for movies shared with this group (via MovieGroup join table)
+        var groupWatches = await _context.MovieGroups
+            .Where(mg => mg.GroupId == groupId)
+            .SelectMany(mg => _context.Watches
+                .Where(w => w.MovieId == mg.MovieId && !w.Movie.IsPrivate))
+            .Include(w => w.Movie)
+            .Where(w => !w.IsDeleted && !w.Movie.IsDeleted)
             .ToListAsync();
-
-        var groupWatches = watchGroups.Select(wg => wg.Watch).ToList();
 
         var totalMoviesWatched = groupWatches.Select(w => w.MovieId).Distinct().Count();
 
@@ -333,12 +332,13 @@ public class GroupRecommendationsService : IGroupRecommendationsService
 
     private async Task<HashSet<int>> GetGroupWatchedMovieIds(int groupId)
     {
-        // Get watches that are actually shared with this group (via WatchGroup join table)
-        // Filter out soft-deleted watches and movies
-        var watchedTmdbIds = await _context.WatchGroups
-            .Where(wg => wg.GroupId == groupId)
-            .Where(wg => !wg.Watch.IsDeleted && !wg.Watch.Movie.IsDeleted)
-            .Select(wg => wg.Watch.Movie.TmdbId)
+        // Get movies shared with this group (via MovieGroup join table)
+        // Filter out soft-deleted movies
+        var watchedTmdbIds = await _context.MovieGroups
+            .Where(mg => mg.GroupId == groupId)
+            .Include(mg => mg.Movie)
+            .Where(mg => !mg.Movie.IsDeleted && !mg.Movie.IsPrivate)
+            .Select(mg => mg.Movie.TmdbId)
             .Distinct()
             .ToListAsync();
 
@@ -376,16 +376,15 @@ public class GroupRecommendationsService : IGroupRecommendationsService
 
     private async Task<GroupPreferences> CalculatePreferences(int groupId)
     {
-        // Get only watches that are actually shared with this group (via WatchGroup join table)
+        // Get only watches for movies shared with this group (via MovieGroup join table)
         // Filter out soft-deleted watches and movies
-        var watchGroups = await _context.WatchGroups
-            .Where(wg => wg.GroupId == groupId)
-            .Include(wg => wg.Watch)
-            .ThenInclude(w => w.Movie)
-            .Where(wg => !wg.Watch.IsDeleted && !wg.Watch.Movie.IsDeleted)
+        var allWatches = await _context.MovieGroups
+            .Where(mg => mg.GroupId == groupId)
+            .SelectMany(mg => _context.Watches
+                .Where(w => w.MovieId == mg.MovieId && !w.Movie.IsPrivate))
+            .Include(w => w.Movie)
+            .Where(w => !w.IsDeleted && !w.Movie.IsDeleted)
             .ToListAsync();
-
-        var allWatches = watchGroups.Select(wg => wg.Watch).ToList();
 
         var prefs = new GroupPreferences();
 

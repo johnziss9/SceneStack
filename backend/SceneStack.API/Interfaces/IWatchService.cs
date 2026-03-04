@@ -9,9 +9,8 @@ public interface IWatchService
     Task<IEnumerable<Watch>> GetAllAsync(int? userId = null, int? groupId = null);
     Task<PaginatedGroupedWatchesResponse> GetGroupedWatchesAsync(GetGroupedWatchesRequest request);
     Task<List<Watch>> GetByMovieIdAsync(int movieId, int userId);
-    Task<Watch> CreateAsync(Watch watch, List<int> groupIds);
-    Task<Watch?> UpdateAsync(int id, Watch watch, List<int>? groupIds = null);
+    Task<Watch> CreateAsync(Watch watch, bool? isPrivate, List<int>? groupIds);
+    Task<Watch?> UpdateAsync(int id, Watch watch);
     Task<bool> DeleteAsync(int id);
     Task<List<Watch>> GetGroupFeedAsync(int groupId, int requestingUserId);
-    Task<BulkUpdateResult> BulkUpdateAsync(int userId, List<int> watchIds, bool isPrivate, List<int>? groupIds, string groupOperation);
 }

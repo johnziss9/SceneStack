@@ -318,9 +318,6 @@ describe('ReactivatePage', () => {
                     isPremium: false,
                     isDeactivated: true,
                     deactivatedAt,
-                    pendingGroupActions: JSON.stringify([
-                        { groupId: 1, action: 'delete' }
-                    ]),
                 },
                 loading: false,
                 login: jest.fn(),

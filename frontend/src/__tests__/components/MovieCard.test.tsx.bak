@@ -63,7 +63,6 @@ describe('MovieCard', () => {
             login: jest.fn(),
             register: jest.fn(),
             logout: jest.fn(),
-            refreshUser: jest.fn(),
         })
 
         // Default: movie is not on watchlist
@@ -185,7 +184,6 @@ describe('MovieCard', () => {
                 login: jest.fn(),
                 register: jest.fn(),
                 logout: jest.fn(),
-            refreshUser: jest.fn(),
             })
 
             render(<MovieCard movie={mockMovie} onAddToWatched={mockOnAddToWatched} />)
@@ -200,7 +198,6 @@ describe('MovieCard', () => {
                 login: jest.fn(),
                 register: jest.fn(),
                 logout: jest.fn(),
-            refreshUser: jest.fn(),
             })
 
             render(<MovieCard movie={mockMovie} onAddToWatched={mockOnAddToWatched} />)
@@ -216,7 +213,6 @@ describe('MovieCard', () => {
                 login: jest.fn(),
                 register: jest.fn(),
                 logout: jest.fn(),
-            refreshUser: jest.fn(),
             })
 
             render(<MovieCard movie={mockMovie} onAddToWatched={mockOnAddToWatched} />)
@@ -251,7 +247,6 @@ describe('MovieCard', () => {
                 login: jest.fn(),
                 register: jest.fn(),
                 logout: jest.fn(),
-            refreshUser: jest.fn(),
             })
 
             const user = userEvent.setup()
@@ -355,8 +350,8 @@ describe('MovieCard', () => {
                     id: 1,
                     tmdbId: 550,
                     title: 'Fight Club',
-                    year: 1999,
                     posterPath: '/pB8BM7pdSp6B6Ih7QZ4DrQ3PmJK.jpg',
+                    releaseDate: '1999-10-15',
                 },
                 notes: null,
                 priority: 0,
@@ -440,7 +435,7 @@ describe('MovieCard', () => {
         })
 
         it('handles duplicate (409) error by marking as on watchlist', async () => {
-            mockAddToWatchlist.mockRejectedValue(new ApiError(409, 'Duplicate'))
+            mockAddToWatchlist.mockRejectedValue(new ApiError('Duplicate', 409))
 
             mockUseAuth.mockReturnValue({
                 user: { id: 1, username: 'testuser', email: 'test@example.com', isPremium: false },
