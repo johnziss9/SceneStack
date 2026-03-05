@@ -31,6 +31,7 @@ import type {
     PaginatedGroupFeedResponse,
     GroupRecommendationStats,
     PaginatedRecommendationsResponse,
+    RecommendedMovie,
     GroupStats,
     UserPrivacySettings,
     UpdatePrivacySettingsRequest,

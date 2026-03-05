@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { watchApi } from '@/lib';
 import { movieApi, watchlistApi } from '@/lib/api';
 import { useWishlist } from '@/contexts/WatchlistContext';
@@ -398,7 +399,11 @@ export default function WatchDetailPage({ params }: WatchDetailPageProps) {
                 <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">Crew</h2>
                 <div className="space-y-3">
                   {movieDetail.directors?.map((director, i) => (
-                    <div key={i} className="flex items-center gap-3">
+                    <Link
+                      key={i}
+                      href={`/people/${director.personId}?from=watched&id=${movieId}&name=${encodeURIComponent(director.name)}`}
+                      className="flex items-center gap-3 hover:bg-muted/50 rounded-lg p-2 -m-2 transition-colors cursor-pointer"
+                    >
                       <div className="w-10 h-10 flex-shrink-0 rounded-full overflow-hidden bg-muted flex items-center justify-center">
                         {director.profilePath ? (
                           <img
@@ -416,10 +421,14 @@ export default function WatchDetailPage({ params }: WatchDetailPageProps) {
                         <p className="text-sm font-semibold">{director.name}</p>
                         <p className="text-xs text-primary">Director</p>
                       </div>
-                    </div>
+                    </Link>
                   ))}
                   {movieDetail.writers?.map((writer, i) => (
-                    <div key={i} className="flex items-center gap-3">
+                    <Link
+                      key={i}
+                      href={`/people/${writer.personId}?from=watched&id=${movieId}&name=${encodeURIComponent(writer.name)}`}
+                      className="flex items-center gap-3 hover:bg-muted/50 rounded-lg p-2 -m-2 transition-colors cursor-pointer"
+                    >
                       <div className="w-10 h-10 flex-shrink-0 rounded-full overflow-hidden bg-muted flex items-center justify-center">
                         {writer.profilePath ? (
                           <img
@@ -437,7 +446,7 @@ export default function WatchDetailPage({ params }: WatchDetailPageProps) {
                         <p className="text-sm font-semibold">{writer.name}</p>
                         <p className="text-xs text-primary">{writer.job}</p>
                       </div>
-                    </div>
+                    </Link>
                   ))}
                 </div>
               </div>
@@ -453,7 +462,11 @@ export default function WatchDetailPage({ params }: WatchDetailPageProps) {
                       ? `https://image.tmdb.org/t/p/w185${member.profilePath}`
                       : null;
                     return (
-                      <div key={i} className="space-y-1">
+                      <Link
+                        key={i}
+                        href={`/people/${member.personId}?from=watched&id=${movieId}&name=${encodeURIComponent(member.name)}`}
+                        className="space-y-1 hover:opacity-80 transition-opacity cursor-pointer"
+                      >
                         <div className="w-10 h-10 rounded-full overflow-hidden bg-muted flex items-center justify-center">
                           {profileUrl ? (
                             <img src={profileUrl} alt={member.name} className="w-full h-full object-cover" />
@@ -462,7 +475,7 @@ export default function WatchDetailPage({ params }: WatchDetailPageProps) {
                           )}
                         </div>
                         <p className="text-xs font-medium leading-tight line-clamp-2">{member.name}</p>
-                      </div>
+                      </Link>
                     );
                   })}
                 </div>

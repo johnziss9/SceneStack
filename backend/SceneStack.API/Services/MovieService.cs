@@ -101,7 +101,10 @@ public class MovieService : IMovieService
                 || existingMovie.WriterName == null
                 || existingMovie.DirectorProfilePath == null
                 || existingMovie.Writers.Count == 0
-                || existingMovie.Directors.Count == 0;
+                || existingMovie.Directors.Count == 0
+                || (existingMovie.Cast.Count > 0 && existingMovie.Cast.Any(c => c.PersonId == 0))
+                || (existingMovie.Directors.Count > 0 && existingMovie.Directors.Any(d => d.PersonId == 0))
+                || (existingMovie.Writers.Count > 0 && existingMovie.Writers.Any(w => w.PersonId == 0));
 
             if (!needsEnrichment)
             {
@@ -135,7 +138,7 @@ public class MovieService : IMovieService
                     .Where(c => c.Job == "Director")
                     .ToList();
                 existingMovie.Directors = enrichDirectorCrewList?
-                    .Select(c => new DirectorMember { Name = c.Name, ProfilePath = c.ProfilePath })
+                    .Select(c => new DirectorMember { PersonId = c.Id, Name = c.Name, ProfilePath = c.ProfilePath })
                     .ToList() ?? new List<DirectorMember>();
 
                 // Extract all writers (Screenplay, Writer, Story)
@@ -148,12 +151,12 @@ public class MovieService : IMovieService
                 existingMovie.Writers = enrichWriterCrew?
                     .GroupBy(c => c.Name)
                     .Select(g => g.First())
-                    .Select(c => new WriterMember { Name = c.Name, Job = c.Job, ProfilePath = c.ProfilePath })
+                    .Select(c => new WriterMember { PersonId = c.Id, Name = c.Name, Job = c.Job, ProfilePath = c.ProfilePath })
                     .ToList() ?? new List<WriterMember>();
                 existingMovie.Cast = enrichedCredits?.Cast
                     .OrderBy(c => c.Order)
                     .Take(10)
-                    .Select(c => new CastMember { Name = c.Name, Character = c.Character, ProfilePath = c.ProfilePath })
+                    .Select(c => new CastMember { PersonId = c.Id, Name = c.Name, Character = c.Character, ProfilePath = c.ProfilePath })
                     .ToList() ?? new List<CastMember>();
 
                 await _context.SaveChangesAsync();
@@ -186,7 +189,7 @@ public class MovieService : IMovieService
             .Where(c => c.Job == "Director")
             .ToList();
         var directorsList = directorCrewList?
-            .Select(c => new DirectorMember { Name = c.Name, ProfilePath = c.ProfilePath })
+            .Select(c => new DirectorMember { PersonId = c.Id, Name = c.Name, ProfilePath = c.ProfilePath })
             .ToList() ?? new List<DirectorMember>();
 
         // Extract all writers (Screenplay, Writer, Story) and combine them
@@ -201,7 +204,7 @@ public class MovieService : IMovieService
         var writersList = writerCrewList?
             .GroupBy(c => c.Name)
             .Select(g => g.First())
-            .Select(c => new WriterMember { Name = c.Name, Job = c.Job, ProfilePath = c.ProfilePath })
+            .Select(c => new WriterMember { PersonId = c.Id, Name = c.Name, Job = c.Job, ProfilePath = c.ProfilePath })
             .ToList() ?? new List<WriterMember>();
 
         // Extract top 10 billed cast
@@ -210,6 +213,7 @@ public class MovieService : IMovieService
             .Take(10)
             .Select(c => new CastMember
             {
+                PersonId = c.Id,
                 Name = c.Name,
                 Character = c.Character,
                 ProfilePath = c.ProfilePath

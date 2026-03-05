@@ -56,14 +56,14 @@ public static class TestDbContextFactory
             PosterPath = "/poster.jpg",
             Synopsis = "An insomniac office worker and a devil-may-care soap maker form an underground fight club.",
             Genres = new List<string> { "Drama", "Thriller" }, // Enriched
-            Cast = new List<CastMember> { new CastMember { Name = "Brad Pitt", Character = "Tyler Durden", ProfilePath = "/brad.jpg" } }, // Enriched
+            Cast = new List<CastMember> { new CastMember { PersonId = 287, Name = "Brad Pitt", Character = "Tyler Durden", ProfilePath = "/brad.jpg" } }, // Enriched
             Runtime = 139, // Enriched
             DirectorName = "David Fincher", // Enriched
             DirectorProfilePath = "/fincher.jpg", // Enriched
-            Directors = new List<DirectorMember> { new DirectorMember { Name = "David Fincher", ProfilePath = "/fincher.jpg" } }, // Enriched
+            Directors = new List<DirectorMember> { new DirectorMember { PersonId = 7467, Name = "David Fincher", ProfilePath = "/fincher.jpg" } }, // Enriched
             WriterName = "Chuck Palahniuk", // Enriched
             WriterProfilePath = "/chuck.jpg", // Enriched
-            Writers = new List<WriterMember> { new WriterMember { Name = "Chuck Palahniuk", Job = "Novel", ProfilePath = "/chuck.jpg" } }, // Enriched
+            Writers = new List<WriterMember> { new WriterMember { PersonId = 2031, Name = "Chuck Palahniuk", Job = "Novel", ProfilePath = "/chuck.jpg" } }, // Enriched
             CreatedAt = DateTime.UtcNow,
             IsDeleted = false
         };

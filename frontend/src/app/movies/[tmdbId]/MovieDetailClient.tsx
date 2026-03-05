@@ -378,7 +378,11 @@ export function MovieDetailClient({ params }: MovieDetailPageProps) {
                         <h2 className="text-lg font-semibold mb-4">Crew</h2>
                         <div className="grid grid-cols-3 sm:grid-cols-5 gap-4">
                             {movie.directors?.map((director, i) => (
-                                <div key={i} className="space-y-2">
+                                <Link
+                                    key={i}
+                                    href={`/people/${director.personId}?from=movie&tmdbId=${movie.tmdbId}&name=${encodeURIComponent(director.name)}`}
+                                    className="space-y-2 hover:opacity-80 transition-opacity cursor-pointer"
+                                >
                                     <div className="w-16 h-16 rounded-full overflow-hidden bg-muted flex items-center justify-center">
                                         {director.profilePath ? (
                                             <img
@@ -400,10 +404,14 @@ export function MovieDetailClient({ params }: MovieDetailPageProps) {
                                             Director
                                         </p>
                                     </div>
-                                </div>
+                                </Link>
                             ))}
                             {movie.writers?.map((writer, i) => (
-                                <div key={i} className="space-y-2">
+                                <Link
+                                    key={i}
+                                    href={`/people/${writer.personId}?from=movie&tmdbId=${movie.tmdbId}&name=${encodeURIComponent(writer.name)}`}
+                                    className="space-y-2 hover:opacity-80 transition-opacity cursor-pointer"
+                                >
                                     <div className="w-16 h-16 rounded-full overflow-hidden bg-muted flex items-center justify-center">
                                         {writer.profilePath ? (
                                             <img
@@ -425,7 +433,7 @@ export function MovieDetailClient({ params }: MovieDetailPageProps) {
                                             {writer.job}
                                         </p>
                                     </div>
-                                </div>
+                                </Link>
                             ))}
                         </div>
                     </div>
@@ -441,7 +449,11 @@ export function MovieDetailClient({ params }: MovieDetailPageProps) {
                                     ? `https://image.tmdb.org/t/p/w185${member.profilePath}`
                                     : null;
                                 return (
-                                    <div key={i} className="space-y-2">
+                                    <Link
+                                        key={i}
+                                        href={`/people/${member.personId}?from=movie&tmdbId=${movie.tmdbId}&name=${encodeURIComponent(member.name)}`}
+                                        className="space-y-2 hover:opacity-80 transition-opacity cursor-pointer"
+                                    >
                                         <div className="w-16 h-16 rounded-full overflow-hidden bg-muted flex items-center justify-center">
                                             {profileUrl ? (
                                                 <img
@@ -463,7 +475,7 @@ export function MovieDetailClient({ params }: MovieDetailPageProps) {
                                                 {member.character}
                                             </p>
                                         </div>
-                                    </div>
+                                    </Link>
                                 );
                             })}
                         </div>

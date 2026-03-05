@@ -73,6 +73,9 @@ public class TmdbCreditsResult
 
 public class TmdbCastMember
 {
+    [JsonPropertyName("id")]
+    public int Id { get; set; }
+
     [JsonPropertyName("name")]
     public string Name { get; set; } = string.Empty;
 
@@ -88,6 +91,9 @@ public class TmdbCastMember
 
 public class TmdbCrewMember
 {
+    [JsonPropertyName("id")]
+    public int Id { get; set; }
+
     [JsonPropertyName("name")]
     public string Name { get; set; } = string.Empty;
 

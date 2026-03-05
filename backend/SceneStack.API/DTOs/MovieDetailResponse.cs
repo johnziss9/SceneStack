@@ -28,6 +28,7 @@ public class MovieDetailResponse
 
 public class CastMemberResponse
 {
+    public int PersonId { get; set; }
     public string Name { get; set; } = string.Empty;
     public string Character { get; set; } = string.Empty;
     public string? ProfilePath { get; set; }
@@ -35,12 +36,14 @@ public class CastMemberResponse
 
 public class DirectorMemberResponse
 {
+    public int PersonId { get; set; }
     public string Name { get; set; } = string.Empty;
     public string? ProfilePath { get; set; }
 }
 
 public class WriterMemberResponse
 {
+    public int PersonId { get; set; }
     public string Name { get; set; } = string.Empty;
     public string Job { get; set; } = string.Empty;
     public string? ProfilePath { get; set; }

@@ -13,17 +13,20 @@ export interface Movie {
 
 // Enriched movie detail — matches MovieDetailResponse from backend
 export interface CastMember {
+    personId: number;
     name: string;
     character: string;
     profilePath?: string | null;
 }
 
 export interface DirectorMember {
+    personId: number;
     name: string;
     profilePath?: string | null;
 }
 
 export interface WriterMember {
+    personId: number;
     name: string;
     job: string;
     profilePath?: string | null;

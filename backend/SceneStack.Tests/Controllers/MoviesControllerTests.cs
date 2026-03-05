@@ -370,10 +370,14 @@ public class MoviesControllerTests
             TmdbRating = 8.8,
             TmdbVoteCount = 20000,
             DirectorName = "David Fincher",
+            Directors = new List<DirectorMember>
+            {
+                new DirectorMember { PersonId = 7467, Name = "David Fincher", ProfilePath = "/fincher.jpg" }
+            },
             Cast = new List<CastMember>
             {
-                new CastMember { Name = "Edward Norton", Character = "The Narrator", ProfilePath = "/norton.jpg" },
-                new CastMember { Name = "Brad Pitt", Character = "Tyler Durden", ProfilePath = "/pitt.jpg" }
+                new CastMember { PersonId = 819, Name = "Edward Norton", Character = "The Narrator", ProfilePath = "/norton.jpg" },
+                new CastMember { PersonId = 287, Name = "Brad Pitt", Character = "Tyler Durden", ProfilePath = "/pitt.jpg" }
             }
         };
 
@@ -397,10 +401,16 @@ public class MoviesControllerTests
         response.TmdbRating.Should().Be(8.8);
         response.TmdbVoteCount.Should().Be(20000);
         response.DirectorName.Should().Be("David Fincher");
+        response.Directors.Should().HaveCount(1);
+        response.Directors[0].PersonId.Should().Be(7467);
+        response.Directors[0].Name.Should().Be("David Fincher");
         response.Cast.Should().HaveCount(2);
+        response.Cast[0].PersonId.Should().Be(819);
         response.Cast[0].Name.Should().Be("Edward Norton");
         response.Cast[0].Character.Should().Be("The Narrator");
         response.Cast[0].ProfilePath.Should().Be("/norton.jpg");
+        response.Cast[1].PersonId.Should().Be(287);
+        response.Cast[1].Name.Should().Be("Brad Pitt");
     }
 
     [Fact]
@@ -719,5 +729,271 @@ public class MoviesControllerTests
 
         // Assert
         await recommendationsService.Received(1).GetMovieSimilarRecommendationsAsync(550, 42, 12);
+    }
+
+    [Fact]
+    public async Task GetTmdbMovie_MovieWithWriters_MapsWriterPersonIdsCorrectly()
+    {
+        // Arrange
+        var movieService = Substitute.For<IMovieService>();
+        var tmdbService = Substitute.For<ITmdbService>();
+        var recommendationsService = Substitute.For<IGroupRecommendationsService>();
+        var logger = Substitute.For<ILogger<MoviesController>>();
+        var controller = new MoviesController(movieService, tmdbService, recommendationsService, logger);
+
+        var movieWithWriters = new Movie
+        {
+            Id = 1,
+            TmdbId = 550,
+            Title = "Fight Club",
+            Year = 1999,
+            Synopsis = "A ticking-time-bomb insomniac...",
+            Genres = new List<string> { "Drama" },
+            Cast = new List<CastMember>(),
+            Runtime = 139,
+            Writers = new List<WriterMember>
+            {
+                new WriterMember { PersonId = 2031, Name = "Chuck Palahniuk", Job = "Novel", ProfilePath = "/chuck.jpg" },
+                new WriterMember { PersonId = 28234, Name = "Jim Uhls", Job = "Screenplay", ProfilePath = "/jim.jpg" }
+            },
+            CreatedAt = DateTime.UtcNow
+        };
+
+        movieService.GetOrCreateFromTmdbAsync(550).Returns(movieWithWriters);
+
+        // Act
+        var result = await controller.GetTmdbMovie(550);
+
+        // Assert
+        var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject;
+        var response = okResult.Value.Should().BeOfType<MovieDetailResponse>().Subject;
+
+        response.Writers.Should().HaveCount(2);
+        response.Writers[0].PersonId.Should().Be(2031);
+        response.Writers[0].Name.Should().Be("Chuck Palahniuk");
+        response.Writers[0].Job.Should().Be("Novel");
+        response.Writers[0].ProfilePath.Should().Be("/chuck.jpg");
+        response.Writers[1].PersonId.Should().Be(28234);
+        response.Writers[1].Name.Should().Be("Jim Uhls");
+        response.Writers[1].Job.Should().Be("Screenplay");
+    }
+
+    [Fact]
+    public async Task GetTmdbMovie_MovieWithMissingPersonIds_ReturnsZeroPersonIds()
+    {
+        // Arrange
+        var movieService = Substitute.For<IMovieService>();
+        var tmdbService = Substitute.For<ITmdbService>();
+        var recommendationsService = Substitute.For<IGroupRecommendationsService>();
+        var logger = Substitute.For<ILogger<MoviesController>>();
+        var controller = new MoviesController(movieService, tmdbService, recommendationsService, logger);
+
+        var legacyMovie = new Movie
+        {
+            Id = 1,
+            TmdbId = 550,
+            Title = "Legacy Movie",
+            Year = 1999,
+            Synopsis = "Old movie without PersonIds",
+            Genres = new List<string> { "Drama" },
+            Cast = new List<CastMember>
+            {
+                new CastMember { PersonId = 0, Name = "Unknown Actor", Character = "Lead", ProfilePath = "/unknown.jpg" }
+            },
+            Directors = new List<DirectorMember>
+            {
+                new DirectorMember { PersonId = 0, Name = "Unknown Director", ProfilePath = "/dir.jpg" }
+            },
+            Writers = new List<WriterMember>
+            {
+                new WriterMember { PersonId = 0, Name = "Unknown Writer", Job = "Screenplay", ProfilePath = "/writer.jpg" }
+            },
+            Runtime = 139,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        movieService.GetOrCreateFromTmdbAsync(550).Returns(legacyMovie);
+
+        // Act
+        var result = await controller.GetTmdbMovie(550);
+
+        // Assert - Should not crash, should return 0 for missing PersonIds
+        var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject;
+        var response = okResult.Value.Should().BeOfType<MovieDetailResponse>().Subject;
+
+        response.Cast.Should().HaveCount(1);
+        response.Cast[0].PersonId.Should().Be(0);
+        response.Cast[0].Name.Should().Be("Unknown Actor");
+
+        response.Directors.Should().HaveCount(1);
+        response.Directors[0].PersonId.Should().Be(0);
+        response.Directors[0].Name.Should().Be("Unknown Director");
+
+        response.Writers.Should().HaveCount(1);
+        response.Writers[0].PersonId.Should().Be(0);
+        response.Writers[0].Name.Should().Be("Unknown Writer");
+    }
+
+    [Fact]
+    public async Task GetTmdbMovie_MovieWithMultipleDirectorsAndWriters_MapsAllPersonIdsCorrectly()
+    {
+        // Arrange
+        var movieService = Substitute.For<IMovieService>();
+        var tmdbService = Substitute.For<ITmdbService>();
+        var recommendationsService = Substitute.For<IGroupRecommendationsService>();
+        var logger = Substitute.For<ILogger<MoviesController>>();
+        var controller = new MoviesController(movieService, tmdbService, recommendationsService, logger);
+
+        var movieWithMultipleCrew = new Movie
+        {
+            Id = 1,
+            TmdbId = 550,
+            Title = "The Matrix",
+            Year = 1999,
+            Synopsis = "The Wachowskis' masterpiece",
+            Genres = new List<string> { "Sci-Fi", "Action" },
+            Cast = new List<CastMember>
+            {
+                new CastMember { PersonId = 6384, Name = "Keanu Reeves", Character = "Neo", ProfilePath = "/keanu.jpg" },
+                new CastMember { PersonId = 2975, Name = "Laurence Fishburne", Character = "Morpheus", ProfilePath = "/laurence.jpg" },
+                new CastMember { PersonId = 530, Name = "Carrie-Anne Moss", Character = "Trinity", ProfilePath = "/carrie.jpg" }
+            },
+            Directors = new List<DirectorMember>
+            {
+                new DirectorMember { PersonId = 1269, Name = "Lana Wachowski", ProfilePath = "/lana.jpg" },
+                new DirectorMember { PersonId = 1196, Name = "Lilly Wachowski", ProfilePath = "/lilly.jpg" }
+            },
+            Writers = new List<WriterMember>
+            {
+                new WriterMember { PersonId = 1269, Name = "Lana Wachowski", Job = "Writer", ProfilePath = "/lana.jpg" },
+                new WriterMember { PersonId = 1196, Name = "Lilly Wachowski", Job = "Writer", ProfilePath = "/lilly.jpg" }
+            },
+            Runtime = 136,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        movieService.GetOrCreateFromTmdbAsync(550).Returns(movieWithMultipleCrew);
+
+        // Act
+        var result = await controller.GetTmdbMovie(550);
+
+        // Assert
+        var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject;
+        var response = okResult.Value.Should().BeOfType<MovieDetailResponse>().Subject;
+
+        // Verify all Cast PersonIds are mapped
+        response.Cast.Should().HaveCount(3);
+        response.Cast[0].PersonId.Should().Be(6384);
+        response.Cast[0].Name.Should().Be("Keanu Reeves");
+        response.Cast[1].PersonId.Should().Be(2975);
+        response.Cast[1].Name.Should().Be("Laurence Fishburne");
+        response.Cast[2].PersonId.Should().Be(530);
+        response.Cast[2].Name.Should().Be("Carrie-Anne Moss");
+
+        // Verify all Director PersonIds are mapped
+        response.Directors.Should().HaveCount(2);
+        response.Directors[0].PersonId.Should().Be(1269);
+        response.Directors[0].Name.Should().Be("Lana Wachowski");
+        response.Directors[1].PersonId.Should().Be(1196);
+        response.Directors[1].Name.Should().Be("Lilly Wachowski");
+
+        // Verify all Writer PersonIds are mapped
+        response.Writers.Should().HaveCount(2);
+        response.Writers[0].PersonId.Should().Be(1269);
+        response.Writers[0].Name.Should().Be("Lana Wachowski");
+        response.Writers[1].PersonId.Should().Be(1196);
+        response.Writers[1].Name.Should().Be("Lilly Wachowski");
+    }
+
+    [Fact]
+    public async Task GetTmdbMovie_MovieWithNullProfilePaths_HandlesGracefully()
+    {
+        // Arrange
+        var movieService = Substitute.For<IMovieService>();
+        var tmdbService = Substitute.For<ITmdbService>();
+        var recommendationsService = Substitute.For<IGroupRecommendationsService>();
+        var logger = Substitute.For<ILogger<MoviesController>>();
+        var controller = new MoviesController(movieService, tmdbService, recommendationsService, logger);
+
+        var movieWithNullProfiles = new Movie
+        {
+            Id = 1,
+            TmdbId = 550,
+            Title = "Independent Film",
+            Year = 2020,
+            Synopsis = "Cast without public photos",
+            Genres = new List<string> { "Drama" },
+            Cast = new List<CastMember>
+            {
+                new CastMember { PersonId = 12345, Name = "Unknown Actor", Character = "Lead", ProfilePath = null }
+            },
+            Directors = new List<DirectorMember>
+            {
+                new DirectorMember { PersonId = 67890, Name = "Unknown Director", ProfilePath = null }
+            },
+            Writers = new List<WriterMember>
+            {
+                new WriterMember { PersonId = 11111, Name = "Unknown Writer", Job = "Screenplay", ProfilePath = null }
+            },
+            Runtime = 90,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        movieService.GetOrCreateFromTmdbAsync(550).Returns(movieWithNullProfiles);
+
+        // Act
+        var result = await controller.GetTmdbMovie(550);
+
+        // Assert
+        var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject;
+        var response = okResult.Value.Should().BeOfType<MovieDetailResponse>().Subject;
+
+        response.Cast[0].PersonId.Should().Be(12345);
+        response.Cast[0].ProfilePath.Should().BeNull();
+
+        response.Directors[0].PersonId.Should().Be(67890);
+        response.Directors[0].ProfilePath.Should().BeNull();
+
+        response.Writers[0].PersonId.Should().Be(11111);
+        response.Writers[0].ProfilePath.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task GetTmdbMovie_MovieWithEmptyCastAndCrew_ReturnsEmptyLists()
+    {
+        // Arrange
+        var movieService = Substitute.For<IMovieService>();
+        var tmdbService = Substitute.For<ITmdbService>();
+        var recommendationsService = Substitute.For<IGroupRecommendationsService>();
+        var logger = Substitute.For<ILogger<MoviesController>>();
+        var controller = new MoviesController(movieService, tmdbService, recommendationsService, logger);
+
+        var movieWithoutCrew = new Movie
+        {
+            Id = 1,
+            TmdbId = 550,
+            Title = "Minimal Movie",
+            Year = 2020,
+            Synopsis = "Movie with no cast/crew data",
+            Genres = new List<string> { "Drama" },
+            Cast = new List<CastMember>(),
+            Directors = new List<DirectorMember>(),
+            Writers = new List<WriterMember>(),
+            Runtime = 60,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        movieService.GetOrCreateFromTmdbAsync(550).Returns(movieWithoutCrew);
+
+        // Act
+        var result = await controller.GetTmdbMovie(550);
+
+        // Assert
+        var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject;
+        var response = okResult.Value.Should().BeOfType<MovieDetailResponse>().Subject;
+
+        response.Cast.Should().BeEmpty();
+        response.Directors.Should().BeEmpty();
+        response.Writers.Should().BeEmpty();
     }
 }

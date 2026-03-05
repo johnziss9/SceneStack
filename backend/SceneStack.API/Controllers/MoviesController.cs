@@ -187,6 +187,7 @@ public class MoviesController : ControllerBase
             DirectorProfilePath = movie.DirectorProfilePath,
             Directors = movie.Directors.Select(d => new DirectorMemberResponse
             {
+                PersonId = d.PersonId,
                 Name = d.Name,
                 ProfilePath = d.ProfilePath
             }).ToList(),
@@ -194,12 +195,14 @@ public class MoviesController : ControllerBase
             WriterProfilePath = movie.WriterProfilePath,
             Writers = movie.Writers.Select(w => new WriterMemberResponse
             {
+                PersonId = w.PersonId,
                 Name = w.Name,
                 Job = w.Job,
                 ProfilePath = w.ProfilePath
             }).ToList(),
             Cast = movie.Cast.Select(c => new CastMemberResponse
             {
+                PersonId = c.PersonId,
                 Name = c.Name,
                 Character = c.Character,
                 ProfilePath = c.ProfilePath
