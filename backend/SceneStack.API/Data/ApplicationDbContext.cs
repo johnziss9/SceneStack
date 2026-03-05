@@ -22,6 +22,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<GroupMemberHistory> GroupMemberHistories { get; set; }
     public DbSet<MovieGroup> MovieGroups { get; set; }
     public DbSet<WatchlistItem> WatchlistItems { get; set; }
+    public DbSet<GroupInvitation> GroupInvitations { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -248,6 +249,39 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
                 .WithMany()
                 .HasForeignKey(wi => wi.MovieId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Configure GroupInvitation
+        modelBuilder.Entity<GroupInvitation>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.GroupId);
+            entity.HasIndex(e => e.InvitedUserId);
+            entity.HasIndex(e => e.InvitedByUserId);
+            entity.HasIndex(e => e.Status);
+            // Composite index for duplicate prevention
+            entity.HasIndex(e => new { e.GroupId, e.InvitedUserId, e.Status });
+            // Composite index for user's pending invitations query
+            entity.HasIndex(e => new { e.InvitedUserId, e.Status });
+
+            // Define relationships
+            entity.HasOne(gi => gi.Group)
+                .WithMany()
+                .HasForeignKey(gi => gi.GroupId)
+                .OnDelete(DeleteBehavior.Cascade)  // Delete invitations if group is deleted
+                .IsRequired(false);
+
+            entity.HasOne(gi => gi.InvitedUser)
+                .WithMany()
+                .HasForeignKey(gi => gi.InvitedUserId)
+                .OnDelete(DeleteBehavior.Restrict)  // Prevent user deletion with pending invitations
+                .IsRequired(false);
+
+            entity.HasOne(gi => gi.InvitedByUser)
+                .WithMany()
+                .HasForeignKey(gi => gi.InvitedByUserId)
+                .OnDelete(DeleteBehavior.SetNull)  // Set to null if inviter is deleted
+                .IsRequired(false);
         });
     }
 }

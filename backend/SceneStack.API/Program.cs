@@ -115,6 +115,7 @@ builder.Services.AddScoped<IGroupFeedService, GroupFeedService>();
 builder.Services.AddScoped<IGroupRecommendationsService, GroupRecommendationsService>();
 builder.Services.AddScoped<IStatsService, StatsService>();
 builder.Services.AddScoped<IWatchlistService, WatchlistService>();
+builder.Services.AddScoped<IInvitationService, InvitationService>();
 
 // Add Rate Limiting
 builder.Services.AddRateLimiter(options =>

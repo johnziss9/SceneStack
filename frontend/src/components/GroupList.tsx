@@ -6,7 +6,8 @@ import { groupApi } from "@/lib/api";
 import { toast } from "@/lib/toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { Users, Plus, AlertCircle, Crown, UserPlus } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Users, Plus, AlertCircle, Crown, UserPlus, ArrowUpDown } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
@@ -243,27 +244,19 @@ export function GroupList() {
                 </div>
             )}
 
-            {/* Sort Toggle */}
+            {/* Sort Dropdown */}
             {groups.length > 1 && (
-                <div className="flex justify-end">
-                    <div className="flex items-center gap-1 border rounded-lg p-1">
-                        <Button
-                            size="sm"
-                            variant={sortBy === 'updated' ? 'default' : 'ghost'}
-                            className="h-7 text-xs px-3"
-                            onClick={() => setSortBy('updated')}
-                        >
-                            Last Updated
-                        </Button>
-                        <Button
-                            size="sm"
-                            variant={sortBy === 'name' ? 'default' : 'ghost'}
-                            className="h-7 text-xs px-3"
-                            onClick={() => setSortBy('name')}
-                        >
-                            Name
-                        </Button>
-                    </div>
+                <div className="flex justify-start">
+                    <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortBy)}>
+                        <SelectTrigger className="gap-2 w-full sm:w-[180px]">
+                            <ArrowUpDown className="h-4 w-4 text-foreground" />
+                            <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="updated">Last Updated</SelectItem>
+                            <SelectItem value="name">Name A-Z</SelectItem>
+                        </SelectContent>
+                    </Select>
                 </div>
             )}
 

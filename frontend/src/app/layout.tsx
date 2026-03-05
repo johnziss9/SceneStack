@@ -4,6 +4,7 @@ import "./globals.css";
 import { Toaster } from "sonner";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { WishlistProvider } from "@/contexts/WatchlistContext";
+import { InvitationProvider } from "@/contexts/InvitationContext";
 import { Navigation } from "@/components/Navigation";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 
@@ -34,24 +35,26 @@ export default function RootLayout({
       >
         <AuthProvider>
           <WishlistProvider>
-            <Navigation />
-            <ErrorBoundary>
-              {children}
-            </ErrorBoundary>
-            <Toaster
-              position="top-right"
-              theme="dark"
-              duration={5000}
-              closeButton
-              toastOptions={{
-                style: {
-                  background: 'oklch(0.20 0.025 240)',
-                  border: '1px solid oklch(0.30 0.025 240)',
-                  color: 'oklch(0.98 0 0)',
-                },
-                className: 'custom-toast',
-              }}
-            />
+            <InvitationProvider>
+              <Navigation />
+              <ErrorBoundary>
+                {children}
+              </ErrorBoundary>
+              <Toaster
+                position="top-right"
+                theme="dark"
+                duration={5000}
+                closeButton
+                toastOptions={{
+                  style: {
+                    background: 'oklch(0.20 0.025 240)',
+                    border: '1px solid oklch(0.30 0.025 240)',
+                    color: 'oklch(0.98 0 0)',
+                  },
+                  className: 'custom-toast',
+                }}
+              />
+            </InvitationProvider>
           </WishlistProvider>
         </AuthProvider>
       </body>

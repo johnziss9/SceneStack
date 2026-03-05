@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useWishlist } from '@/contexts/WatchlistContext';
+import { useInvitation } from '@/contexts/InvitationContext';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
@@ -11,6 +12,7 @@ import { Film, User, Users, BarChart2, Menu, X, Eye, LogIn, UserPlus, Bookmark, 
 export function Navigation() {
     const { user, loading } = useAuth();
     const { count: wishlistCount } = useWishlist();
+    const { count: invitationCount } = useInvitation();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const menuButtonRef = useRef<HTMLButtonElement>(null);
     const mobileMenuRef = useRef<HTMLDivElement>(null);
@@ -127,9 +129,14 @@ export function Navigation() {
                                             </Button>
                                         </Link>
                                         <Link href="/groups">
-                                            <Button variant="ghost" className="gap-2">
+                                            <Button variant="ghost" className="gap-2 relative">
                                                 <Users className="h-4 w-4" />
                                                 Groups
+                                                {invitationCount > 0 && (
+                                                    <Badge variant="default" className="ml-1 px-1.5 py-0 h-5 min-w-[1.25rem] text-[10px]">
+                                                        {invitationCount}
+                                                    </Badge>
+                                                )}
                                             </Button>
                                         </Link>
                                         <Link href="/stats">
@@ -237,6 +244,11 @@ export function Navigation() {
                                 <Button variant="ghost" className="w-full justify-start gap-3">
                                     <Users className="h-4 w-4" />
                                     Groups
+                                    {invitationCount > 0 && (
+                                        <Badge variant="default" className="ml-auto px-1.5 py-0 h-5 min-w-[1.25rem] text-[10px]">
+                                            {invitationCount}
+                                        </Badge>
+                                    )}
                                 </Button>
                             </Link>
                             <Link href="/stats" onClick={closeMenu}>

@@ -42,6 +42,11 @@ import type {
     ChangePasswordRequest,
     DeleteAccountRequest,
     UserProfile,
+    Invitation,
+    CreateInvitationRequest,
+    RespondToInvitationRequest,
+    UserSearchResult,
+    PendingInvitationsCount,
 } from '@/types';
 
 // Auth endpoints
@@ -256,6 +261,40 @@ export const groupApi = {
     // GET: api/groups/{id}/stats
     getGroupStats: (groupId: number) =>
         api.get<GroupStats>(`/api/groups/${groupId}/stats`),
+};
+
+// Invitation endpoints
+export const invitationApi = {
+    // POST: api/invitations
+    createInvitation: (data: CreateInvitationRequest) =>
+        api.post<Invitation>('/api/invitations', data),
+
+    // GET: api/invitations/pending
+    getPendingInvitations: () =>
+        api.get<Invitation[]>('/api/invitations/pending'),
+
+    // GET: api/invitations/pending/count
+    getPendingCount: () =>
+        api.get<PendingInvitationsCount>('/api/invitations/pending/count'),
+
+    // PUT: api/invitations/{id}/respond
+    respondToInvitation: (id: number, data: RespondToInvitationRequest) =>
+        api.put<Invitation>(`/api/invitations/${id}/respond`, data),
+
+    // DELETE: api/invitations/{id}
+    cancelInvitation: (id: number) =>
+        api.delete<void>(`/api/invitations/${id}`),
+
+    // GET: api/invitations/group/{groupId}/sent
+    getSentInvitations: (groupId: number) =>
+        api.get<Invitation[]>(`/api/invitations/group/${groupId}/sent`),
+
+    // GET: api/invitations/search?query={query}&excludeGroupId={groupId}
+    searchUsers: (query: string, excludeGroupId?: number) => {
+        const params = new URLSearchParams({ query });
+        if (excludeGroupId) params.set('excludeGroupId', String(excludeGroupId));
+        return api.get<UserSearchResult[]>(`/api/invitations/search?${params.toString()}`);
+    },
 };
 
 // Stats endpoints

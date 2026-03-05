@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Group, GroupMember, GroupRole } from "@/types";
-import { groupApi } from "@/lib/api";
+import { Group, GroupMember, GroupRole, Invitation } from "@/types";
+import { groupApi, invitationApi } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import {
     AlertDialog,
     AlertDialogAction,
@@ -16,7 +17,7 @@ import {
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Edit, Trash2, UserPlus, Shield, Crown, AlertCircle, Users } from "lucide-react";
+import { ArrowLeft, Edit, Trash2, UserPlus, Shield, Crown, AlertCircle, Users, Loader2 } from "lucide-react";
 import { toast } from "@/lib/toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { LoadingTips } from "@/components/LoadingTips";
@@ -30,6 +31,7 @@ export function GroupDetail({ groupId }: GroupDetailProps) {
     const router = useRouter();
     const { user } = useAuth();
     const [group, setGroup] = useState<Group | null>(null);
+    const [pendingInvitations, setPendingInvitations] = useState<Invitation[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -37,9 +39,13 @@ export function GroupDetail({ groupId }: GroupDetailProps) {
     const [removingMember, setRemovingMember] = useState<GroupMember | null>(null);
     const [isRemoveDialogOpen, setIsRemoveDialogOpen] = useState(false);
     const [isRemoving, setIsRemoving] = useState(false);
+    const [cancellingInvitationId, setCancellingInvitationId] = useState<number | null>(null);
+    const [isLeaveDialogOpen, setIsLeaveDialogOpen] = useState(false);
+    const [isLeaving, setIsLeaving] = useState(false);
 
     useEffect(() => {
         fetchGroup();
+        fetchPendingInvitations();
     }, [groupId]);
 
     const fetchGroup = async () => {
@@ -56,6 +62,16 @@ export function GroupDetail({ groupId }: GroupDetailProps) {
             setError("Failed to load group. Please try again.");
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    const fetchPendingInvitations = async () => {
+        try {
+            const invitations = await invitationApi.getSentInvitations(groupId);
+            setPendingInvitations(invitations.filter(inv => inv.status === 0)); // Only pending
+        } catch (err) {
+            console.error("Failed to fetch pending invitations:", err);
+            // Silently fail - not critical
         }
     };
 
@@ -107,6 +123,54 @@ export function GroupDetail({ groupId }: GroupDetailProps) {
         } finally {
             setIsRemoving(false);
         }
+    };
+
+    const handleCancelInvitation = async (invitationId: number) => {
+        setCancellingInvitationId(invitationId);
+        try {
+            await invitationApi.cancelInvitation(invitationId);
+            toast.success("Invitation cancelled");
+
+            // Refetch pending invitations
+            await fetchPendingInvitations();
+        } catch (err) {
+            console.error("Error cancelling invitation:", err);
+            toast.error("Failed to cancel invitation", {
+                description: "Please try again later",
+            });
+        } finally {
+            setCancellingInvitationId(null);
+        }
+    };
+
+    const handleLeaveGroup = () => {
+        setIsLeaveDialogOpen(true);
+    };
+
+    const handleLeaveGroupConfirm = async () => {
+        if (!user || !group) return;
+
+        setIsLeaving(true);
+        try {
+            await groupApi.removeMember(group.id, user.id);
+            toast.success("You have left the group");
+            router.push("/groups");
+        } catch (err) {
+            console.error("Error leaving group:", err);
+            toast.error("Failed to leave group", {
+                description: "Please try again later",
+            });
+        } finally {
+            setIsLeaving(false);
+            setIsLeaveDialogOpen(false);
+        }
+    };
+
+    const canLeaveGroup = () => {
+        if (!user || !group) return false;
+        const currentMember = group.members.find(m => m.userId === user.id);
+        // Can leave if you're a member but not the creator
+        return currentMember !== undefined && currentMember.role !== GroupRole.Creator;
     };
 
     const getRoleBadge = (role: GroupRole) => {
@@ -240,7 +304,7 @@ export function GroupDetail({ groupId }: GroupDetailProps) {
                     <ArrowLeft className="mr-2 h-4 w-4" />
                     Back to Groups
                 </Button>
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-wrap">
                     {canEditGroup() && (
                         <Button
                             variant="outline"
@@ -313,7 +377,7 @@ export function GroupDetail({ groupId }: GroupDetailProps) {
                             <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
                                 <Users className="h-5 w-5 text-primary" />
                             </div>
-                            <CardTitle>Members ({group.members.length})</CardTitle>
+                            <CardTitle>Members ({group.members.length + pendingInvitations.length})</CardTitle>
                         </div>
                         {canEditGroup() && (
                             <Button
@@ -329,6 +393,7 @@ export function GroupDetail({ groupId }: GroupDetailProps) {
                 </CardHeader>
                 <CardContent className="pt-6">
                     <div className="space-y-3">
+                        {/* Existing Members */}
                         {group.members.map((member) => (
                             <div
                                 key={member.userId}
@@ -365,14 +430,76 @@ export function GroupDetail({ groupId }: GroupDetailProps) {
                                         </div>
                                     </div>
                                 </div>
-                                {canRemoveMember(member) && (
+                                {/* Show Leave button if this is the current user's card and they're not the creator */}
+                                {user && member.userId === user.id && member.role !== GroupRole.Creator ? (
                                     <Button
-                                        variant="ghost"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={handleLeaveGroup}
+                                        className="shrink-0"
+                                    >
+                                        Leave Group
+                                    </Button>
+                                ) : canRemoveMember(member) ? (
+                                    <Button
+                                        variant="outline"
                                         size="sm"
                                         onClick={() => handleRemoveMemberClick(member)}
-                                        className="hover:bg-destructive/10 hover:text-destructive shrink-0"
+                                        className="shrink-0"
                                     >
                                         Remove
+                                    </Button>
+                                ) : null}
+                            </div>
+                        ))}
+
+                        {/* Pending Invitations */}
+                        {pendingInvitations.map((invitation) => (
+                            <div
+                                key={`invitation-${invitation.id}`}
+                                className="group relative flex items-start sm:items-center justify-between py-4 px-4 rounded-xl border border-amber-500/30 bg-amber-500/5 gap-3"
+                            >
+                                {/* Avatar Circle */}
+                                <div className="flex items-start gap-4 flex-1 min-w-0">
+                                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-amber-500/20 to-amber-500/10 flex items-center justify-center flex-shrink-0 text-lg font-bold text-amber-500">
+                                        {invitation.invitedUsername.charAt(0).toUpperCase()}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                            <span className="font-semibold text-base">{invitation.invitedUsername}</span>
+                                            <Badge variant="outline" className="text-xs bg-amber-500/10 text-amber-600 border-amber-500/30">
+                                                Pending
+                                            </Badge>
+                                        </div>
+                                        <div className="text-sm text-muted-foreground mt-1">
+                                            {invitation.invitedUserEmail}
+                                        </div>
+                                        <div className="text-xs text-muted-foreground mt-1.5 flex items-center gap-1">
+                                            <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                            </svg>
+                                            Sent{" "}
+                                            {new Date(invitation.createdAt).toLocaleDateString("en-GB", {
+                                                day: "numeric",
+                                                month: "short",
+                                                year: "numeric",
+                                            })}
+                                        </div>
+                                    </div>
+                                </div>
+                                {canEditGroup() && (
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => handleCancelInvitation(invitation.id)}
+                                        disabled={cancellingInvitationId === invitation.id}
+                                        className="shrink-0"
+                                    >
+                                        {cancellingInvitationId === invitation.id ? (
+                                            <Loader2 className="h-4 w-4 animate-spin" />
+                                        ) : (
+                                            "Cancel"
+                                        )}
                                     </Button>
                                 )}
                             </div>
@@ -437,6 +564,36 @@ export function GroupDetail({ groupId }: GroupDetailProps) {
                             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                         >
                             {isRemoving ? "Removing..." : "Remove"}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            {/* Leave Group Dialog */}
+            <AlertDialog open={isLeaveDialogOpen} onOpenChange={setIsLeaveDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Leave Group</AlertDialogTitle>
+                        <AlertDialogDescription asChild>
+                            <div>
+                                <p>Are you sure you want to leave this group?</p>
+                                {group && (
+                                    <div className="mt-2 text-sm">
+                                        <strong>{group.name}</strong>
+                                    </div>
+                                )}
+                                <p className="mt-2">You will need to be re-invited if you want to join again.</p>
+                            </div>
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel disabled={isLeaving}>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={handleLeaveGroupConfirm}
+                            disabled={isLeaving}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                            {isLeaving ? "Leaving..." : "Leave Group"}
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>

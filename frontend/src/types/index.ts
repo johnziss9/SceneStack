@@ -54,3 +54,11 @@ export type {
     WatchLocationItem,
     TopRewatchedMovie
 } from './stats';
+export type {
+    Invitation,
+    CreateInvitationRequest,
+    RespondToInvitationRequest,
+    UserSearchResult,
+    PendingInvitationsCount
+} from './invitation';
+export { InvitationStatus } from './invitation';

@@ -47,6 +47,20 @@ public static class TestDbContextFactory
         };
         context.Users.Add(freeUser);
 
+        // Add additional test users for invitation tests
+        for (int i = 1; i <= 8; i++)
+        {
+            context.Users.Add(new User
+            {
+                Username = $"user{i}",
+                Email = $"user{i}@example.com",
+                IsPremium = i % 2 == 0, // Alternate between premium and free
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+                IsDeleted = false
+            });
+        }
+
         // Add a test movie with enriched metadata
         var testMovie = new Movie
         {

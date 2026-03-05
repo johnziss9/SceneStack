@@ -53,9 +53,22 @@ jest.mock('@/contexts/WatchlistContext', () => ({
     WatchlistProvider: ({ children }) => children,
 }));
 
+// Mock InvitationContext
+const mockUseInvitation = jest.fn(() => ({
+    count: 0,
+    isLoading: false,
+    refreshCount: jest.fn(),
+}));
+
+jest.mock('@/contexts/InvitationContext', () => ({
+    useInvitation: mockUseInvitation,
+    InvitationProvider: ({ children }) => children,
+}));
+
 // Export for test files to use
 global.mockUseAuth = mockUseAuth;
 global.mockUseWishlist = mockUseWishlist;
+global.mockUseInvitation = mockUseInvitation;
 
 // Mock ResizeObserver (used by Radix UI components like Select)
 global.ResizeObserver = jest.fn().mockImplementation(() => ({
