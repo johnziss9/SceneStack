@@ -179,3 +179,20 @@ internal enum RecommendationTier
     Broad = 3,    // All ratings
     Popular = 4   // Fallback
 }
+
+public class PaginatedMemberWatchesResponse
+{
+    public int GroupId { get; set; }
+    public string GroupName { get; set; } = string.Empty;
+    public int TargetUserId { get; set; }
+    public string TargetUsername { get; set; } = string.Empty;
+    public bool IsTargetDeactivated { get; set; }
+    public string TargetRole { get; set; } = string.Empty;
+    public DateTime TargetJoinedAt { get; set; }
+    public List<GroupFeedItemResponse> Items { get; set; } = new();
+    public int Skip { get; set; }
+    public int Take { get; set; }
+    public bool HasMore { get; set; }
+    public int TotalCount { get; set; }
+    public int NextSkip { get; set; }
+}

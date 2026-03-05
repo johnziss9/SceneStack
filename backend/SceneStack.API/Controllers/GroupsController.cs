@@ -554,4 +554,52 @@ public class GroupsController : ControllerBase
             return StatusCode(500, $"Error getting recommendation stats: {ex.Message}");
         }
     }
+
+    /// <summary>
+    /// Get watches for a specific member within the group
+    /// </summary>
+    /// <param name="id">Group ID</param>
+    /// <param name="userId">Target User ID</param>
+    /// <param name="skip">Number of items to skip</param>
+    /// <param name="take">Number of items to take</param>
+    /// <returns>Paginated list of member's watches in this group</returns>
+    // GET: api/groups/5/members/10/watches
+    [HttpGet("{id}/members/{userId}/watches")]
+    public async Task<ActionResult<PaginatedMemberWatchesResponse>> GetMemberWatchesInGroup(
+        int id,
+        int userId,
+        [FromQuery] int skip = 0,
+        [FromQuery] int take = 20)
+    {
+        var requestingUserId = User.GetUserId();
+        _logger.LogInformation("User {RequestingUserId} getting watches for member {UserId} in group {GroupId}",
+            requestingUserId, userId, id);
+
+        try
+        {
+            var response = await _groupFeedService.GetMemberWatchesInGroupAsync(
+                id, userId, requestingUserId, skip, take);
+
+            _logger.LogInformation("Returning {Count} watches for member {UserId} in group {GroupId}",
+                response.Items.Count, userId, id);
+
+            return Ok(response);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            _logger.LogWarning("User {RequestingUserId} not authorized: {Message}",
+                requestingUserId, ex.Message);
+            return Unauthorized(ex.Message);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            _logger.LogWarning("Not found: {Message}", ex.Message);
+            return NotFound(ex.Message);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting member watches for group {GroupId}", id);
+            return StatusCode(500, $"Error getting member watches: {ex.Message}");
+        }
+    }
 }

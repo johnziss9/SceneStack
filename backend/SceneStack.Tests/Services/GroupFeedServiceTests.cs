@@ -625,4 +625,436 @@ public class GroupFeedServiceTests
         result.GroupName.Should().Be("Unauthorized");
         result.Watches.Should().BeEmpty();
     }
+
+    [Fact]
+    public async Task GetMemberWatchesInGroupAsync_ValidRequest_ReturnsMemberWatches()
+    {
+        // Arrange
+        using var context = TestDbContextFactory.CreateInMemoryDbContext();
+        var logger = Substitute.For<ILogger<GroupFeedService>>();
+        var service = new GroupFeedService(context, logger);
+
+        var user1 = context.Users.First();
+        var user2 = context.Users.Skip(1).First();
+
+        // Update privacy settings
+        user2.ShareWatches = true;
+        user2.ShareRatings = true;
+        user2.ShareNotes = true;
+        await context.SaveChangesAsync();
+
+        // Create a group
+        var group = new Group
+        {
+            Name = "Test Group",
+            CreatedById = user1.Id,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+        context.Groups.Add(group);
+        await context.SaveChangesAsync();
+
+        context.GroupMembers.AddRange(
+            new GroupMember { GroupId = group.Id, UserId = user1.Id, Role = GroupRole.Creator, JoinedAt = DateTime.UtcNow },
+            new GroupMember { GroupId = group.Id, UserId = user2.Id, Role = GroupRole.Member, JoinedAt = DateTime.UtcNow.AddDays(-5) }
+        );
+        await context.SaveChangesAsync();
+
+        // Create movies
+        var movie1 = new Movie { TmdbId = 1001, Title = "Movie 1", Year = 2024, CreatedAt = DateTime.UtcNow };
+        var movie2 = new Movie { TmdbId = 1002, Title = "Movie 2", Year = 2024, CreatedAt = DateTime.UtcNow };
+        context.Movies.AddRange(movie1, movie2);
+        await context.SaveChangesAsync();
+
+        // Create watches for user2
+        var watch1 = new Watch
+        {
+            UserId = user2.Id,
+            MovieId = movie1.Id,
+            WatchedDate = DateTime.UtcNow,
+            Rating = 9,
+            Notes = "Great movie!",
+            CreatedAt = DateTime.UtcNow
+        };
+        var watch2 = new Watch
+        {
+            UserId = user2.Id,
+            MovieId = movie2.Id,
+            WatchedDate = DateTime.UtcNow.AddDays(-1),
+            Rating = 8,
+            Notes = "Good watch",
+            CreatedAt = DateTime.UtcNow
+        };
+        context.Watches.AddRange(watch1, watch2);
+        await context.SaveChangesAsync();
+
+        // Share movies with group
+        context.MovieGroups.AddRange(
+            new MovieGroup { MovieId = movie1.Id, GroupId = group.Id, SharedAt = DateTime.UtcNow },
+            new MovieGroup { MovieId = movie2.Id, GroupId = group.Id, SharedAt = DateTime.UtcNow }
+        );
+        await context.SaveChangesAsync();
+
+        // Act
+        var result = await service.GetMemberWatchesInGroupAsync(group.Id, user2.Id, user1.Id);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.GroupId.Should().Be(group.Id);
+        result.GroupName.Should().Be("Test Group");
+        result.TargetUserId.Should().Be(user2.Id);
+        result.TargetUsername.Should().Be(user2.Username);
+        result.TargetRole.Should().Be("Member");
+        result.Items.Should().HaveCount(2);
+        result.Items.First().MovieTitle.Should().Be("Movie 1"); // Most recent first
+        result.Items.First().Rating.Should().Be(9);
+        result.Items.First().Notes.Should().Be("Great movie!");
+    }
+
+    [Fact]
+    public async Task GetMemberWatchesInGroupAsync_RequestingUserNotMember_ThrowsUnauthorized()
+    {
+        // Arrange
+        using var context = TestDbContextFactory.CreateInMemoryDbContext();
+        var logger = Substitute.For<ILogger<GroupFeedService>>();
+        var service = new GroupFeedService(context, logger);
+
+        var user1 = context.Users.First();
+        var user2 = context.Users.Skip(1).First();
+
+        // Create a group with only user1
+        var group = new Group
+        {
+            Name = "Private Group",
+            CreatedById = user1.Id,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+        context.Groups.Add(group);
+        await context.SaveChangesAsync();
+
+        context.GroupMembers.Add(
+            new GroupMember { GroupId = group.Id, UserId = user1.Id, Role = GroupRole.Creator, JoinedAt = DateTime.UtcNow }
+        );
+        await context.SaveChangesAsync();
+
+        // Act & Assert - user2 tries to access
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(
+            async () => await service.GetMemberWatchesInGroupAsync(group.Id, user1.Id, user2.Id)
+        );
+    }
+
+    [Fact]
+    public async Task GetMemberWatchesInGroupAsync_TargetUserNotMember_ThrowsKeyNotFound()
+    {
+        // Arrange
+        using var context = TestDbContextFactory.CreateInMemoryDbContext();
+        var logger = Substitute.For<ILogger<GroupFeedService>>();
+        var service = new GroupFeedService(context, logger);
+
+        var user1 = context.Users.First();
+        var user2 = context.Users.Skip(1).First();
+
+        // Create a group with only user1
+        var group = new Group
+        {
+            Name = "Test Group",
+            CreatedById = user1.Id,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+        context.Groups.Add(group);
+        await context.SaveChangesAsync();
+
+        context.GroupMembers.Add(
+            new GroupMember { GroupId = group.Id, UserId = user1.Id, Role = GroupRole.Creator, JoinedAt = DateTime.UtcNow }
+        );
+        await context.SaveChangesAsync();
+
+        // Act & Assert - user1 tries to view user2 who is not in the group
+        await Assert.ThrowsAsync<KeyNotFoundException>(
+            async () => await service.GetMemberWatchesInGroupAsync(group.Id, user2.Id, user1.Id)
+        );
+    }
+
+    [Fact]
+    public async Task GetMemberWatchesInGroupAsync_PrivacyFiltersApplied_HidesRatingsAndNotes()
+    {
+        // Arrange
+        using var context = TestDbContextFactory.CreateInMemoryDbContext();
+        var logger = Substitute.For<ILogger<GroupFeedService>>();
+        var service = new GroupFeedService(context, logger);
+
+        var user1 = context.Users.First();
+        var user2 = context.Users.Skip(1).First();
+
+        // User2 shares watches but NOT ratings and notes
+        user2.ShareWatches = true;
+        user2.ShareRatings = false;
+        user2.ShareNotes = false;
+        await context.SaveChangesAsync();
+
+        // Create a group
+        var group = new Group
+        {
+            Name = "Test Group",
+            CreatedById = user1.Id,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+        context.Groups.Add(group);
+        await context.SaveChangesAsync();
+
+        context.GroupMembers.AddRange(
+            new GroupMember { GroupId = group.Id, UserId = user1.Id, Role = GroupRole.Creator, JoinedAt = DateTime.UtcNow },
+            new GroupMember { GroupId = group.Id, UserId = user2.Id, Role = GroupRole.Member, JoinedAt = DateTime.UtcNow }
+        );
+        await context.SaveChangesAsync();
+
+        // Create movie
+        var movie = new Movie { TmdbId = 1001, Title = "Movie 1", Year = 2024, CreatedAt = DateTime.UtcNow };
+        context.Movies.Add(movie);
+        await context.SaveChangesAsync();
+
+        // Create watch for user2
+        var watch = new Watch
+        {
+            UserId = user2.Id,
+            MovieId = movie.Id,
+            WatchedDate = DateTime.UtcNow,
+            Rating = 9,
+            Notes = "Secret notes",
+            CreatedAt = DateTime.UtcNow
+        };
+        context.Watches.Add(watch);
+        await context.SaveChangesAsync();
+
+        // Share movie with group
+        context.MovieGroups.Add(
+            new MovieGroup { MovieId = movie.Id, GroupId = group.Id, SharedAt = DateTime.UtcNow }
+        );
+        await context.SaveChangesAsync();
+
+        // Act
+        var result = await service.GetMemberWatchesInGroupAsync(group.Id, user2.Id, user1.Id);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Items.Should().HaveCount(1);
+        result.Items.First().Rating.Should().BeNull(); // Rating hidden
+        result.Items.First().Notes.Should().BeNull(); // Notes hidden
+    }
+
+    [Fact]
+    public async Task GetMemberWatchesInGroupAsync_ViewingOwnProfile_ShowsAllContent()
+    {
+        // Arrange
+        using var context = TestDbContextFactory.CreateInMemoryDbContext();
+        var logger = Substitute.For<ILogger<GroupFeedService>>();
+        var service = new GroupFeedService(context, logger);
+
+        var user1 = context.Users.First();
+
+        // User1 has privacy disabled
+        user1.ShareWatches = false;
+        user1.ShareRatings = false;
+        user1.ShareNotes = false;
+        await context.SaveChangesAsync();
+
+        // Create a group
+        var group = new Group
+        {
+            Name = "Test Group",
+            CreatedById = user1.Id,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+        context.Groups.Add(group);
+        await context.SaveChangesAsync();
+
+        context.GroupMembers.Add(
+            new GroupMember { GroupId = group.Id, UserId = user1.Id, Role = GroupRole.Creator, JoinedAt = DateTime.UtcNow }
+        );
+        await context.SaveChangesAsync();
+
+        // Create movie
+        var movie = new Movie { TmdbId = 1001, Title = "Movie 1", Year = 2024, CreatedAt = DateTime.UtcNow };
+        context.Movies.Add(movie);
+        await context.SaveChangesAsync();
+
+        // Create watch for user1
+        var watch = new Watch
+        {
+            UserId = user1.Id,
+            MovieId = movie.Id,
+            WatchedDate = DateTime.UtcNow,
+            Rating = 9,
+            Notes = "My notes",
+            CreatedAt = DateTime.UtcNow
+        };
+        context.Watches.Add(watch);
+        await context.SaveChangesAsync();
+
+        // Share movie with group
+        context.MovieGroups.Add(
+            new MovieGroup { MovieId = movie.Id, GroupId = group.Id, SharedAt = DateTime.UtcNow }
+        );
+        await context.SaveChangesAsync();
+
+        // Act - user1 views their own profile
+        var result = await service.GetMemberWatchesInGroupAsync(group.Id, user1.Id, user1.Id);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Items.Should().HaveCount(1);
+        result.Items.First().Rating.Should().Be(9); // Rating visible
+        result.Items.First().Notes.Should().Be("My notes"); // Notes visible
+    }
+
+    [Fact]
+    public async Task GetMemberWatchesInGroupAsync_WithPagination_ReturnsCorrectPage()
+    {
+        // Arrange
+        using var context = TestDbContextFactory.CreateInMemoryDbContext();
+        var logger = Substitute.For<ILogger<GroupFeedService>>();
+        var service = new GroupFeedService(context, logger);
+
+        var user1 = context.Users.First();
+        var user2 = context.Users.Skip(1).First();
+
+        user2.ShareWatches = true;
+        await context.SaveChangesAsync();
+
+        // Create a group
+        var group = new Group
+        {
+            Name = "Test Group",
+            CreatedById = user1.Id,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+        context.Groups.Add(group);
+        await context.SaveChangesAsync();
+
+        context.GroupMembers.AddRange(
+            new GroupMember { GroupId = group.Id, UserId = user1.Id, Role = GroupRole.Creator, JoinedAt = DateTime.UtcNow },
+            new GroupMember { GroupId = group.Id, UserId = user2.Id, Role = GroupRole.Member, JoinedAt = DateTime.UtcNow }
+        );
+        await context.SaveChangesAsync();
+
+        // Create 25 movies and watches
+        var movies = Enumerable.Range(1, 25).Select(i => new Movie
+        {
+            TmdbId = 2000 + i,
+            Title = $"Movie {i}",
+            Year = 2024,
+            CreatedAt = DateTime.UtcNow
+        }).ToList();
+        context.Movies.AddRange(movies);
+        await context.SaveChangesAsync();
+
+        var watches = movies.Select((m, i) => new Watch
+        {
+            UserId = user2.Id,
+            MovieId = m.Id,
+            WatchedDate = DateTime.UtcNow.AddDays(-i), // Most recent first
+            Rating = 8,
+            CreatedAt = DateTime.UtcNow
+        }).ToList();
+        context.Watches.AddRange(watches);
+        await context.SaveChangesAsync();
+
+        // Share all movies with group
+        var movieGroups = movies.Select(m => new MovieGroup
+        {
+            MovieId = m.Id,
+            GroupId = group.Id,
+            SharedAt = DateTime.UtcNow
+        }).ToList();
+        context.MovieGroups.AddRange(movieGroups);
+        await context.SaveChangesAsync();
+
+        // Act - Get first page
+        var result = await service.GetMemberWatchesInGroupAsync(group.Id, user2.Id, user1.Id, skip: 0, take: 10);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Items.Should().HaveCount(10);
+        result.HasMore.Should().BeTrue();
+        result.TotalCount.Should().Be(25);
+        result.Items.First().MovieTitle.Should().Be("Movie 1"); // Most recent
+
+        // Act - Get second page
+        var result2 = await service.GetMemberWatchesInGroupAsync(group.Id, user2.Id, user1.Id, skip: result.NextSkip, take: 10);
+
+        // Assert
+        result2.Items.Should().HaveCount(10);
+        result2.HasMore.Should().BeTrue();
+        result2.Items.First().MovieTitle.Should().Be("Movie 11");
+    }
+
+    [Fact]
+    public async Task GetMemberWatchesInGroupAsync_DeactivatedUser_ReturnsWithFlag()
+    {
+        // Arrange
+        using var context = TestDbContextFactory.CreateInMemoryDbContext();
+        var logger = Substitute.For<ILogger<GroupFeedService>>();
+        var service = new GroupFeedService(context, logger);
+
+        var user1 = context.Users.First();
+        var user2 = context.Users.Skip(1).First();
+
+        // Deactivate user2
+        user2.IsDeactivated = true;
+        user2.ShareWatches = true;
+        await context.SaveChangesAsync();
+
+        // Create a group
+        var group = new Group
+        {
+            Name = "Test Group",
+            CreatedById = user1.Id,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+        context.Groups.Add(group);
+        await context.SaveChangesAsync();
+
+        context.GroupMembers.AddRange(
+            new GroupMember { GroupId = group.Id, UserId = user1.Id, Role = GroupRole.Creator, JoinedAt = DateTime.UtcNow },
+            new GroupMember { GroupId = group.Id, UserId = user2.Id, Role = GroupRole.Member, JoinedAt = DateTime.UtcNow }
+        );
+        await context.SaveChangesAsync();
+
+        // Create movie
+        var movie = new Movie { TmdbId = 1001, Title = "Movie 1", Year = 2024, CreatedAt = DateTime.UtcNow };
+        context.Movies.Add(movie);
+        await context.SaveChangesAsync();
+
+        // Create watch
+        var watch = new Watch
+        {
+            UserId = user2.Id,
+            MovieId = movie.Id,
+            WatchedDate = DateTime.UtcNow,
+            Rating = 9,
+            CreatedAt = DateTime.UtcNow
+        };
+        context.Watches.Add(watch);
+        await context.SaveChangesAsync();
+
+        // Share movie with group
+        context.MovieGroups.Add(
+            new MovieGroup { MovieId = movie.Id, GroupId = group.Id, SharedAt = DateTime.UtcNow }
+        );
+        await context.SaveChangesAsync();
+
+        // Act
+        var result = await service.GetMemberWatchesInGroupAsync(group.Id, user2.Id, user1.Id);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.IsTargetDeactivated.Should().BeTrue();
+        result.Items.Should().HaveCount(1); // Still shows watches
+    }
 }

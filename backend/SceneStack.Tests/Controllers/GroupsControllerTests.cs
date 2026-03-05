@@ -931,4 +931,216 @@ public class GroupsControllerTests
         recommendation.Reason.Should().Contain("written by Quentin Tarantino");
         recommendation.Reason.Should().Contain("directed by Quentin Tarantino");
     }
+
+    [Fact]
+    public async Task GetMemberWatchesInGroup_ValidRequest_ReturnsOkWithWatches()
+    {
+        // Arrange
+        var groupService = Substitute.For<IGroupService>();
+        var feedService = Substitute.For<IGroupFeedService>();
+        var recommendationsService = Substitute.For<IGroupRecommendationsService>();
+        var logger = Substitute.For<ILogger<GroupsController>>();
+        var controller = new GroupsController(groupService, feedService, recommendationsService, logger);
+
+        var user = new ClaimsPrincipal(new ClaimsIdentity(new[]
+        {
+            new Claim(ClaimTypes.NameIdentifier, "1")
+        }));
+
+        controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext { User = user }
+        };
+
+        var response = new PaginatedMemberWatchesResponse
+        {
+            GroupId = 1,
+            GroupName = "Test Group",
+            TargetUserId = 2,
+            TargetUsername = "targetuser",
+            IsTargetDeactivated = false,
+            TargetRole = "Member",
+            TargetJoinedAt = DateTime.UtcNow.AddDays(-30),
+            Items = new List<GroupFeedItemResponse>
+            {
+                new GroupFeedItemResponse
+                {
+                    Id = 1,
+                    UserId = 2,
+                    Username = "targetuser",
+                    MovieId = 1,
+                    TmdbId = 550,
+                    MovieTitle = "Fight Club",
+                    WatchedDate = DateTime.UtcNow,
+                    Rating = 9
+                }
+            },
+            Skip = 0,
+            Take = 20,
+            HasMore = false,
+            TotalCount = 1,
+            NextSkip = 1
+        };
+
+        feedService.GetMemberWatchesInGroupAsync(1, 2, 1, 0, 20).Returns(response);
+
+        // Act
+        var result = await controller.GetMemberWatchesInGroup(1, 2, skip: 0, take: 20);
+
+        // Assert
+        var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject;
+        var returnedResponse = okResult.Value.Should().BeOfType<PaginatedMemberWatchesResponse>().Subject;
+        returnedResponse.GroupId.Should().Be(1);
+        returnedResponse.TargetUserId.Should().Be(2);
+        returnedResponse.Items.Should().HaveCount(1);
+        returnedResponse.Items.First().MovieTitle.Should().Be("Fight Club");
+    }
+
+    [Fact]
+    public async Task GetMemberWatchesInGroup_UserNotMember_ReturnsUnauthorized()
+    {
+        // Arrange
+        var groupService = Substitute.For<IGroupService>();
+        var feedService = Substitute.For<IGroupFeedService>();
+        var recommendationsService = Substitute.For<IGroupRecommendationsService>();
+        var logger = Substitute.For<ILogger<GroupsController>>();
+        var controller = new GroupsController(groupService, feedService, recommendationsService, logger);
+
+        var user = new ClaimsPrincipal(new ClaimsIdentity(new[]
+        {
+            new Claim(ClaimTypes.NameIdentifier, "1")
+        }));
+
+        controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext { User = user }
+        };
+
+        feedService.GetMemberWatchesInGroupAsync(1, 2, 1, 0, 20)
+            .Returns<PaginatedMemberWatchesResponse>(x => throw new UnauthorizedAccessException("You must be a member of this group to view member profiles"));
+
+        // Act
+        var result = await controller.GetMemberWatchesInGroup(1, 2, skip: 0, take: 20);
+
+        // Assert
+        var unauthorizedResult = result.Result.Should().BeOfType<UnauthorizedObjectResult>().Subject;
+        unauthorizedResult.Value.Should().Be("You must be a member of this group to view member profiles");
+    }
+
+    [Fact]
+    public async Task GetMemberWatchesInGroup_TargetUserNotMember_ReturnsNotFound()
+    {
+        // Arrange
+        var groupService = Substitute.For<IGroupService>();
+        var feedService = Substitute.For<IGroupFeedService>();
+        var recommendationsService = Substitute.For<IGroupRecommendationsService>();
+        var logger = Substitute.For<ILogger<GroupsController>>();
+        var controller = new GroupsController(groupService, feedService, recommendationsService, logger);
+
+        var user = new ClaimsPrincipal(new ClaimsIdentity(new[]
+        {
+            new Claim(ClaimTypes.NameIdentifier, "1")
+        }));
+
+        controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext { User = user }
+        };
+
+        feedService.GetMemberWatchesInGroupAsync(1, 2, 1, 0, 20)
+            .Returns<PaginatedMemberWatchesResponse>(x => throw new KeyNotFoundException("User is not a member of this group"));
+
+        // Act
+        var result = await controller.GetMemberWatchesInGroup(1, 2, skip: 0, take: 20);
+
+        // Assert
+        var notFoundResult = result.Result.Should().BeOfType<NotFoundObjectResult>().Subject;
+        notFoundResult.Value.Should().Be("User is not a member of this group");
+    }
+
+    [Fact]
+    public async Task GetMemberWatchesInGroup_ServiceThrowsException_Returns500()
+    {
+        // Arrange
+        var groupService = Substitute.For<IGroupService>();
+        var feedService = Substitute.For<IGroupFeedService>();
+        var recommendationsService = Substitute.For<IGroupRecommendationsService>();
+        var logger = Substitute.For<ILogger<GroupsController>>();
+        var controller = new GroupsController(groupService, feedService, recommendationsService, logger);
+
+        var user = new ClaimsPrincipal(new ClaimsIdentity(new[]
+        {
+            new Claim(ClaimTypes.NameIdentifier, "1")
+        }));
+
+        controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext { User = user }
+        };
+
+        feedService.GetMemberWatchesInGroupAsync(1, 2, 1, 0, 20)
+            .Returns<PaginatedMemberWatchesResponse>(x => throw new Exception("Database error"));
+
+        // Act
+        var result = await controller.GetMemberWatchesInGroup(1, 2, skip: 0, take: 20);
+
+        // Assert
+        var statusCodeResult = result.Result.Should().BeOfType<ObjectResult>().Subject;
+        statusCodeResult.StatusCode.Should().Be(500);
+        statusCodeResult.Value.Should().Be("Error getting member watches: Database error");
+    }
+
+    [Fact]
+    public async Task GetMemberWatchesInGroup_WithPagination_ReturnsCorrectPage()
+    {
+        // Arrange
+        var groupService = Substitute.For<IGroupService>();
+        var feedService = Substitute.For<IGroupFeedService>();
+        var recommendationsService = Substitute.For<IGroupRecommendationsService>();
+        var logger = Substitute.For<ILogger<GroupsController>>();
+        var controller = new GroupsController(groupService, feedService, recommendationsService, logger);
+
+        var user = new ClaimsPrincipal(new ClaimsIdentity(new[]
+        {
+            new Claim(ClaimTypes.NameIdentifier, "1")
+        }));
+
+        controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext { User = user }
+        };
+
+        var response = new PaginatedMemberWatchesResponse
+        {
+            GroupId = 1,
+            GroupName = "Test Group",
+            TargetUserId = 2,
+            TargetUsername = "targetuser",
+            IsTargetDeactivated = false,
+            TargetRole = "Member",
+            TargetJoinedAt = DateTime.UtcNow.AddDays(-30),
+            Items = new List<GroupFeedItemResponse>
+            {
+                new GroupFeedItemResponse { Id = 11, UserId = 2, Username = "targetuser", MovieId = 11, TmdbId = 511, MovieTitle = "Movie 11", WatchedDate = DateTime.UtcNow },
+                new GroupFeedItemResponse { Id = 12, UserId = 2, Username = "targetuser", MovieId = 12, TmdbId = 512, MovieTitle = "Movie 12", WatchedDate = DateTime.UtcNow }
+            },
+            Skip = 10,
+            Take = 10,
+            HasMore = true,
+            TotalCount = 25,
+            NextSkip = 20
+        };
+
+        feedService.GetMemberWatchesInGroupAsync(1, 2, 1, 10, 10).Returns(response);
+
+        // Act
+        var result = await controller.GetMemberWatchesInGroup(1, 2, skip: 10, take: 10);
+
+        // Assert
+        var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject;
+        var returnedResponse = okResult.Value.Should().BeOfType<PaginatedMemberWatchesResponse>().Subject;
+        returnedResponse.Items.Should().HaveCount(2);
+        returnedResponse.HasMore.Should().BeTrue();
+        returnedResponse.NextSkip.Should().Be(20);
+    }
 }

@@ -174,3 +174,20 @@ export interface GroupStats {
     memberStats: GroupMemberStats[];
     sharedMovies: SharedMovieStats[];
 }
+
+// Matches PaginatedMemberWatchesResponse from backend
+export interface PaginatedMemberWatchesResponse {
+    groupId: number;
+    groupName: string;
+    targetUserId: number;
+    targetUsername: string;
+    isTargetDeactivated: boolean;
+    targetRole: string;
+    targetJoinedAt: string; // ISO date string
+    items: GroupFeedItem[];
+    skip: number;
+    take: number;
+    hasMore: boolean;
+    totalCount: number;
+    nextSkip: number;
+}

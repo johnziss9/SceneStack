@@ -27,6 +27,7 @@ export type {
     UpdateMemberRoleRequest,
     GroupFeedItem,
     PaginatedGroupFeedResponse,
+    PaginatedMemberWatchesResponse,
     GroupRecommendation,
     GroupRecommendationStats,
     PaginatedRecommendationsResponse,

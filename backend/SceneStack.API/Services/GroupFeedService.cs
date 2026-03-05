@@ -333,6 +333,171 @@ public class GroupFeedService : IGroupFeedService
         };
     }
 
+    public async Task<PaginatedMemberWatchesResponse> GetMemberWatchesInGroupAsync(
+        int groupId,
+        int targetUserId,
+        int requestingUserId,
+        int skip = 0,
+        int take = 20)
+    {
+        // Verify requesting user is a member of the group
+        var isRequestingUserMember = await _context.GroupMembers
+            .AnyAsync(gm => gm.GroupId == groupId && gm.UserId == requestingUserId);
+
+        if (!isRequestingUserMember)
+        {
+            _logger.LogWarning("User {UserId} attempted to access member profile in group {GroupId} without membership",
+                requestingUserId, groupId);
+            throw new UnauthorizedAccessException("You must be a member of this group to view member profiles");
+        }
+
+        // Verify target user is a member of the group and get their info
+        var targetMember = await _context.GroupMembers
+            .Include(gm => gm.User)
+            .Include(gm => gm.Group)
+            .FirstOrDefaultAsync(gm => gm.GroupId == groupId && gm.UserId == targetUserId);
+
+        if (targetMember == null)
+        {
+            _logger.LogWarning("Target user {TargetUserId} is not a member of group {GroupId}",
+                targetUserId, groupId);
+            throw new KeyNotFoundException("User is not a member of this group");
+        }
+
+        // Get total count first (for display purposes)
+        var totalCount = await _context.MovieGroups
+            .Where(mg => mg.GroupId == groupId)
+            .SelectMany(mg => _context.Watches
+                .Where(w => w.MovieId == mg.MovieId
+                    && !w.Movie.IsPrivate
+                    && w.UserId == targetUserId))
+            .Include(w => w.User)
+            .CountAsync(w => w.UserId == requestingUserId || w.User.ShareWatches);
+
+        // Fetch items with tracking to know where we left off
+        var allItems = new List<GroupFeedItemResponse>();
+        var currentPosition = skip;
+        var foundEnough = false;
+
+        // Fetch in batches until we have enough filtered items
+        var batchSize = Math.Min(take * 5, 200);
+        var maxAttempts = 3; // Prevent infinite loops
+        var attempts = 0;
+
+        while (allItems.Count < take && attempts < maxAttempts)
+        {
+            attempts++;
+
+            var watches = await _context.MovieGroups
+                .Where(mg => mg.GroupId == groupId)
+                .SelectMany(mg => _context.Watches
+                    .Where(w => w.MovieId == mg.MovieId
+                        && !w.Movie.IsPrivate
+                        && w.UserId == targetUserId))
+                .Include(w => w.Movie)
+                .Include(w => w.User)
+                .OrderByDescending(w => w.WatchedDate)
+                .ThenBy(w => w.Id) // Secondary sort for consistency
+                .Skip(currentPosition)
+                .Take(batchSize)
+                .ToListAsync();
+
+            if (!watches.Any())
+            {
+                // No more items in database
+                foundEnough = true;
+                break;
+            }
+
+            // Apply privacy filters and track each item
+            var processedCount = 0;
+            foreach (var watch in watches)
+            {
+                processedCount++;
+
+                // Check if this item passes privacy filter
+                if (watch.UserId == requestingUserId || watch.User.ShareWatches)
+                {
+                    // Apply field-level privacy
+                    var rating = watch.User.ShareRatings || watch.UserId == requestingUserId ? watch.Rating : null;
+                    var notes = watch.User.ShareNotes || watch.UserId == requestingUserId ? watch.Notes : null;
+
+                    allItems.Add(new GroupFeedItemResponse
+                    {
+                        Id = watch.Id,
+                        UserId = watch.UserId,
+                        Username = watch.User.Username,
+                        IsDeactivated = watch.User.IsDeactivated,
+                        MovieId = watch.MovieId,
+                        TmdbId = watch.Movie.TmdbId,
+                        MovieTitle = watch.Movie.Title,
+                        PosterPath = watch.Movie.PosterPath,
+                        WatchedDate = watch.WatchedDate,
+                        Rating = rating,
+                        Notes = notes,
+                        WatchLocation = watch.WatchLocation,
+                        WatchedWith = watch.WatchedWith,
+                        IsRewatch = watch.IsRewatch
+                    });
+
+                    if (allItems.Count >= take)
+                    {
+                        // We have enough items, update position to after this item
+                        currentPosition += processedCount;
+                        foundEnough = true;
+                        break;
+                    }
+                }
+            }
+
+            // If we didn't find enough items but processed all from this batch
+            if (!foundEnough)
+            {
+                currentPosition += processedCount;
+
+                // If we got fewer items than batch size, we've reached the end
+                if (watches.Count < batchSize)
+                {
+                    foundEnough = true;
+                    break;
+                }
+            }
+            else
+            {
+                break;
+            }
+        }
+
+        // Check if there are more items available
+        var hasMore = await _context.MovieGroups
+            .Where(mg => mg.GroupId == groupId)
+            .SelectMany(mg => _context.Watches
+                .Where(w => w.MovieId == mg.MovieId
+                    && !w.Movie.IsPrivate
+                    && w.UserId == targetUserId))
+            .OrderByDescending(w => w.WatchedDate)
+            .ThenBy(w => w.Id)
+            .Skip(currentPosition)
+            .AnyAsync();
+
+        return new PaginatedMemberWatchesResponse
+        {
+            GroupId = groupId,
+            GroupName = targetMember.Group.Name,
+            TargetUserId = targetUserId,
+            TargetUsername = targetMember.User.Username,
+            IsTargetDeactivated = targetMember.User.IsDeactivated,
+            TargetRole = targetMember.Role.ToString(),
+            TargetJoinedAt = targetMember.JoinedAt,
+            Items = allItems,
+            Skip = skip,
+            Take = take,
+            HasMore = hasMore,
+            TotalCount = totalCount,
+            NextSkip = currentPosition
+        };
+    }
+
     private List<Watch> ApplyPrivacyFilters(List<Watch> watches, int requestingUserId)
     {
         var filteredWatches = new List<Watch>();

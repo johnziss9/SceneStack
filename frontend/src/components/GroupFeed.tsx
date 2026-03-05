@@ -162,9 +162,12 @@ export function GroupFeed({ groupId }: GroupFeedProps) {
                                     {/* User and Movie */}
                                     <div>
                                         <div className="flex items-center gap-2 flex-wrap">
-                                            <span className="font-semibold text-primary">
+                                            <Link
+                                                href={`/groups/${groupId}/members/${item.userId}`}
+                                                className="font-semibold text-primary hover:underline cursor-pointer transition-colors"
+                                            >
                                                 {item.username}
-                                            </span>
+                                            </Link>
                                             {item.isDeactivated && (
                                                 <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded">
                                                     Inactive

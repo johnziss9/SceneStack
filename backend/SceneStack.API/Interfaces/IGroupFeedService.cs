@@ -9,4 +9,5 @@ public interface IGroupFeedService
     Task<PaginatedGroupFeedResponse> GetPaginatedGroupFeedAsync(int groupId, int requestingUserId, int skip = 0, int take = 20);
     Task<List<Watch>> GetCombinedFeedAsync(int userId, int skip = 0, int take = 20);
     Task<GroupFeedStatsResponse> GetFeedWithStatsAsync(int groupId, int requestingUserId, int skip = 0, int take = 20);
+    Task<PaginatedMemberWatchesResponse> GetMemberWatchesInGroupAsync(int groupId, int targetUserId, int requestingUserId, int skip = 0, int take = 20);
 }

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Group, GroupMember, GroupRole, Invitation } from "@/types";
 import { groupApi, invitationApi } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -406,7 +407,12 @@ export function GroupDetail({ groupId }: GroupDetailProps) {
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center gap-2 flex-wrap">
-                                            <span className="font-semibold text-base">{member.username || 'Unknown'}</span>
+                                            <Link
+                                                href={`/groups/${group.id}/members/${member.userId}`}
+                                                className="font-semibold text-base hover:text-primary hover:underline transition-colors cursor-pointer"
+                                            >
+                                                {member.username || 'Unknown'}
+                                            </Link>
                                             {getRoleBadge(member.role)}
                                             {member.isDeactivated && (
                                                 <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded">

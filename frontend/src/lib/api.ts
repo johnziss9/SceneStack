@@ -29,6 +29,7 @@ import type {
     GroupMember,
     GroupFeedItem,
     PaginatedGroupFeedResponse,
+    PaginatedMemberWatchesResponse,
     GroupRecommendationStats,
     PaginatedRecommendationsResponse,
     RecommendedMovie,
@@ -261,6 +262,12 @@ export const groupApi = {
     // GET: api/groups/{id}/stats
     getGroupStats: (groupId: number) =>
         api.get<GroupStats>(`/api/groups/${groupId}/stats`),
+
+    // GET: api/groups/{id}/members/{userId}/watches?skip={skip}&take={take}
+    getMemberWatches: (groupId: number, userId: number, skip: number = 0, take: number = 20) =>
+        api.get<PaginatedMemberWatchesResponse>(
+            `/api/groups/${groupId}/members/${userId}/watches?skip=${skip}&take=${take}`
+        ),
 };
 
 // Invitation endpoints
