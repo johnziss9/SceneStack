@@ -87,7 +87,7 @@ export const MovieCard = memo(function MovieCard({ movie, onAddToWatched, search
     };
 
     return (
-        <Card className="overflow-hidden hover:ring-2 hover:ring-primary transition-all flex flex-col h-full">
+        <Card className="overflow-hidden hover:ring-2 hover:ring-primary transition-all flex flex-col h-full cursor-pointer">
             <Link href={movieUrl} tabIndex={-1}>
                 <div className="aspect-[2/3] relative bg-muted">
                     {posterUrl ? (
@@ -111,7 +111,7 @@ export const MovieCard = memo(function MovieCard({ movie, onAddToWatched, search
                             disabled={isSaving}
                             aria-label={onWatchlist ? 'Remove from wishlist' : 'Save to wishlist'}
                             title={onWatchlist ? 'Remove from wishlist' : 'Save to wishlist'}
-                            className="absolute top-2 right-2 w-8 h-8 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center shadow hover:bg-background transition-colors"
+                            className="absolute top-2 right-2 w-8 h-8 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center shadow hover:bg-background transition-colors cursor-pointer"
                         >
                             {isSaving ? (
                                 <Loader2 className="h-4 w-4 animate-spin text-primary" />

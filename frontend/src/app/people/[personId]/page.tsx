@@ -138,7 +138,7 @@ export default function PersonDetailPage({ params }: PersonDetailPageProps) {
                     <div className="space-y-6">
                         <div className="mb-4">
                             <Link href={backUrl}>
-                                <Button variant="outline">
+                                <Button variant="outline" className="!border-[0.5px] hover:!border-orange-500 hover:scale-[1.02] transition-all">
                                     <ArrowLeft className="h-4 w-4 mr-2" />
                                     Back to Movie
                                 </Button>
@@ -160,7 +160,7 @@ export default function PersonDetailPage({ params }: PersonDetailPageProps) {
                 <div className="space-y-6">
                     <div className="mb-4">
                         <Link href={backUrl}>
-                            <Button variant="outline">
+                            <Button variant="outline" className="!border-[0.5px] hover:!border-orange-500 hover:scale-[1.02] transition-all">
                                 <ArrowLeft className="h-4 w-4 mr-2" />
                                 Back to Movie
                             </Button>
@@ -172,7 +172,7 @@ export default function PersonDetailPage({ params }: PersonDetailPageProps) {
                             <div className="flex items-center justify-between">
                                 <div>
                                     <h1 className="text-3xl font-bold">
-                                        {personName || 'Filmography'}
+                                        {personName ? `${personName} - Filmography` : 'Filmography'}
                                     </h1>
                                     <p className="text-sm text-muted-foreground mt-1">
                                         Showing {Math.min(displayCount, movies.length)} of {movies.length} movies, sorted by popularity
@@ -194,6 +194,7 @@ export default function PersonDetailPage({ params }: PersonDetailPageProps) {
                                         onClick={handleLoadMore}
                                         size="lg"
                                         variant="outline"
+                                        className="!border-[0.5px] hover:!border-orange-500 hover:scale-[1.02] transition-all"
                                     >
                                         Load More ({movies.length - displayCount} remaining)
                                     </Button>

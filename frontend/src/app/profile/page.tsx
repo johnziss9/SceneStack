@@ -593,7 +593,7 @@ export default function ProfilePage() {
                     <Button
                         variant="outline"
                         onClick={handleLogoutClick}
-                        className="flex-shrink-0 mr-4"
+                        className="flex-shrink-0 mr-4 !border-[0.5px] hover:!border-orange-500 hover:scale-[1.02] transition-all"
                     >
                         <LogOut className="h-4 w-4 mr-2" />
                         Sign Out
@@ -631,7 +631,7 @@ export default function ProfilePage() {
                                 <CardTitle>Account Information</CardTitle>
                             </div>
                             {!isEditMode && (
-                                <Button variant="outline" size="sm" onClick={handleEditClick}>
+                                <Button variant="outline" size="sm" onClick={handleEditClick} className="!border-[0.5px] hover:!border-orange-500 hover:scale-[1.02] transition-all">
                                     <Edit className="h-4 w-4 mr-2" />
                                     Edit Profile
                                 </Button>
@@ -1133,7 +1133,7 @@ export default function ProfilePage() {
                                         variant="outline"
                                         onClick={() => handleExportData('csv')}
                                         disabled={isExportingCsv || isExportingJson}
-                                        className="flex-1"
+                                        className="flex-1 !border-[0.5px] hover:!border-orange-500 hover:scale-[1.02] transition-all"
                                     >
                                         <FileSpreadsheet className="h-4 w-4 mr-2" />
                                         {isExportingCsv ? 'Exporting...' : 'Download CSV (ZIP)'}
@@ -1142,7 +1142,7 @@ export default function ProfilePage() {
                                         variant="outline"
                                         onClick={() => handleExportData('json')}
                                         disabled={isExportingCsv || isExportingJson}
-                                        className="flex-1"
+                                        className="flex-1 !border-[0.5px] hover:!border-orange-500 hover:scale-[1.02] transition-all"
                                     >
                                         <FileJson className="h-4 w-4 mr-2" />
                                         {isExportingJson ? 'Exporting...' : 'Download JSON'}
@@ -1171,7 +1171,7 @@ export default function ProfilePage() {
                                     <Button
                                         variant="outline"
                                         onClick={() => setShowDeactivateDialog(true)}
-                                        className="flex-shrink-0 w-44"
+                                        className="flex-shrink-0 w-44 !border-[0.5px] hover:!border-orange-500 hover:scale-[1.02] transition-all"
                                     >
                                         Deactivate Account
                                     </Button>

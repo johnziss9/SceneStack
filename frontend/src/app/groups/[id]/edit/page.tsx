@@ -155,9 +155,9 @@ export default function EditGroupPage({ params }: EditGroupPageProps) {
             <div className="max-w-2xl mx-auto">
                 {/* Back Button */}
                 <Button
-                    variant="ghost"
+                    variant="outline"
                     onClick={() => router.push(`/groups/${groupId}`)}
-                    className="mb-6"
+                    className="mb-6 !border-[0.5px] hover:!border-orange-500 hover:scale-[1.02] transition-all"
                 >
                     <ArrowLeft className="mr-2 h-4 w-4" />
                     Back to Group
@@ -218,7 +218,7 @@ export default function EditGroupPage({ params }: EditGroupPageProps) {
                                     variant="outline"
                                     onClick={() => router.push(`/groups/${groupId}`)}
                                     disabled={isSubmitting}
-                                    className="flex-1"
+                                    className="flex-1 !border-[0.5px] hover:!border-orange-500 hover:scale-[1.02] transition-all"
                                 >
                                     Cancel
                                 </Button>

@@ -144,7 +144,7 @@ export default function MemberProfilePage({ params }: MemberProfilePageProps) {
                             {error || "This member's profile could not be loaded."}
                         </p>
                     </div>
-                    <Button onClick={handleBackToGroup}>
+                    <Button variant="outline" onClick={handleBackToGroup} className="!border-[0.5px] hover:!border-orange-500 hover:scale-[1.02] transition-all">
                         <ArrowLeft className="mr-2" size={16} />
                         Back to Group
                     </Button>
@@ -163,7 +163,7 @@ export default function MemberProfilePage({ params }: MemberProfilePageProps) {
         <div className="container mx-auto px-4 py-8 max-w-5xl">
             {/* Back Button */}
             <div className="mb-6">
-                <Button variant="ghost" onClick={handleBackToGroup} className="gap-2">
+                <Button variant="outline" onClick={handleBackToGroup} className="gap-2 !border-[0.5px] hover:!border-orange-500 hover:scale-[1.02] transition-all">
                     <ArrowLeft size={16} />
                     Back to {profileData.groupName}
                 </Button>
@@ -351,6 +351,7 @@ export default function MemberProfilePage({ params }: MemberProfilePageProps) {
                             variant="outline"
                             onClick={handleLoadMore}
                             disabled={isLoadingMore}
+                            className="!border-[0.5px] hover:!border-orange-500 hover:scale-[1.02] transition-all"
                         >
                             {isLoadingMore ? "Loading..." : `Load More (${profileData.totalCount - feedItems.length} remaining)`}
                         </Button>

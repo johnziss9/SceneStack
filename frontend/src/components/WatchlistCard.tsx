@@ -203,7 +203,7 @@ export function WatchlistCard({ item, onRemoved, isDragDisabled = false }: Watch
                                 <Button
                                     size="sm"
                                     variant="outline"
-                                    className="gap-1.5 text-xs h-8"
+                                    className="gap-1.5 text-xs h-8 !border-[0.5px] hover:!border-orange-500 hover:scale-[1.02] transition-all"
                                     onClick={handleMarkAsWatched}
                                 >
                                     <CheckCircle className="h-3.5 w-3.5" />
@@ -212,7 +212,7 @@ export function WatchlistCard({ item, onRemoved, isDragDisabled = false }: Watch
                                 <Button
                                     size="sm"
                                     variant="ghost"
-                                    className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                                    className="h-8 w-8 p-0 text-muted-foreground hover:bg-muted hover:scale-110 transition-all"
                                     onClick={handleRemoveClick}
                                     disabled={isRemoving}
                                     aria-label="Remove from watchlist"

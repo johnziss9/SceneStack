@@ -118,12 +118,9 @@ export function GroupList() {
         return (
             <div className="flex flex-col items-center justify-center py-12 space-y-4">
                 <p className="text-destructive">{error}</p>
-                <button
-                    onClick={fetchGroups}
-                    className="px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90"
-                >
+                <Button onClick={fetchGroups}>
                     Try Again
-                </button>
+                </Button>
             </div>
         );
     }
@@ -145,13 +142,10 @@ export function GroupList() {
                             Create a group to share your movie watching experience with friends and family
                         </p>
                     </div>
-                    <button
-                        onClick={handleCreateGroupClick}
-                        className="px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 inline-flex items-center gap-2 font-medium transition-all hover:shadow-lg hover:scale-105"
-                    >
+                    <Button onClick={handleCreateGroupClick}>
                         <Plus size={20} />
                         Create Your First Group
-                    </button>
+                    </Button>
                 </div>
 
                 {/* Upgrade Modal */}
@@ -187,13 +181,10 @@ export function GroupList() {
                 )}
 
                 {/* Create Group Button */}
-                <button
-                    onClick={handleCreateGroupClick}
-                    className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 inline-flex items-center gap-2 font-medium transition-all hover:shadow-lg hover:scale-105 ml-auto"
-                >
+                <Button onClick={handleCreateGroupClick} className="ml-auto">
                     <Plus size={20} />
                     Create Group
-                </button>
+                </Button>
             </div>
 
             {/* Warning Banner when at 1/2 groups (not yet at limit) */}
@@ -248,7 +239,7 @@ export function GroupList() {
             {groups.length > 1 && (
                 <div className="flex justify-start">
                     <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortBy)}>
-                        <SelectTrigger className="gap-2 w-full sm:w-[180px]">
+                        <SelectTrigger className="gap-2 w-full sm:w-[180px] !border-[0.5px] hover:!border-orange-500 hover:scale-[1.02] transition-all">
                             <ArrowUpDown className="h-4 w-4 text-foreground" />
                             <SelectValue />
                         </SelectTrigger>

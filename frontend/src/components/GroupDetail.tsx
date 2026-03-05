@@ -272,9 +272,9 @@ export function GroupDetail({ groupId }: GroupDetailProps) {
         return (
             <div className="space-y-6">
                 <Button
-                    variant="ghost"
+                    variant="outline"
                     onClick={() => router.push("/groups")}
-                    className="justify-start"
+                    className="justify-start !border-[0.5px] hover:!border-orange-500 hover:scale-[1.02] transition-all"
                 >
                     <ArrowLeft className="mr-2 h-4 w-4" />
                     Back to Groups
@@ -298,9 +298,9 @@ export function GroupDetail({ groupId }: GroupDetailProps) {
             {/* Header with Actions */}
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
                 <Button
-                    variant="ghost"
+                    variant="outline"
                     onClick={() => router.push("/groups")}
-                    className="justify-start"
+                    className="justify-start !border-[0.5px] hover:!border-orange-500 hover:scale-[1.02] transition-all"
                 >
                     <ArrowLeft className="mr-2 h-4 w-4" />
                     Back to Groups
@@ -310,6 +310,7 @@ export function GroupDetail({ groupId }: GroupDetailProps) {
                         <Button
                             variant="outline"
                             onClick={() => router.push(`/groups/${group.id}/edit`)}
+                            className="!border-[0.5px] hover:!border-orange-500 hover:scale-[1.02] transition-all"
                         >
                             <Edit className="mr-2 h-4 w-4" />
                             Edit Group
@@ -442,7 +443,7 @@ export function GroupDetail({ groupId }: GroupDetailProps) {
                                         variant="outline"
                                         size="sm"
                                         onClick={handleLeaveGroup}
-                                        className="shrink-0"
+                                        className="shrink-0 !border-[0.5px] hover:!border-orange-500 hover:scale-[1.02] transition-all"
                                     >
                                         Leave Group
                                     </Button>
@@ -451,7 +452,7 @@ export function GroupDetail({ groupId }: GroupDetailProps) {
                                         variant="outline"
                                         size="sm"
                                         onClick={() => handleRemoveMemberClick(member)}
-                                        className="shrink-0"
+                                        className="shrink-0 !border-[0.5px] hover:!border-orange-500 hover:scale-[1.02] transition-all"
                                     >
                                         Remove
                                     </Button>
@@ -499,7 +500,7 @@ export function GroupDetail({ groupId }: GroupDetailProps) {
                                         size="sm"
                                         onClick={() => handleCancelInvitation(invitation.id)}
                                         disabled={cancellingInvitationId === invitation.id}
-                                        className="shrink-0"
+                                        className="shrink-0 !border-[0.5px] hover:!border-orange-500 hover:scale-[1.02] transition-all"
                                     >
                                         {cancellingInvitationId === invitation.id ? (
                                             <Loader2 className="h-4 w-4 animate-spin" />

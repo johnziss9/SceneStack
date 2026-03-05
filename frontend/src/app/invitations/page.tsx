@@ -89,7 +89,7 @@ export default function InvitationsPage() {
             <div className="max-w-4xl mx-auto">
                 <div className="mb-4">
                     <Link href="/groups">
-                        <Button variant="outline">
+                        <Button variant="outline" className="!border-[0.5px] hover:!border-orange-500 hover:scale-[1.02] transition-all">
                             <ArrowLeft className="h-4 w-4 mr-2" />
                             Back to Groups
                         </Button>
@@ -160,7 +160,7 @@ export default function InvitationsPage() {
                                         variant="outline"
                                         onClick={() => handleRespond(invitation.id, false)}
                                         disabled={respondingTo === invitation.id}
-                                        className="flex-1"
+                                        className="flex-1 !border-[0.5px] hover:!border-orange-500 hover:scale-[1.02] transition-all"
                                     >
                                         <X className="h-4 w-4 mr-2" />
                                         Decline

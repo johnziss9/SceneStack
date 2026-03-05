@@ -23,7 +23,7 @@ export const PersonCard = memo(function PersonCard({ person, onViewMovies }: Per
         .join(', ');
 
     return (
-        <Card className="overflow-hidden hover:ring-2 hover:ring-primary transition-all flex flex-col h-full">
+        <Card className="overflow-hidden hover:ring-2 hover:ring-primary transition-all flex flex-col h-full cursor-pointer">
             <div className="aspect-[2/3] relative bg-muted">
                 {profileUrl ? (
                     <img

@@ -102,9 +102,9 @@ export default function CreateGroupPage() {
             <div className="max-w-2xl mx-auto">
                 {/* Back Button */}
                 <Button
-                    variant="ghost"
+                    variant="outline"
                     onClick={() => router.push("/groups")}
-                    className="mb-6"
+                    className="mb-6 !border-[0.5px] hover:!border-orange-500 hover:scale-[1.02] transition-all"
                 >
                     <ArrowLeft className="mr-2 h-4 w-4" />
                     Back to Groups
@@ -182,7 +182,7 @@ export default function CreateGroupPage() {
                                     variant="outline"
                                     onClick={() => router.push("/groups")}
                                     disabled={isSubmitting}
-                                    className="flex-1"
+                                    className="flex-1 !border-[0.5px] hover:!border-orange-500 hover:scale-[1.02] transition-all"
                                 >
                                     Cancel
                                 </Button>

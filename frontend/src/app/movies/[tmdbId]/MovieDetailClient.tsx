@@ -306,6 +306,9 @@ export function MovieDetailClient({ params }: MovieDetailPageProps) {
                                     {formatRuntime(movie.runtime)}
                                 </span>
                             )}
+                            {movie.runtime && movie.genres.length > 0 && (
+                                <span className="text-muted-foreground self-center">•</span>
+                            )}
                             {movie.genres.map(genre => (
                                 <span
                                     key={genre}
@@ -332,6 +335,7 @@ export function MovieDetailClient({ params }: MovieDetailPageProps) {
                             disabled={isTogglingWatchlist}
                             onMouseEnter={() => setWatchlistHover(true)}
                             onMouseLeave={() => setWatchlistHover(false)}
+                            className={!onWatchlist ? '!border-[0.5px] hover:!border-orange-500 hover:scale-[1.02] transition-all' : ''}
                         >
                             {onWatchlist ? (
                                 watchlistHover ? (

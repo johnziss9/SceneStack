@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { Bookmark, Loader2, AlertCircle, Info } from 'lucide-react';
+import { Bookmark, Loader2, AlertCircle, Info, ArrowUpDown } from 'lucide-react';
 import {
     DndContext,
     closestCenter,
@@ -21,6 +21,7 @@ import {
 } from '@dnd-kit/sortable';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { WatchlistCard } from '@/components/WatchlistCard';
 import { watchlistApi } from '@/lib/api';
 import { toast } from '@/lib/toast';
@@ -138,40 +139,30 @@ export default function WishlistPage() {
     return (
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             {/* Header */}
-            <div className="flex items-center justify-between mb-6 gap-4 flex-wrap">
-                <div>
-                    <h1 className="text-2xl font-bold flex items-center gap-2">
-                        <Bookmark className="h-6 w-6 text-primary" />
-                        My Wishlist
-                    </h1>
-                    {!isLoading && (
-                        <p className="text-sm text-muted-foreground mt-1">
-                            {totalCount === 0
-                                ? 'Nothing saved yet'
-                                : `${totalCount} ${totalCount === 1 ? 'movie' : 'movies'} saved`}
-                        </p>
-                    )}
-                </div>
+            <div className="mb-6 space-y-4">
+                <h1 className="text-2xl font-bold flex items-center gap-2">
+                    <Bookmark className="h-6 w-6 text-primary" />
+                    My Wishlist
+                </h1>
 
-                {/* Sort toggle */}
+                {/* Sort dropdown and count */}
                 {!isLoading && totalCount > 0 && (
-                    <div className="flex flex-wrap items-center gap-1 border rounded-lg p-1">
-                        <Button
-                            size="sm"
-                            variant={sortBy === 'priority-asc' ? 'default' : 'ghost'}
-                            className="h-7 text-xs px-3"
-                            onClick={() => handleSortChange('priority-asc')}
-                        >
-                            Priority
-                        </Button>
-                        <Button
-                            size="sm"
-                            variant={sortBy === 'recent' ? 'default' : 'ghost'}
-                            className="h-7 text-xs px-3"
-                            onClick={() => handleSortChange('recent')}
-                        >
-                            Date Added
-                        </Button>
+                    <div className="flex flex-wrap items-center gap-4">
+                        <div className="w-full sm:w-auto">
+                            <Select value={sortBy} onValueChange={(v) => handleSortChange(v as SortBy)}>
+                                <SelectTrigger className="gap-2 w-full sm:w-[180px] !border-[0.5px] hover:!border-orange-500 hover:scale-[1.02] transition-all">
+                                    <ArrowUpDown className="h-4 w-4 text-foreground" />
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="priority-asc">Priority</SelectItem>
+                                    <SelectItem value="recent">Date Added</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <span className="text-sm text-muted-foreground">
+                            {totalCount} {totalCount === 1 ? 'movie' : 'movies'}
+                        </span>
                     </div>
                 )}
             </div>

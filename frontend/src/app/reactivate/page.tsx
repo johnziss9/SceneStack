@@ -145,7 +145,7 @@ export default function ReactivatePage() {
                         <Button
                             variant="outline"
                             onClick={logout}
-                            className="w-full"
+                            className="w-full !border-[0.5px] hover:!border-orange-500 hover:scale-[1.02] transition-all"
                         >
                             Log Out
                         </Button>

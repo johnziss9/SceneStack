@@ -504,7 +504,7 @@ export function WatchList() {
                             <Button
                                 variant="outline"
                                 onClick={() => setFiltersOpen(prev => !prev)}
-                                className="gap-2 flex-1 sm:flex-initial"
+                                className="gap-2 flex-1 sm:flex-initial !border-[0.5px] hover:!border-orange-500 hover:scale-[1.02] transition-all"
                             >
                                 <Filter className="h-4 w-4" />
                                 Filters
@@ -521,18 +521,18 @@ export function WatchList() {
                                     onClick={enterBulkMode}
                                     variant="outline"
                                     title="Select multiple movies to update privacy settings"
-                                    className="gap-2 flex-1 sm:hidden"
+                                    className="gap-2 flex-1 sm:hidden !border-[0.5px] hover:!border-orange-500 hover:scale-[1.02] transition-all"
                                 >
                                     Select Multiple
                                 </Button>
                             ) : (
-                                <Button onClick={exitBulkMode} variant="outline" className="flex-1 sm:hidden">Done</Button>
+                                <Button onClick={exitBulkMode} variant="outline" className="flex-1 sm:hidden !border-[0.5px] hover:!border-orange-500 hover:scale-[1.02] transition-all">Done</Button>
                             )}
 
                             {/* Sort dropdown - full width on mobile, normal on desktop */}
                             <div className="w-full sm:w-auto">
                                 <Select value={filters.sortBy} onValueChange={v => updateFilter("sortBy", v)}>
-                                    <SelectTrigger className="gap-2 w-full sm:w-[180px]">
+                                    <SelectTrigger className="gap-2 w-full sm:w-[180px] !border-[0.5px] hover:!border-orange-500 hover:scale-[1.02] transition-all">
                                         <ArrowUpDown className="h-4 w-4 text-foreground" />
                                         <SelectValue />
                                     </SelectTrigger>
@@ -569,12 +569,12 @@ export function WatchList() {
                                     onClick={enterBulkMode}
                                     variant="outline"
                                     title="Select multiple movies to update privacy settings"
-                                    className="gap-2"
+                                    className="gap-2 !border-[0.5px] hover:!border-orange-500 hover:scale-[1.02] transition-all"
                                 >
                                     Select Multiple
                                 </Button>
                             ) : (
-                                <Button onClick={exitBulkMode} variant="outline">Done</Button>
+                                <Button onClick={exitBulkMode} variant="outline" className="!border-[0.5px] hover:!border-orange-500 hover:scale-[1.02] transition-all">Done</Button>
                             )}
                         </div>
                     </div>
@@ -710,7 +710,7 @@ export function WatchList() {
                                 )}
                             </div>
                             <Select value={filters.ratingMin || "any"} onValueChange={v => updateFilter("ratingMin", v === "any" ? "" : v)}>
-                                <SelectTrigger className={filters.ratingMin ? "border-primary ring-1 ring-primary/20" : ""}>
+                                <SelectTrigger className={`!border-[0.5px] hover:!border-orange-500 hover:scale-[1.02] transition-all ${filters.ratingMin ? "border-primary ring-1 ring-primary/20" : ""}`}>
                                     <SelectValue placeholder="Any" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -735,7 +735,7 @@ export function WatchList() {
                                 )}
                             </div>
                             <Select value={filters.ratingMax || "any"} onValueChange={v => updateFilter("ratingMax", v === "any" ? "" : v)}>
-                                <SelectTrigger className={filters.ratingMax ? "border-primary ring-1 ring-primary/20" : ""}>
+                                <SelectTrigger className={`!border-[0.5px] hover:!border-orange-500 hover:scale-[1.02] transition-all ${filters.ratingMax ? "border-primary ring-1 ring-primary/20" : ""}`}>
                                     <SelectValue placeholder="Any" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -842,7 +842,7 @@ export function WatchList() {
                                             value={filters.privacyFilter}
                                             onValueChange={v => updateFilter("privacyFilter", v as FilterState["privacyFilter"])}
                                         >
-                                            <SelectTrigger className={`w-[150px] ${filters.privacyFilter !== "all" ? "border-primary ring-1 ring-primary/20" : ""}`}>
+                                            <SelectTrigger className={`w-[150px] !border-[0.5px] hover:!border-orange-500 hover:scale-[1.02] transition-all ${filters.privacyFilter !== "all" ? "border-primary ring-1 ring-primary/20" : ""}`}>
                                                 <SelectValue />
                                             </SelectTrigger>
                                             <SelectContent>
@@ -872,7 +872,7 @@ export function WatchList() {
                                                 value={filters.groupId || "all"}
                                                 onValueChange={v => updateFilter("groupId", v === "all" ? "" : v)}
                                             >
-                                                <SelectTrigger className={`w-[200px] ${filters.groupId ? "border-primary ring-1 ring-primary/20" : ""}`}>
+                                                <SelectTrigger className={`w-[200px] !border-[0.5px] hover:!border-orange-500 hover:scale-[1.02] transition-all ${filters.groupId ? "border-primary ring-1 ring-primary/20" : ""}`}>
                                                     <SelectValue placeholder="All groups" />
                                                 </SelectTrigger>
                                                 <SelectContent>

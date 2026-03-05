@@ -39,7 +39,7 @@ export const WatchCard = memo(function WatchCard({ groupedWatch }: WatchCardProp
     return (
         <TooltipProvider>
             <Link href={`/watched/${movie.id}`} className="flex flex-col h-full">
-            <Card className="flex flex-col h-full overflow-hidden transition-all hover:ring-2 hover:ring-primary duration-200">
+            <Card className="flex flex-col h-full overflow-hidden transition-all hover:ring-2 hover:ring-primary duration-200 cursor-pointer">
                 <CardHeader className="p-0">
                     <div className="aspect-[2/3] bg-muted relative">
                         {posterUrl ? (

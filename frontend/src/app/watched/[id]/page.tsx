@@ -337,7 +337,7 @@ export default function WatchDetailPage({ params }: WatchDetailPageProps) {
                   disabled={isTogglingWatchlist}
                   onMouseEnter={() => !isTogglingWatchlist && setWatchlistHover(true)}
                   onMouseLeave={() => !isTogglingWatchlist && setWatchlistHover(false)}
-                  className="min-w-[160px]"
+                  className={`min-w-[160px] ${!onWatchlist ? '!border-[0.5px] hover:!border-orange-500 hover:scale-[1.02] transition-all' : ''}`}
                 >
                   {onWatchlist ? (
                     watchlistHover ? (

@@ -423,7 +423,7 @@ function HomeContent() {
                 </Button>
               </Link>
               <Link href="/login">
-                <Button size="lg" variant="outline" className="text-lg px-8 py-6">
+                <Button size="lg" variant="outline" className="text-lg px-8 py-6 !border-[0.5px] hover:!border-orange-500 hover:scale-[1.02] transition-all">
                   Sign In
                 </Button>
               </Link>
@@ -1012,7 +1012,7 @@ function HomeContent() {
                     <Button size="lg">Create Free Account</Button>
                   </Link>
                   <Link href="/login">
-                    <Button size="lg" variant="outline">Sign In</Button>
+                    <Button size="lg" variant="outline" className="!border-[0.5px] hover:!border-orange-500 hover:scale-[1.02] transition-all">Sign In</Button>
                   </Link>
                 </div>
               </CardContent>

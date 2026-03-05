@@ -914,6 +914,7 @@ export function WatchForm({ movie, open, onOpenChange, onSuccess, isFirstWatch =
                             variant="outline"
                             onClick={() => handleOpenChange(false)}
                             disabled={isSubmitting}
+                            className="!border-[0.5px] hover:!border-orange-500 hover:scale-[1.02] transition-all"
                         >
                             Cancel
                         </Button>
@@ -990,6 +991,7 @@ export function WatchForm({ movie, open, onOpenChange, onSuccess, isFirstWatch =
                             setIsGroupSelectionOpen(false);
                             setTempSelectedGroups(selectedGroups); // Reset to original
                         }}
+                        className="!border-[0.5px] hover:!border-orange-500 hover:scale-[1.02] transition-all"
                     >
                         Cancel
                     </Button>
