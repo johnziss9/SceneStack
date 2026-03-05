@@ -15,11 +15,19 @@ public class MoviesController : ControllerBase
 {
     private readonly IMovieService _movieService;
     private readonly ITmdbService _tmdbService;
+    private readonly IGroupRecommendationsService _recommendationsService;
+    private readonly ILogger<MoviesController> _logger;
 
-    public MoviesController(IMovieService movieService, ITmdbService tmdbService)
+    public MoviesController(
+        IMovieService movieService,
+        ITmdbService tmdbService,
+        IGroupRecommendationsService recommendationsService,
+        ILogger<MoviesController> logger)
     {
         _movieService = movieService;
         _tmdbService = tmdbService;
+        _recommendationsService = recommendationsService;
+        _logger = logger;
     }
 
     // GET: api/movies
@@ -83,6 +91,27 @@ public class MoviesController : ControllerBase
         var userId = User.GetUserId();
         var status = await _movieService.GetMyStatusAsync(userId, tmdbId);
         return Ok(status);
+    }
+
+    // GET: api/movies/tmdb/550/similar  (authenticated)
+    // Returns similar movies based on the movie's attributes (genres, directors, writers, cast)
+    [HttpGet("tmdb/{tmdbId}/similar")]
+    public async Task<ActionResult<List<RecommendedMovie>>> GetSimilarMovies(int tmdbId)
+    {
+        var userId = User.GetUserId();
+
+        try
+        {
+            var recommendations = await _recommendationsService
+                .GetMovieSimilarRecommendationsAsync(tmdbId, userId, 12);
+
+            return Ok(recommendations);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting similar movies for tmdbId {TmdbId}", tmdbId);
+            return StatusCode(500, $"Error getting similar movies: {ex.Message}");
+        }
     }
 
     // PUT: api/movies/5/privacy

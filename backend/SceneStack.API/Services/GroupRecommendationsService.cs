@@ -1034,4 +1034,308 @@ public class GroupRecommendationsService : IGroupRecommendationsService
             _ => 0
         };
     }
+
+    // ===== MOVIE SIMILARITY RECOMMENDATIONS =====
+    // Recommendations based on a single movie's attributes rather than user watch history
+
+    public async Task<List<RecommendedMovie>> GetMovieSimilarRecommendationsAsync(
+        int tmdbId,
+        int userId,
+        int count = 12)
+    {
+        _logger.LogInformation("========== SIMILAR MOVIES REQUEST: Movie {TmdbId}, User {UserId} ==========", tmdbId, userId);
+
+        try
+        {
+            // 1. Get the source movie details from TMDB
+            var sourceMovieDetails = await _tmdbService.GetMovieDetailsAsync(tmdbId);
+            if (sourceMovieDetails == null)
+            {
+                _logger.LogWarning("Source movie with TmdbId {TmdbId} not found on TMDB", tmdbId);
+                return new List<RecommendedMovie>();
+            }
+
+            // 2. Get credits for the source movie (with caching)
+            var sourceCredits = await _tmdbService.GetMovieCreditsAsync(tmdbId);
+            if (sourceCredits == null)
+            {
+                _logger.LogWarning("Could not fetch credits for source movie {TmdbId}", tmdbId);
+                return new List<RecommendedMovie>();
+            }
+
+            // 3. Extract preferences from the source movie
+            var preferences = ExtractMoviePreferenceFromTmdb(sourceMovieDetails, sourceCredits);
+            _logger.LogInformation("Extracted preferences from {Movie}: {GenreCount} genres, {DirectorCount} directors, {WriterCount} writers, {CastCount} cast",
+                sourceMovieDetails.Title, preferences.Genres.Count, preferences.Directors.Count, preferences.Writers.Count, preferences.Cast.Count);
+
+            // 4. Get user's watched movie IDs for filtering
+            var watchedTmdbIds = await GetUserWatchedMovieIds(userId);
+            watchedTmdbIds.Add(tmdbId); // Exclude the source movie itself
+            _logger.LogInformation("User {UserId} has watched {Count} movies (excluding them)", userId, watchedTmdbIds.Count);
+
+            // 5. Get genre IDs for TMDb Discover API
+            var genreIds = preferences.Genres.Keys
+                .Where(name => TmdbGenreIds.GenreToId.ContainsKey(name))
+                .Select(name => TmdbGenreIds.GenreToId[name])
+                .ToList();
+
+            _logger.LogInformation("Using genres for discovery: {Genres} -> IDs: {GenreIds}",
+                string.Join(", ", preferences.Genres.Keys), string.Join(", ", genreIds));
+
+            // 6. Fetch candidate movies from TMDb Discover API
+            // Try with genre filter first
+            var discoverMovies = await _tmdbService.DiscoverMoviesAsync(
+                withGenres: genreIds.Any() ? genreIds : null,
+                voteAverageMin: 6.0,  // Quality threshold
+                voteCountMin: 200,    // Popularity threshold
+                sortBy: "popularity.desc",
+                page: 1);
+
+            // Fallback: try without genre filter if no results
+            if (discoverMovies == null || !discoverMovies.Results.Any())
+            {
+                _logger.LogWarning("No movies with genre filter, trying without");
+                discoverMovies = await _tmdbService.DiscoverMoviesAsync(
+                    withGenres: null,
+                    voteAverageMin: 6.0,
+                    voteCountMin: 200,
+                    sortBy: "popularity.desc",
+                    page: 1);
+            }
+
+            if (discoverMovies == null || !discoverMovies.Results.Any())
+            {
+                _logger.LogWarning("No movies returned from TMDb Discover");
+                return new List<RecommendedMovie>();
+            }
+
+            // 7. Filter out watched movies and source movie
+            var unwatchedMovies = discoverMovies.Results
+                .Where(m => !watchedTmdbIds.Contains(m.Id))
+                .ToList();
+
+            _logger.LogInformation("Found {UnwatchedCount} unwatched candidates from {TotalCandidates} TMDb results",
+                unwatchedMovies.Count, discoverMovies.Results.Count);
+
+            if (!unwatchedMovies.Any())
+            {
+                _logger.LogWarning("All candidate movies already watched");
+                return new List<RecommendedMovie>();
+            }
+
+            // 8. Fetch credits for all candidates in parallel
+            var creditsDict = await FetchCreditsForMovies(unwatchedMovies.Select(m => m.Id).ToList());
+
+            // 9. Score all candidates using similarity algorithm
+            var scored = unwatchedMovies
+                .Select(m => ScoreMovieSimilarity(m, preferences, creditsDict))
+                .OrderByDescending(sm => sm.Score)
+                .Take(count)
+                .ToList();
+
+            // Log top 3 for debugging
+            if (scored.Any())
+            {
+                _logger.LogInformation("Top 3 similar movies:");
+                for (int i = 0; i < Math.Min(3, scored.Count); i++)
+                {
+                    var rec = scored[i];
+                    _logger.LogInformation("  #{Rank}: {Movie} (score={Score:F3})", i + 1, rec.Movie.Title, rec.Score);
+                    _logger.LogInformation("    Reason: {Reason}", rec.Reason);
+                }
+            }
+
+            _logger.LogInformation("Returning {Count} similar movies for {SourceMovie}", scored.Count, sourceMovieDetails.Title);
+            return scored;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting similar movies for tmdbId {TmdbId}", tmdbId);
+            throw;
+        }
+    }
+
+    private MoviePreferences ExtractMoviePreferences(Movie movie, TmdbCreditsResult credits)
+    {
+        var prefs = new MoviePreferences();
+
+        // Extract genres (all genres from the movie)
+        if (movie.Genres != null && movie.Genres.Any())
+        {
+            prefs.Genres = movie.Genres.ToDictionary(g => g, g => 1);
+        }
+
+        // Extract directors from credits
+        if (credits.Crew.Any())
+        {
+            prefs.Directors = credits.Crew
+                .Where(c => c.Job == "Director")
+                .Select(c => c.Name)
+                .Distinct()
+                .ToList();
+        }
+
+        // Extract writers from credits (top 5)
+        if (credits.Crew.Any())
+        {
+            prefs.Writers = credits.Crew
+                .Where(c => c.Job == "Writer" || c.Job == "Screenplay" || c.Job == "Story")
+                .Select(c => c.Name)
+                .Distinct()
+                .Take(5)
+                .ToList();
+        }
+
+        // Extract top 10 cast
+        if (credits.Cast.Any())
+        {
+            prefs.Cast = credits.Cast
+                .OrderBy(c => c.Order)
+                .Take(10)
+                .Select(c => c.Name)
+                .ToList();
+        }
+
+        return prefs;
+    }
+
+    private MoviePreferences ExtractMoviePreferenceFromTmdb(TmdbMovie movie, TmdbCreditsResult credits)
+    {
+        var prefs = new MoviePreferences();
+
+        // Extract genres (all genres from the TMDB movie)
+        if (movie.Genres != null && movie.Genres.Any())
+        {
+            prefs.Genres = movie.Genres.Select(g => g.Name).ToDictionary(g => g, g => 1);
+        }
+
+        // Extract directors from credits
+        if (credits.Crew.Any())
+        {
+            prefs.Directors = credits.Crew
+                .Where(c => c.Job == "Director")
+                .Select(c => c.Name)
+                .Distinct()
+                .ToList();
+        }
+
+        // Extract writers from credits (top 5)
+        if (credits.Crew.Any())
+        {
+            prefs.Writers = credits.Crew
+                .Where(c => c.Job == "Writer" || c.Job == "Screenplay" || c.Job == "Story")
+                .Select(c => c.Name)
+                .Distinct()
+                .Take(5)
+                .ToList();
+        }
+
+        // Extract top 10 cast
+        if (credits.Cast.Any())
+        {
+            prefs.Cast = credits.Cast
+                .OrderBy(c => c.Order)
+                .Take(10)
+                .Select(c => c.Name)
+                .ToList();
+        }
+
+        return prefs;
+    }
+
+    private RecommendedMovie ScoreMovieSimilarity(
+        TmdbMovie movie,
+        MoviePreferences preferences,
+        Dictionary<int, TmdbCreditsResult> creditsDict)
+    {
+        double score = 0.0;
+        var matchedGenres = new List<string>();
+        string? matchedDirector = null;
+        var matchedCast = new List<string>();
+        string? matchedWriter = null;
+
+        // Get credits for this movie
+        creditsDict.TryGetValue(movie.Id, out var credits);
+
+        // Genre matching (40%) - Simple overlap count
+        if (movie.Genres != null && movie.Genres.Any() && preferences.Genres.Any())
+        {
+            var movieGenres = movie.Genres.Select(g => g.Name).ToList();
+            matchedGenres = movieGenres.Where(g => preferences.Genres.ContainsKey(g)).ToList();
+
+            if (matchedGenres.Any())
+            {
+                // Score based on percentage of source movie's genres that match
+                var genreScore = (double)matchedGenres.Count / preferences.Genres.Count;
+                score += genreScore * 0.40;
+            }
+        }
+
+        // Director matching (25%) - Binary: 1.0 if any director matches
+        if (credits != null && credits.Crew.Any() && preferences.Directors.Any())
+        {
+            var directors = credits.Crew
+                .Where(c => c.Job == "Director")
+                .Select(c => c.Name)
+                .ToList();
+
+            matchedDirector = directors.FirstOrDefault(d => preferences.Directors.Contains(d));
+            if (matchedDirector != null)
+            {
+                score += 0.25;
+            }
+        }
+
+        // Writer matching (20%) - Binary: 1.0 if any writer matches
+        if (credits != null && credits.Crew.Any() && preferences.Writers.Any())
+        {
+            var writers = credits.Crew
+                .Where(c => c.Job == "Writer" || c.Job == "Screenplay" || c.Job == "Story")
+                .Select(c => c.Name)
+                .Distinct()
+                .ToList();
+
+            matchedWriter = writers.FirstOrDefault(w => preferences.Writers.Contains(w));
+            if (matchedWriter != null)
+            {
+                score += 0.20;
+            }
+        }
+
+        // Cast matching (10%) - Ratio of matched cast
+        if (credits != null && credits.Cast.Any() && preferences.Cast.Any())
+        {
+            var topCast = credits.Cast
+                .OrderBy(c => c.Order)
+                .Take(10)
+                .Select(c => c.Name)
+                .ToList();
+
+            matchedCast = topCast.Where(c => preferences.Cast.Contains(c)).ToList();
+
+            if (matchedCast.Any())
+            {
+                var castScore = (double)matchedCast.Count / preferences.Cast.Count;
+                score += castScore * 0.10;
+            }
+        }
+
+        // TMDb rating boost (5%)
+        var ratingScore = (movie.VoteAverage / 10.0) * 0.05;
+        score += ratingScore;
+
+        // Build reason string
+        var reason = BuildReason(matchedGenres, matchedDirector, matchedWriter, matchedCast, "similar to this movie");
+
+        return new RecommendedMovie
+        {
+            Movie = movie,
+            Score = score,
+            Reason = reason,
+            MatchedGenres = matchedGenres,
+            MatchedDirector = matchedDirector,
+            MatchedCast = matchedCast,
+            MatchedWriter = matchedWriter
+        };
+    }
 }

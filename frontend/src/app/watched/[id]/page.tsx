@@ -28,6 +28,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { LoadingTips } from "@/components/LoadingTips";
 import { MovieInsight } from '@/components/MovieInsight';
 import { MoviePrivacyCard } from '@/components/MoviePrivacyCard';
+import { SimilarMovies } from '@/components/SimilarMovies';
 import { useAuth } from '@/contexts/AuthContext';
 import { formatWatchDate } from '@/lib/utils';
 
@@ -551,6 +552,13 @@ export default function WatchDetailPage({ params }: WatchDetailPageProps) {
             </Card>
           </div>
         </div>
+
+        {/* Similar Movies Section */}
+        {user && movie && (
+          <div className="mt-10">
+            <SimilarMovies tmdbId={movie.tmdbId} />
+          </div>
+        )}
       </div>
 
       {/* Dialogs */}

@@ -1,8 +1,14 @@
 import { renderHook, act, waitFor } from '@testing-library/react';
-import { AuthProvider, useAuth } from '../../contexts/AuthContext';
 import { authApi, userApi } from '@/lib/api';
 import { tokenStorage } from '@/lib/api-client';
 import { useRouter } from 'next/navigation';
+
+// Unmock AuthContext to test the real implementation
+jest.unmock('@/contexts/AuthContext');
+jest.unmock('@/contexts/WatchlistContext');
+
+// Import after unmocking
+import { AuthProvider, useAuth } from '../../contexts/AuthContext';
 
 // Mock dependencies
 jest.mock('@/lib/api');

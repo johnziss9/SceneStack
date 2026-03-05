@@ -581,8 +581,16 @@ public class MovieServiceTests
             Runtime = 100, // Has runtime
             DirectorName = "Director Name", // Has director
             DirectorProfilePath = "/director.jpg", // Has director profile
+            Directors = new List<DirectorMember>
+            {
+                new DirectorMember { Name = "Director Name", ProfilePath = "/director.jpg" }
+            }, // Has directors array
             WriterName = "Writer Name", // Has writer
             WriterProfilePath = "/writer.jpg", // Has writer profile
+            Writers = new List<WriterMember>
+            {
+                new WriterMember { Name = "Writer Name", Job = "Screenplay", ProfilePath = "/writer.jpg" }
+            }, // Has writers array
             CreatedAt = DateTime.UtcNow
         };
         context.Movies.Add(enrichedMovie);

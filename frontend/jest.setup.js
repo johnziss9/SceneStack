@@ -25,17 +25,37 @@ jest.mock('next/navigation', () => ({
     useParams: jest.fn(() => ({})),
 }))
 
+// Mock AuthContext with configurable implementation
+const mockUseAuth = jest.fn(() => ({
+    user: null,
+    isLoading: false,
+    login: jest.fn(),
+    logout: jest.fn(),
+    register: jest.fn(),
+}));
+
+jest.mock('@/contexts/AuthContext', () => ({
+    useAuth: mockUseAuth,
+    AuthProvider: ({ children }) => children,
+}));
+
 // Mock WatchlistContext
+const mockUseWishlist = jest.fn(() => ({
+    count: 0,
+    isLoading: false,
+    incrementCount: jest.fn(),
+    decrementCount: jest.fn(),
+    refreshCount: jest.fn(),
+}));
+
 jest.mock('@/contexts/WatchlistContext', () => ({
-    useWatchlist: jest.fn(() => ({
-        count: 0,
-        isLoading: false,
-        incrementCount: jest.fn(),
-        decrementCount: jest.fn(),
-        refreshCount: jest.fn(),
-    })),
+    useWishlist: mockUseWishlist,
     WatchlistProvider: ({ children }) => children,
-}))
+}));
+
+// Export for test files to use
+global.mockUseAuth = mockUseAuth;
+global.mockUseWishlist = mockUseWishlist;
 
 // Mock ResizeObserver (used by Radix UI components like Select)
 global.ResizeObserver = jest.fn().mockImplementation(() => ({

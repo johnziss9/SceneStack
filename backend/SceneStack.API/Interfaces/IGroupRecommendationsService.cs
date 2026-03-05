@@ -10,4 +10,7 @@ public interface IGroupRecommendationsService
 
     // User personal recommendations
     Task<PaginatedRecommendationsResponse> GetUserRecommendationsAsync(int userId, int page = 1, int pageSize = 20);
+
+    // Movie similarity recommendations
+    Task<List<RecommendedMovie>> GetMovieSimilarRecommendationsAsync(int tmdbId, int userId, int count = 12);
 }

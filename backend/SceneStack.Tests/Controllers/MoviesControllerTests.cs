@@ -2,6 +2,7 @@ using System.Security.Claims;
 using FluentAssertions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using NSubstitute;
 using SceneStack.API.Controllers;
 using SceneStack.API.DTOs;
@@ -18,7 +19,9 @@ public class MoviesControllerTests
         ITmdbService tmdbService,
         int userId = 1)
     {
-        var controller = new MoviesController(movieService, tmdbService);
+        var recommendationsService = Substitute.For<IGroupRecommendationsService>();
+        var logger = Substitute.For<ILogger<MoviesController>>();
+        var controller = new MoviesController(movieService, tmdbService, recommendationsService, logger);
 
         // Mock the authenticated user
         var claims = new List<Claim>
@@ -44,7 +47,9 @@ public class MoviesControllerTests
         // Arrange
         var movieService = Substitute.For<IMovieService>();
         var tmdbService = Substitute.For<ITmdbService>();
-        var controller = new MoviesController(movieService, tmdbService);
+        var recommendationsService = Substitute.For<IGroupRecommendationsService>();
+        var logger = Substitute.For<ILogger<MoviesController>>();
+        var controller = new MoviesController(movieService, tmdbService, recommendationsService, logger);
 
         var searchResult = new TmdbMovieSearchResult
         {
@@ -81,7 +86,9 @@ public class MoviesControllerTests
         // Arrange
         var movieService = Substitute.For<IMovieService>();
         var tmdbService = Substitute.For<ITmdbService>();
-        var controller = new MoviesController(movieService, tmdbService);
+        var recommendationsService = Substitute.For<IGroupRecommendationsService>();
+        var logger = Substitute.For<ILogger<MoviesController>>();
+        var controller = new MoviesController(movieService, tmdbService, recommendationsService, logger);
 
         // Act
         var result = await controller.SearchMovies("");
@@ -96,7 +103,9 @@ public class MoviesControllerTests
         // Arrange
         var movieService = Substitute.For<IMovieService>();
         var tmdbService = Substitute.For<ITmdbService>();
-        var controller = new MoviesController(movieService, tmdbService);
+        var recommendationsService = Substitute.For<IGroupRecommendationsService>();
+        var logger = Substitute.For<ILogger<MoviesController>>();
+        var controller = new MoviesController(movieService, tmdbService, recommendationsService, logger);
         
         tmdbService.SearchMoviesAsync(Arg.Any<string>(), Arg.Any<int>()).Returns((TmdbMovieSearchResult?)null);
 
@@ -114,7 +123,9 @@ public class MoviesControllerTests
         // Arrange
         var movieService = Substitute.For<IMovieService>();
         var tmdbService = Substitute.For<ITmdbService>();
-        var controller = new MoviesController(movieService, tmdbService);
+        var recommendationsService = Substitute.For<IGroupRecommendationsService>();
+        var logger = Substitute.For<ILogger<MoviesController>>();
+        var controller = new MoviesController(movieService, tmdbService, recommendationsService, logger);
 
         var enrichedMovie = new Movie
         {
@@ -147,7 +158,9 @@ public class MoviesControllerTests
         // Arrange
         var movieService = Substitute.For<IMovieService>();
         var tmdbService = Substitute.For<ITmdbService>();
-        var controller = new MoviesController(movieService, tmdbService);
+        var recommendationsService = Substitute.For<IGroupRecommendationsService>();
+        var logger = Substitute.For<ILogger<MoviesController>>();
+        var controller = new MoviesController(movieService, tmdbService, recommendationsService, logger);
 
         movieService.GetOrCreateFromTmdbAsync(999).Returns((Movie?)null);
 
@@ -164,7 +177,9 @@ public class MoviesControllerTests
         // Arrange
         var movieService = Substitute.For<IMovieService>();
         var tmdbService = Substitute.For<ITmdbService>();
-        var controller = new MoviesController(movieService, tmdbService);
+        var recommendationsService = Substitute.For<IGroupRecommendationsService>();
+        var logger = Substitute.For<ILogger<MoviesController>>();
+        var controller = new MoviesController(movieService, tmdbService, recommendationsService, logger);
 
         var movies = new List<Movie>
         {
@@ -188,7 +203,9 @@ public class MoviesControllerTests
         // Arrange
         var movieService = Substitute.For<IMovieService>();
         var tmdbService = Substitute.For<ITmdbService>();
-        var controller = new MoviesController(movieService, tmdbService);
+        var recommendationsService = Substitute.For<IGroupRecommendationsService>();
+        var logger = Substitute.For<ILogger<MoviesController>>();
+        var controller = new MoviesController(movieService, tmdbService, recommendationsService, logger);
 
         var movie = new Movie { Id = 1, TmdbId = 550, Title = "Fight Club", Year = 1999 };
         movieService.GetByIdAsync(1).Returns(movie);
@@ -208,7 +225,9 @@ public class MoviesControllerTests
         // Arrange
         var movieService = Substitute.For<IMovieService>();
         var tmdbService = Substitute.For<ITmdbService>();
-        var controller = new MoviesController(movieService, tmdbService);
+        var recommendationsService = Substitute.For<IGroupRecommendationsService>();
+        var logger = Substitute.For<ILogger<MoviesController>>();
+        var controller = new MoviesController(movieService, tmdbService, recommendationsService, logger);
 
         movieService.GetByIdAsync(999).Returns((Movie?)null);
 
@@ -225,7 +244,9 @@ public class MoviesControllerTests
         // Arrange
         var movieService = Substitute.For<IMovieService>();
         var tmdbService = Substitute.For<ITmdbService>();
-        var controller = new MoviesController(movieService, tmdbService);
+        var recommendationsService = Substitute.For<IGroupRecommendationsService>();
+        var logger = Substitute.For<ILogger<MoviesController>>();
+        var controller = new MoviesController(movieService, tmdbService, recommendationsService, logger);
 
         var newMovie = new Movie { TmdbId = 551, Title = "The Matrix", Year = 1999 };
         var createdMovie = new Movie { Id = 2, TmdbId = 551, Title = "The Matrix", Year = 1999 };
@@ -248,7 +269,9 @@ public class MoviesControllerTests
         // Arrange
         var movieService = Substitute.For<IMovieService>();
         var tmdbService = Substitute.For<ITmdbService>();
-        var controller = new MoviesController(movieService, tmdbService);
+        var recommendationsService = Substitute.For<IGroupRecommendationsService>();
+        var logger = Substitute.For<ILogger<MoviesController>>();
+        var controller = new MoviesController(movieService, tmdbService, recommendationsService, logger);
 
         var updateMovie = new Movie { Title = "Fight Club - Updated", Year = 1999 };
         var updatedMovie = new Movie { Id = 1, TmdbId = 550, Title = "Fight Club - Updated", Year = 1999 };
@@ -270,7 +293,9 @@ public class MoviesControllerTests
         // Arrange
         var movieService = Substitute.For<IMovieService>();
         var tmdbService = Substitute.For<ITmdbService>();
-        var controller = new MoviesController(movieService, tmdbService);
+        var recommendationsService = Substitute.For<IGroupRecommendationsService>();
+        var logger = Substitute.For<ILogger<MoviesController>>();
+        var controller = new MoviesController(movieService, tmdbService, recommendationsService, logger);
 
         var updateMovie = new Movie { Title = "Updated", Year = 1999 };
         movieService.UpdateAsync(999, updateMovie).Returns((Movie?)null);
@@ -288,7 +313,9 @@ public class MoviesControllerTests
         // Arrange
         var movieService = Substitute.For<IMovieService>();
         var tmdbService = Substitute.For<ITmdbService>();
-        var controller = new MoviesController(movieService, tmdbService);
+        var recommendationsService = Substitute.For<IGroupRecommendationsService>();
+        var logger = Substitute.For<ILogger<MoviesController>>();
+        var controller = new MoviesController(movieService, tmdbService, recommendationsService, logger);
 
         movieService.DeleteAsync(1).Returns(true);
 
@@ -305,7 +332,9 @@ public class MoviesControllerTests
         // Arrange
         var movieService = Substitute.For<IMovieService>();
         var tmdbService = Substitute.For<ITmdbService>();
-        var controller = new MoviesController(movieService, tmdbService);
+        var recommendationsService = Substitute.For<IGroupRecommendationsService>();
+        var logger = Substitute.For<ILogger<MoviesController>>();
+        var controller = new MoviesController(movieService, tmdbService, recommendationsService, logger);
 
         movieService.DeleteAsync(999).Returns(false);
 
@@ -322,7 +351,9 @@ public class MoviesControllerTests
         // Arrange
         var movieService = Substitute.For<IMovieService>();
         var tmdbService = Substitute.For<ITmdbService>();
-        var controller = new MoviesController(movieService, tmdbService);
+        var recommendationsService = Substitute.For<IGroupRecommendationsService>();
+        var logger = Substitute.For<ILogger<MoviesController>>();
+        var controller = new MoviesController(movieService, tmdbService, recommendationsService, logger);
 
         var enrichedMovie = new Movie
         {
@@ -378,7 +409,9 @@ public class MoviesControllerTests
         // Arrange
         var movieService = Substitute.For<IMovieService>();
         var tmdbService = Substitute.For<ITmdbService>();
-        var controller = new MoviesController(movieService, tmdbService);
+        var recommendationsService = Substitute.For<IGroupRecommendationsService>();
+        var logger = Substitute.For<ILogger<MoviesController>>();
+        var controller = new MoviesController(movieService, tmdbService, recommendationsService, logger);
 
         movieService.GetOrCreateFromTmdbAsync(999).Returns((Movie?)null);
 
@@ -517,5 +550,174 @@ public class MoviesControllerTests
         returnedStatus.LatestRating.Should().Be(8);
         returnedStatus.OnWatchlist.Should().BeTrue();
         returnedStatus.WatchlistItemId.Should().Be(3);
+    }
+
+    [Fact]
+    public async Task GetSimilarMovies_ValidTmdbId_ReturnsOkWithRecommendations()
+    {
+        // Arrange
+        var movieService = Substitute.For<IMovieService>();
+        var tmdbService = Substitute.For<ITmdbService>();
+        var recommendationsService = Substitute.For<IGroupRecommendationsService>();
+        var controller = CreateControllerWithAuthenticatedUser(movieService, tmdbService, userId: 1);
+
+        // Override the recommendations service in the helper method
+        var logger = Substitute.For<ILogger<MoviesController>>();
+        controller = new MoviesController(movieService, tmdbService, recommendationsService, logger);
+
+        // Set up authenticated user
+        var claims = new List<Claim>
+        {
+            new Claim(ClaimTypes.NameIdentifier, "1"),
+            new Claim(ClaimTypes.Name, "testuser"),
+            new Claim(ClaimTypes.Email, "test@example.com")
+        };
+        var identity = new ClaimsIdentity(claims, "TestAuth");
+        var claimsPrincipal = new ClaimsPrincipal(identity);
+        controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext { User = claimsPrincipal }
+        };
+
+        var recommendations = new List<RecommendedMovie>
+        {
+            new RecommendedMovie
+            {
+                Movie = new TmdbMovie
+                {
+                    Id = 680,
+                    Title = "Pulp Fiction",
+                    ReleaseDate = "1994-10-14",
+                    VoteAverage = 8.5,
+                    VoteCount = 25000
+                },
+                Score = 0.85,
+                Reason = "Matches your preferred genres and director",
+                MatchedGenres = new List<string> { "Crime", "Drama" },
+                MatchedCast = new List<string> { "John Travolta", "Samuel L. Jackson" }
+            }
+        };
+
+        recommendationsService.GetMovieSimilarRecommendationsAsync(550, 1, 12).Returns(recommendations);
+
+        // Act
+        var result = await controller.GetSimilarMovies(550);
+
+        // Assert
+        var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject;
+        var returnedData = okResult.Value.Should().BeAssignableTo<List<RecommendedMovie>>().Subject;
+
+        returnedData.Should().HaveCount(1);
+        returnedData.First().Movie.Id.Should().Be(680);
+        returnedData.First().Movie.Title.Should().Be("Pulp Fiction");
+        returnedData.First().Reason.Should().Contain("genres");
+    }
+
+    [Fact]
+    public async Task GetSimilarMovies_ServiceThrowsException_ReturnsInternalServerError()
+    {
+        // Arrange
+        var movieService = Substitute.For<IMovieService>();
+        var tmdbService = Substitute.For<ITmdbService>();
+        var recommendationsService = Substitute.For<IGroupRecommendationsService>();
+        var logger = Substitute.For<ILogger<MoviesController>>();
+        var controller = new MoviesController(movieService, tmdbService, recommendationsService, logger);
+
+        // Set up authenticated user
+        var claims = new List<Claim>
+        {
+            new Claim(ClaimTypes.NameIdentifier, "1"),
+            new Claim(ClaimTypes.Name, "testuser"),
+            new Claim(ClaimTypes.Email, "test@example.com")
+        };
+        var identity = new ClaimsIdentity(claims, "TestAuth");
+        var claimsPrincipal = new ClaimsPrincipal(identity);
+        controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext { User = claimsPrincipal }
+        };
+
+        recommendationsService
+            .GetMovieSimilarRecommendationsAsync(Arg.Any<int>(), Arg.Any<int>(), Arg.Any<int>())
+            .Returns<List<RecommendedMovie>>(x => throw new Exception("TMDb API error"));
+
+        // Act
+        var result = await controller.GetSimilarMovies(550);
+
+        // Assert
+        var statusResult = result.Result.Should().BeOfType<ObjectResult>().Subject;
+        statusResult.StatusCode.Should().Be(500);
+    }
+
+    [Fact]
+    public async Task GetSimilarMovies_EmptyResults_ReturnsOkWithEmptyList()
+    {
+        // Arrange
+        var movieService = Substitute.For<IMovieService>();
+        var tmdbService = Substitute.For<ITmdbService>();
+        var recommendationsService = Substitute.For<IGroupRecommendationsService>();
+        var logger = Substitute.For<ILogger<MoviesController>>();
+        var controller = new MoviesController(movieService, tmdbService, recommendationsService, logger);
+
+        // Set up authenticated user
+        var claims = new List<Claim>
+        {
+            new Claim(ClaimTypes.NameIdentifier, "1"),
+            new Claim(ClaimTypes.Name, "testuser"),
+            new Claim(ClaimTypes.Email, "test@example.com")
+        };
+        var identity = new ClaimsIdentity(claims, "TestAuth");
+        var claimsPrincipal = new ClaimsPrincipal(identity);
+        controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext { User = claimsPrincipal }
+        };
+
+        recommendationsService
+            .GetMovieSimilarRecommendationsAsync(999, 1, 12)
+            .Returns(new List<RecommendedMovie>());
+
+        // Act
+        var result = await controller.GetSimilarMovies(999);
+
+        // Assert
+        var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject;
+        var returnedData = okResult.Value.Should().BeAssignableTo<List<RecommendedMovie>>().Subject;
+        returnedData.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task GetSimilarMovies_CallsServiceWithCorrectParameters()
+    {
+        // Arrange
+        var movieService = Substitute.For<IMovieService>();
+        var tmdbService = Substitute.For<ITmdbService>();
+        var recommendationsService = Substitute.For<IGroupRecommendationsService>();
+        var logger = Substitute.For<ILogger<MoviesController>>();
+        var controller = new MoviesController(movieService, tmdbService, recommendationsService, logger);
+
+        // Set up authenticated user
+        var claims = new List<Claim>
+        {
+            new Claim(ClaimTypes.NameIdentifier, "42"),
+            new Claim(ClaimTypes.Name, "testuser"),
+            new Claim(ClaimTypes.Email, "test@example.com")
+        };
+        var identity = new ClaimsIdentity(claims, "TestAuth");
+        var claimsPrincipal = new ClaimsPrincipal(identity);
+        controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext { User = claimsPrincipal }
+        };
+
+        recommendationsService
+            .GetMovieSimilarRecommendationsAsync(Arg.Any<int>(), Arg.Any<int>(), Arg.Any<int>())
+            .Returns(new List<RecommendedMovie>());
+
+        // Act
+        await controller.GetSimilarMovies(550);
+
+        // Assert
+        await recommendationsService.Received(1).GetMovieSimilarRecommendationsAsync(550, 42, 12);
     }
 }

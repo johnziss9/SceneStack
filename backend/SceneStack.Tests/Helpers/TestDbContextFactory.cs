@@ -60,8 +60,10 @@ public static class TestDbContextFactory
             Runtime = 139, // Enriched
             DirectorName = "David Fincher", // Enriched
             DirectorProfilePath = "/fincher.jpg", // Enriched
+            Directors = new List<DirectorMember> { new DirectorMember { Name = "David Fincher", ProfilePath = "/fincher.jpg" } }, // Enriched
             WriterName = "Chuck Palahniuk", // Enriched
             WriterProfilePath = "/chuck.jpg", // Enriched
+            Writers = new List<WriterMember> { new WriterMember { Name = "Chuck Palahniuk", Job = "Novel", ProfilePath = "/chuck.jpg" } }, // Enriched
             CreatedAt = DateTime.UtcNow,
             IsDeleted = false
         };
@@ -117,6 +119,16 @@ public class TestApplicationDbContext : ApplicationDbContext
                 .HasConversion(
                     v => JsonSerializer.Serialize(v, (JsonSerializerOptions)null!),
                     v => JsonSerializer.Deserialize<List<CastMember>>(v, (JsonSerializerOptions)null!) ?? new List<CastMember>());
+
+            entity.Property(e => e.Directors)
+                .HasConversion(
+                    v => JsonSerializer.Serialize(v, (JsonSerializerOptions)null!),
+                    v => JsonSerializer.Deserialize<List<DirectorMember>>(v, (JsonSerializerOptions)null!) ?? new List<DirectorMember>());
+
+            entity.Property(e => e.Writers)
+                .HasConversion(
+                    v => JsonSerializer.Serialize(v, (JsonSerializerOptions)null!),
+                    v => JsonSerializer.Deserialize<List<WriterMember>>(v, (JsonSerializerOptions)null!) ?? new List<WriterMember>());
         });
     }
 }

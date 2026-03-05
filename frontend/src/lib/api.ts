@@ -87,6 +87,10 @@ export const movieApi = {
     // GET: api/people/{personId}/movies
     getPersonMovies: (personId: number) =>
         api.get<TmdbPersonMovieCredits>(`/api/people/${personId}/movies`),
+
+    // GET: api/movies/tmdb/{tmdbId}/similar — authenticated
+    getSimilarMovies: (tmdbId: number) =>
+        api.get<RecommendedMovie[]>(`/api/movies/tmdb/${tmdbId}/similar`),
 };
 
 // Watchlist endpoints

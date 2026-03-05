@@ -163,6 +163,15 @@ internal class GroupPreferences
     public List<string> Tier2Writers { get; set; } = new();
 }
 
+// Preferences extracted from a single movie for similarity recommendations
+internal class MoviePreferences
+{
+    public Dictionary<string, int> Genres { get; set; } = new();      // Genre name -> 1 (presence)
+    public List<string> Directors { get; set; } = new();              // All directors
+    public List<string> Writers { get; set; } = new();                // Top writers
+    public List<string> Cast { get; set; } = new();                   // Top 10 cast
+}
+
 internal enum RecommendationTier
 {
     Elite = 1,    // 8-10 ratings

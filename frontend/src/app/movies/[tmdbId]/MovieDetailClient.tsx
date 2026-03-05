@@ -8,6 +8,7 @@ import type { MovieDetail, MovieUserStatus, TmdbMovie } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { useWishlist } from '@/contexts/WatchlistContext';
 import { WatchForm } from '@/components/WatchForm';
+import { SimilarMovies } from '@/components/SimilarMovies';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { LoadingTips } from "@/components/LoadingTips";
@@ -115,6 +116,13 @@ export function MovieDetailClient({ params }: MovieDetailPageProps) {
         }
         load();
     }, [params, user]);
+
+    // Scroll to top when tmdbId changes (e.g., when navigating from similar movies)
+    useEffect(() => {
+        if (tmdbId !== null) {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    }, [tmdbId]);
 
     const handleWatchlistToggle = async () => {
         if (!user || !movie || !status) return;
@@ -459,6 +467,13 @@ export function MovieDetailClient({ params }: MovieDetailPageProps) {
                                 );
                             })}
                         </div>
+                    </div>
+                )}
+
+                {/* Similar Movies Section */}
+                {user && movie && (
+                    <div className="mt-10">
+                        <SimilarMovies tmdbId={movie.tmdbId} />
                     </div>
                 )}
             </div>
