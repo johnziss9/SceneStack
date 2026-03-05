@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import InvitationsPage from '@/app/invitations/page'
+import { ReceivedInvitations } from '@/components/ReceivedInvitations'
 import { invitationApi } from '@/lib/api'
 import type { Invitation } from '@/types'
 
@@ -39,7 +39,7 @@ mockRouter.useRouter = jest.fn(() => ({
     back: jest.fn(),
 }))
 
-describe('InvitationsPage', () => {
+describe('ReceivedInvitations', () => {
     const mockInvitations: Invitation[] = [
         {
             id: 1,
@@ -84,7 +84,7 @@ describe('InvitationsPage', () => {
             () => new Promise(() => { }) // Never resolves
         )
 
-        render(<InvitationsPage />)
+        render(<ReceivedInvitations />)
 
         expect(screen.getByText(/loading invitations/i)).toBeInTheDocument()
     })
@@ -92,7 +92,7 @@ describe('InvitationsPage', () => {
     it('should render invitations list when data is loaded', async () => {
         ;(invitationApi.getPendingInvitations as jest.Mock).mockResolvedValue(mockInvitations)
 
-        render(<InvitationsPage />)
+        render(<ReceivedInvitations />)
 
         await waitFor(() => {
             expect(screen.getByText('Movie Buffs')).toBeInTheDocument()
@@ -107,7 +107,7 @@ describe('InvitationsPage', () => {
     it('should render empty state when no invitations', async () => {
         ;(invitationApi.getPendingInvitations as jest.Mock).mockResolvedValue([])
 
-        render(<InvitationsPage />)
+        render(<ReceivedInvitations />)
 
         await waitFor(() => {
             expect(screen.getByText('No pending invitations')).toBeInTheDocument()
@@ -124,7 +124,7 @@ describe('InvitationsPage', () => {
             status: 1, // Accepted
         })
 
-        render(<InvitationsPage />)
+        render(<ReceivedInvitations />)
 
         await waitFor(() => {
             expect(screen.getByText('Movie Buffs')).toBeInTheDocument()
@@ -158,7 +158,7 @@ describe('InvitationsPage', () => {
             status: 2, // Declined
         })
 
-        render(<InvitationsPage />)
+        render(<ReceivedInvitations />)
 
         await waitFor(() => {
             expect(screen.getByText('Movie Buffs')).toBeInTheDocument()
@@ -186,7 +186,7 @@ describe('InvitationsPage', () => {
             () => new Promise((resolve) => setTimeout(resolve, 100))
         )
 
-        render(<InvitationsPage />)
+        render(<ReceivedInvitations />)
 
         await waitFor(() => {
             expect(screen.getByText('Movie Buffs')).toBeInTheDocument()
@@ -208,7 +208,7 @@ describe('InvitationsPage', () => {
             new Error('Failed to fetch')
         )
 
-        render(<InvitationsPage />)
+        render(<ReceivedInvitations />)
 
         await waitFor(() => {
             expect(consoleError).toHaveBeenCalledWith(
@@ -228,7 +228,7 @@ describe('InvitationsPage', () => {
             message: 'This invitation has expired',
         })
 
-        render(<InvitationsPage />)
+        render(<ReceivedInvitations />)
 
         await waitFor(() => {
             expect(screen.getByText('Movie Buffs')).toBeInTheDocument()
@@ -244,24 +244,10 @@ describe('InvitationsPage', () => {
         })
     })
 
-    it('should render Back to Groups button with correct link', async () => {
-        ;(invitationApi.getPendingInvitations as jest.Mock).mockResolvedValue(mockInvitations)
-
-        render(<InvitationsPage />)
-
-        await waitFor(() => {
-            expect(screen.getByText('Movie Buffs')).toBeInTheDocument()
-        })
-
-        const backButton = screen.getByRole('link', { name: /back to groups/i })
-        expect(backButton).toBeInTheDocument()
-        expect(backButton).toHaveAttribute('href', '/groups')
-    })
-
     it('should display invitation count in group stats', async () => {
         ;(invitationApi.getPendingInvitations as jest.Mock).mockResolvedValue(mockInvitations)
 
-        render(<InvitationsPage />)
+        render(<ReceivedInvitations />)
 
         await waitFor(() => {
             expect(screen.getByText('Movie Buffs')).toBeInTheDocument()
@@ -275,13 +261,13 @@ describe('InvitationsPage', () => {
     it('should format dates correctly', async () => {
         ;(invitationApi.getPendingInvitations as jest.Mock).mockResolvedValue(mockInvitations)
 
-        render(<InvitationsPage />)
+        render(<ReceivedInvitations />)
 
         await waitFor(() => {
             expect(screen.getByText('Movie Buffs')).toBeInTheDocument()
         })
 
-        // Check if date formatting is present (format-fns uses different formats)
+        // Check if date formatting is present (date-fns uses different formats)
         // Just verify there's a date badge
         const dateBadges = screen.getAllByText(/mar/i)
         expect(dateBadges.length).toBeGreaterThan(0)
@@ -295,7 +281,7 @@ describe('InvitationsPage', () => {
             status: 1,
         })
 
-        render(<InvitationsPage />)
+        render(<ReceivedInvitations />)
 
         await waitFor(() => {
             expect(screen.getByText('Movie Buffs')).toBeInTheDocument()
@@ -310,5 +296,39 @@ describe('InvitationsPage', () => {
             expect(screen.queryByText('Movie Buffs')).not.toBeInTheDocument()
             expect(screen.getByText('Cinema Club')).toBeInTheDocument()
         })
+    })
+
+    it('should render invitation without description', async () => {
+        ;(invitationApi.getPendingInvitations as jest.Mock).mockResolvedValue([mockInvitations[1]])
+
+        render(<ReceivedInvitations />)
+
+        await waitFor(() => {
+            expect(screen.getByText('Cinema Club')).toBeInTheDocument()
+        })
+
+        // Should not crash when description is null
+        expect(screen.queryByText('A group for movie enthusiasts')).not.toBeInTheDocument()
+    })
+
+    it('should display both Accept and Decline buttons with correct styling', async () => {
+        ;(invitationApi.getPendingInvitations as jest.Mock).mockResolvedValue([mockInvitations[0]])
+
+        render(<ReceivedInvitations />)
+
+        await waitFor(() => {
+            expect(screen.getByText('Movie Buffs')).toBeInTheDocument()
+        })
+
+        const acceptButton = screen.getByRole('button', { name: /accept/i })
+        const declineButton = screen.getByRole('button', { name: /decline/i })
+
+        expect(acceptButton).toBeInTheDocument()
+        expect(declineButton).toBeInTheDocument()
+
+        // Decline button should have baseline styling
+        expect(declineButton.className).toContain('border')
+        expect(declineButton.className).toContain('hover:!border-orange-500')
+        expect(declineButton.className).toContain('hover:scale-[1.02]')
     })
 })

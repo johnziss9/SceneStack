@@ -16,7 +16,11 @@ interface InvitationWithGroup extends Invitation {
     groupName: string;
 }
 
-export function SentInvitations() {
+interface SentInvitationsProps {
+    onCountChange?: (count: number) => void;
+}
+
+export function SentInvitations({ onCountChange }: SentInvitationsProps = {}) {
     const [invitations, setInvitations] = useState<InvitationWithGroup[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [cancellingId, setCancellingId] = useState<number | null>(null);
@@ -24,6 +28,11 @@ export function SentInvitations() {
     useEffect(() => {
         fetchAllInvitations();
     }, []);
+
+    // Notify parent of count changes
+    useEffect(() => {
+        onCountChange?.(invitations.length);
+    }, [invitations.length, onCountChange]);
 
     const fetchAllInvitations = async () => {
         try {
@@ -131,7 +140,7 @@ export function SentInvitations() {
         <div className="space-y-3">
             {invitations.map((invitation) => (
                 <Card key={invitation.id}>
-                    <CardContent className="p-4">
+                    <CardContent className="px-4 py-3">
                         <div
                             className={`flex items-center justify-between gap-4 ${
                                 isExpired(invitation.expiresAt) ? 'opacity-50' : ''
@@ -176,7 +185,7 @@ export function SentInvitations() {
                                 size="sm"
                                 onClick={() => handleCancel(invitation.id)}
                                 disabled={cancellingId === invitation.id || isExpired(invitation.expiresAt)}
-                                className="shrink-0"
+                                className="shrink-0 !border-[0.5px] hover:!border-orange-500 hover:scale-[1.02] transition-all"
                             >
                                 {cancellingId === invitation.id ? (
                                     <Loader2 className="h-4 w-4 animate-spin" />
