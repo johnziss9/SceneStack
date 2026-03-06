@@ -13,42 +13,38 @@ import { Eye, EyeOff } from 'lucide-react';
 
 export default function LoginPage() {
     const { login, loading: authLoading } = useAuth();
-    const [email, setEmail] = useState('');
+    const [emailOrUsername, setEmailOrUsername] = useState('');
     const [password, setPassword] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
 
     // Refs for auto-scrolling to errors and focus management
-    const emailRef = useRef<HTMLDivElement>(null);
+    const emailOrUsernameRef = useRef<HTMLDivElement>(null);
     const passwordRef = useRef<HTMLDivElement>(null);
-    const emailInputRef = useRef<HTMLInputElement>(null);
+    const emailOrUsernameInputRef = useRef<HTMLInputElement>(null);
 
-    // Auto-focus email field when page loads
+    // Auto-focus email/username field when page loads
     useEffect(() => {
-        if (emailInputRef.current) {
-            emailInputRef.current.focus();
+        if (emailOrUsernameInputRef.current) {
+            emailOrUsernameInputRef.current.focus();
         }
     }, []);
 
     // Form validation
-    const [emailError, setEmailError] = useState('');
+    const [emailOrUsernameError, setEmailOrUsernameError] = useState('');
     const [passwordError, setPasswordError] = useState('');
 
     const validateForm = (): boolean => {
         let isValid = true;
         let firstErrorRef: React.RefObject<HTMLDivElement | null> | null = null;
 
-        // Email validation
-        if (!email) {
-            setEmailError('Email is required');
+        // Email or Username validation
+        if (!emailOrUsername) {
+            setEmailOrUsernameError('Email or username is required');
             isValid = false;
-            if (!firstErrorRef) firstErrorRef = emailRef;
-        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-            setEmailError('Please enter a valid email');
-            isValid = false;
-            if (!firstErrorRef) firstErrorRef = emailRef;
+            if (!firstErrorRef) firstErrorRef = emailOrUsernameRef;
         } else {
-            setEmailError('');
+            setEmailOrUsernameError('');
         }
 
         // Password validation
@@ -83,11 +79,11 @@ export default function LoginPage() {
         setIsLoading(true);
 
         try {
-            await login({ email, password });
+            await login({ emailOrUsername, password });
             toast.success('Logged in successfully!');
         } catch (error: any) {
             // ApiError has the message directly on the error object
-            const errorMessage = error?.message || error?.response?.data?.message || 'Invalid email or password';
+            const errorMessage = error?.message || error?.response?.data?.message || 'Invalid email/username or password';
             toast.error(errorMessage);
         } finally {
             setIsLoading(false);
@@ -109,9 +105,9 @@ export default function LoginPage() {
                     {/* Form skeleton */}
                     <div className="mt-8 space-y-6">
                         <div className="space-y-4">
-                            {/* Email field skeleton */}
+                            {/* Email or Username field skeleton */}
                             <div className="space-y-2">
-                                <Skeleton variant="branded" className="h-4 w-12" />
+                                <Skeleton variant="branded" className="h-4 w-32" />
                                 <Skeleton variant="branded" className="h-10 w-full" />
                             </div>
 
@@ -147,34 +143,29 @@ export default function LoginPage() {
                 {/* Login Form */}
                 <form onSubmit={handleSubmit} className="mt-8 space-y-6" noValidate>
                     <div className="space-y-4">
-                        {/* Email Field */}
-                        <div ref={emailRef}>
-                            <Label htmlFor="email">Email</Label>
+                        {/* Email or Username Field */}
+                        <div ref={emailOrUsernameRef} className="space-y-2">
+                            <Label htmlFor="emailOrUsername">Email or Username</Label>
                             <Input
-                                ref={emailInputRef}
-                                id="email"
-                                type="email"
-                                value={email}
+                                ref={emailOrUsernameInputRef}
+                                id="emailOrUsername"
+                                type="text"
+                                value={emailOrUsername}
                                 onChange={(e) => {
-                                    setEmail(e.target.value);
-                                    if (emailError) setEmailError('');
+                                    setEmailOrUsername(e.target.value);
+                                    if (emailOrUsernameError) setEmailOrUsernameError('');
                                 }}
-                                onBlur={() => {
-                                    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-                                        setEmailError('Please enter a valid email');
-                                    }
-                                }}
-                                placeholder="Enter your email address"
+                                placeholder="Enter your email or username"
                                 disabled={isLoading}
-                                className={emailError ? 'border-destructive' : ''}
+                                className={emailOrUsernameError ? 'border-destructive' : ''}
                             />
-                            {emailError && (
-                                <p className="text-sm text-destructive mt-1">{emailError}</p>
+                            {emailOrUsernameError && (
+                                <p className="text-sm text-destructive mt-1">{emailOrUsernameError}</p>
                             )}
                         </div>
 
                         {/* Password Field */}
-                        <div ref={passwordRef}>
+                        <div ref={passwordRef} className="space-y-2">
                             <Label htmlFor="password">Password</Label>
                             <div className="relative">
                                 <Input

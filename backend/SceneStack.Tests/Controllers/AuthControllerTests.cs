@@ -67,14 +67,46 @@ public class AuthControllerTests
     }
 
     [Fact]
-    public async Task Login_ValidCredentials_ReturnsOkWithToken()
+    public async Task Login_ValidEmailCredentials_ReturnsOkWithToken()
     {
         // Arrange
         var authService = Substitute.For<IAuthService>();
         var controller = new AuthController(authService);
 
         var request = new LoginRequest(
+            EmailOrUsername: "test@example.com",
+            Password: "Password123!"
+        );
+
+        var authResponse = new AuthResponse(
+            Token: "fake-jwt-token",
+            Username: "testuser",
             Email: "test@example.com",
+            UserId: 1
+        );
+
+        authService.LoginAsync(request).Returns(authResponse);
+
+        // Act
+        var result = await controller.Login(request);
+
+        // Assert
+        var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject;
+        var returnedResponse = okResult.Value.Should().BeOfType<AuthResponse>().Subject;
+        returnedResponse.Token.Should().Be("fake-jwt-token");
+        returnedResponse.Username.Should().Be("testuser");
+        returnedResponse.UserId.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task Login_ValidUsernameCredentials_ReturnsOkWithToken()
+    {
+        // Arrange
+        var authService = Substitute.For<IAuthService>();
+        var controller = new AuthController(authService);
+
+        var request = new LoginRequest(
+            EmailOrUsername: "testuser",
             Password: "Password123!"
         );
 
@@ -106,7 +138,7 @@ public class AuthControllerTests
         var controller = new AuthController(authService);
 
         var request = new LoginRequest(
-            Email: "test@example.com",
+            EmailOrUsername: "test@example.com",
             Password: "WrongPassword123!"
         );
 

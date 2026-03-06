@@ -122,13 +122,13 @@ describe('AuthContext', () => {
 
             await act(async () => {
                 await result.current.login({
-                    email: 'test@example.com',
+                    emailOrUsername: 'test@example.com',
                     password: 'password123',
                 });
             });
 
             expect(mockAuthApi.login).toHaveBeenCalledWith({
-                email: 'test@example.com',
+                emailOrUsername: 'test@example.com',
                 password: 'password123',
             });
 
@@ -159,7 +159,7 @@ describe('AuthContext', () => {
             await expect(
                 act(async () => {
                     await result.current.login({
-                        email: 'test@example.com',
+                        emailOrUsername: 'test@example.com',
                         password: 'wrongpassword',
                     });
                 })

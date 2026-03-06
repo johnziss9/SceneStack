@@ -272,7 +272,7 @@ export default function RegisterPage() {
                 <form onSubmit={handleSubmit} className="mt-8 space-y-6" noValidate>
                     <div className="space-y-4">
                         {/* Username Field */}
-                        <div ref={usernameRef}>
+                        <div ref={usernameRef} className="space-y-2">
                             <Label htmlFor="username">Username</Label>
                             <Input
                                 ref={usernameInputRef}
@@ -298,7 +298,7 @@ export default function RegisterPage() {
                         </div>
 
                         {/* Email Field */}
-                        <div ref={emailRef}>
+                        <div ref={emailRef} className="space-y-2">
                             <Label htmlFor="email">Email</Label>
                             <Input
                                 id="email"
@@ -492,7 +492,7 @@ export default function RegisterPage() {
                         </div>
 
                         {/* Confirm Password Field */}
-                        <div ref={confirmPasswordRef}>
+                        <div ref={confirmPasswordRef} className="space-y-2">
                             <Label htmlFor="confirmPassword">Confirm Password</Label>
                             <div className="relative">
                                 <Input

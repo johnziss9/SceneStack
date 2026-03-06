@@ -115,11 +115,16 @@ public class AuthService : IAuthService
 
     public async Task<AuthResponse?> LoginAsync(LoginRequest request)
     {
-        // 1. Find the auth user by email
-        var authUser = await _userManager.FindByEmailAsync(request.Email);
+        // 1. Find the auth user by email or username
+        var authUser = await _userManager.FindByEmailAsync(request.EmailOrUsername);
         if (authUser == null)
         {
-            return null;
+            // Try finding by username if email lookup failed
+            authUser = await _userManager.FindByNameAsync(request.EmailOrUsername);
+            if (authUser == null)
+            {
+                return null;
+            }
         }
 
         // 2. Verify password
@@ -142,7 +147,7 @@ public class AuthService : IAuthService
         // 4. Check if account is permanently deleted
         if (domainUser.IsDeleted)
         {
-            Console.WriteLine($"Account {request.Email} is permanently deleted (IsDeleted={domainUser.IsDeleted})");
+            Console.WriteLine($"Account {request.EmailOrUsername} is permanently deleted (IsDeleted={domainUser.IsDeleted})");
             throw new InvalidOperationException("Account has been permanently deactivated and cannot be accessed.");
         }
 

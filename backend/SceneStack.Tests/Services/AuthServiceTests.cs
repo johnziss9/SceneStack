@@ -97,7 +97,7 @@ public class AuthServiceTests
     }
 
     [Fact]
-    public async Task LoginAsync_WithValidCredentials_ShouldReturnToken()
+    public async Task LoginAsync_WithValidEmail_ShouldReturnToken()
     {
         // Arrange
         // First create a domain user
@@ -120,11 +120,11 @@ public class AuthServiceTests
         };
 
         var request = new LoginRequest(
-            Email: "test@example.com",
+            EmailOrUsername: "test@example.com",
             Password: "Password123!"
         );
 
-        _userManager.FindByEmailAsync(request.Email).Returns(authUser);
+        _userManager.FindByEmailAsync(request.EmailOrUsername).Returns(authUser);
         _userManager.CheckPasswordAsync(authUser, request.Password).Returns(true);
 
         // Act
@@ -139,15 +139,60 @@ public class AuthServiceTests
     }
 
     [Fact]
-    public async Task LoginAsync_WithInvalidEmail_ShouldReturnNull()
+    public async Task LoginAsync_WithValidUsername_ShouldReturnToken()
     {
         // Arrange
+        // First create a domain user
+        var domainUser = new User
+        {
+            Username = "testuser",
+            Email = "test@example.com",
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+        _context.Users.Add(domainUser);
+        await _context.SaveChangesAsync();
+
+        var authUser = new ApplicationUser
+        {
+            Id = Guid.NewGuid().ToString(),
+            UserName = "testuser",
+            Email = "test@example.com",
+            DomainUserId = domainUser.Id
+        };
+
         var request = new LoginRequest(
-            Email: "nonexistent@example.com",
+            EmailOrUsername: "testuser",
             Password: "Password123!"
         );
 
-        _userManager.FindByEmailAsync(request.Email).Returns((ApplicationUser?)null);
+        // Username lookup (email lookup fails, then username succeeds)
+        _userManager.FindByEmailAsync(request.EmailOrUsername).Returns((ApplicationUser?)null);
+        _userManager.FindByNameAsync(request.EmailOrUsername).Returns(authUser);
+        _userManager.CheckPasswordAsync(authUser, request.Password).Returns(true);
+
+        // Act
+        var result = await _authService.LoginAsync(request);
+
+        // Assert
+        result.Should().NotBeNull();
+        result!.Username.Should().Be("testuser");
+        result.Email.Should().Be("test@example.com");
+        result.Token.Should().NotBeNullOrEmpty();
+        result.UserId.Should().Be(domainUser.Id);
+    }
+
+    [Fact]
+    public async Task LoginAsync_WithInvalidEmailOrUsername_ShouldReturnNull()
+    {
+        // Arrange
+        var request = new LoginRequest(
+            EmailOrUsername: "nonexistent@example.com",
+            Password: "Password123!"
+        );
+
+        _userManager.FindByEmailAsync(request.EmailOrUsername).Returns((ApplicationUser?)null);
+        _userManager.FindByNameAsync(request.EmailOrUsername).Returns((ApplicationUser?)null);
 
         // Act
         var result = await _authService.LoginAsync(request);
@@ -169,11 +214,11 @@ public class AuthServiceTests
         };
 
         var request = new LoginRequest(
-            Email: "test@example.com",
+            EmailOrUsername: "test@example.com",
             Password: "WrongPassword123!"
         );
 
-        _userManager.FindByEmailAsync(request.Email).Returns(authUser);
+        _userManager.FindByEmailAsync(request.EmailOrUsername).Returns(authUser);
         _userManager.CheckPasswordAsync(authUser, request.Password).Returns(false);
 
         // Act

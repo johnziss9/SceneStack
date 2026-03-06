@@ -33,7 +33,7 @@ describe('LoginPage', () => {
 
             expect(screen.getByText('SceneStack')).toBeInTheDocument();
             expect(screen.getByText('Sign in to your account')).toBeInTheDocument();
-            expect(screen.getByLabelText(/email/i)).toBeInTheDocument();
+            expect(screen.getByLabelText(/email or username/i)).toBeInTheDocument();
             expect(screen.getByLabelText(/password/i)).toBeInTheDocument();
             expect(screen.getByRole('button', { name: /sign in/i })).toBeInTheDocument();
         });
@@ -48,34 +48,18 @@ describe('LoginPage', () => {
     });
 
     describe('Form Validation', () => {
-        it('should show error when submitting with empty email', async () => {
+        it('should show error when submitting with empty email or username', async () => {
             const user = userEvent.setup();
             render(<LoginPage />);
 
             const passwordInput = screen.getByLabelText(/password/i);
             const submitButton = screen.getByRole('button', { name: /sign in/i });
 
-            // Fill password but leave email empty
+            // Fill password but leave email/username empty
             await user.type(passwordInput, 'password123');
             await user.click(submitButton);
 
-            expect(await screen.findByText('Email is required')).toBeInTheDocument();
-            expect(mockLogin).not.toHaveBeenCalled();
-        });
-
-        it('should show error for invalid email format on submit', async () => {
-            const user = userEvent.setup();
-            render(<LoginPage />);
-
-            const emailInput = screen.getByLabelText(/email/i);
-            const passwordInput = screen.getByLabelText(/password/i);
-            const submitButton = screen.getByRole('button', { name: /sign in/i });
-
-            await user.type(emailInput, 'notanemail');
-            await user.type(passwordInput, 'password123');
-            await user.click(submitButton);
-
-            expect(await screen.findByText('Please enter a valid email')).toBeInTheDocument();
+            expect(await screen.findByText('Email or username is required')).toBeInTheDocument();
             expect(mockLogin).not.toHaveBeenCalled();
         });
 
@@ -83,11 +67,11 @@ describe('LoginPage', () => {
             const user = userEvent.setup();
             render(<LoginPage />);
 
-            const emailInput = screen.getByLabelText(/email/i);
+            const emailOrUsernameInput = screen.getByLabelText(/email or username/i);
             const submitButton = screen.getByRole('button', { name: /sign in/i });
 
-            // Fill email but leave password empty
-            await user.type(emailInput, 'test@example.com');
+            // Fill email/username but leave password empty
+            await user.type(emailOrUsernameInput, 'test@example.com');
             await user.click(submitButton);
 
             expect(await screen.findByText('Password is required')).toBeInTheDocument();
@@ -98,29 +82,29 @@ describe('LoginPage', () => {
             const user = userEvent.setup();
             render(<LoginPage />);
 
-            const emailInput = screen.getByLabelText(/email/i);
+            const emailOrUsernameInput = screen.getByLabelText(/email or username/i);
             const passwordInput = screen.getByLabelText(/password/i);
             const submitButton = screen.getByRole('button', { name: /sign in/i });
 
             // Submit with empty fields to trigger errors
             await user.click(submitButton);
-            expect(await screen.findByText('Email is required')).toBeInTheDocument();
+            expect(await screen.findByText('Email or username is required')).toBeInTheDocument();
 
             // Start typing - error should clear
-            await user.type(emailInput, 'test@example.com');
-            expect(screen.queryByText('Email is required')).not.toBeInTheDocument();
+            await user.type(emailOrUsernameInput, 'test@example.com');
+            expect(screen.queryByText('Email or username is required')).not.toBeInTheDocument();
         });
 
         it('should enable submit button when form has values', async () => {
             const user = userEvent.setup();
             render(<LoginPage />);
 
-            const emailInput = screen.getByLabelText(/email/i);
+            const emailOrUsernameInput = screen.getByLabelText(/email or username/i);
             const passwordInput = screen.getByLabelText(/password/i);
             const submitButton = screen.getByRole('button', { name: /sign in/i });
 
             // Initially disabled (or enabled if no client-side disable logic)
-            await user.type(emailInput, 'test@example.com');
+            await user.type(emailOrUsernameInput, 'test@example.com');
             await user.type(passwordInput, 'password123');
 
             expect(submitButton).toBeEnabled();
@@ -128,21 +112,40 @@ describe('LoginPage', () => {
     });
 
     describe('Form Submission', () => {
-        it('should call login with correct credentials on submit', async () => {
+        it('should call login with email when email is provided', async () => {
             const user = userEvent.setup();
             mockLogin.mockResolvedValue(undefined);
             render(<LoginPage />);
 
-            const emailInput = screen.getByLabelText(/email/i);
+            const emailOrUsernameInput = screen.getByLabelText(/email or username/i);
             const passwordInput = screen.getByLabelText(/password/i);
             const submitButton = screen.getByRole('button', { name: /sign in/i });
 
-            await user.type(emailInput, 'test@example.com');
+            await user.type(emailOrUsernameInput, 'test@example.com');
             await user.type(passwordInput, 'password123');
             await user.click(submitButton);
 
             expect(mockLogin).toHaveBeenCalledWith({
-                email: 'test@example.com',
+                emailOrUsername: 'test@example.com',
+                password: 'password123',
+            });
+        });
+
+        it('should call login with username when username is provided', async () => {
+            const user = userEvent.setup();
+            mockLogin.mockResolvedValue(undefined);
+            render(<LoginPage />);
+
+            const emailOrUsernameInput = screen.getByLabelText(/email or username/i);
+            const passwordInput = screen.getByLabelText(/password/i);
+            const submitButton = screen.getByRole('button', { name: /sign in/i });
+
+            await user.type(emailOrUsernameInput, 'testuser');
+            await user.type(passwordInput, 'password123');
+            await user.click(submitButton);
+
+            expect(mockLogin).toHaveBeenCalledWith({
+                emailOrUsername: 'testuser',
                 password: 'password123',
             });
         });
@@ -152,16 +155,16 @@ describe('LoginPage', () => {
             mockLogin.mockImplementation(() => new Promise(resolve => setTimeout(resolve, 100)));
             render(<LoginPage />);
 
-            const emailInput = screen.getByLabelText(/email/i);
+            const emailOrUsernameInput = screen.getByLabelText(/email or username/i);
             const passwordInput = screen.getByLabelText(/password/i);
             const submitButton = screen.getByRole('button', { name: /sign in/i });
 
-            await user.type(emailInput, 'test@example.com');
+            await user.type(emailOrUsernameInput, 'test@example.com');
             await user.type(passwordInput, 'password123');
             await user.click(submitButton);
 
             expect(screen.getByText('Signing in...')).toBeInTheDocument();
-            expect(emailInput).toBeDisabled();
+            expect(emailOrUsernameInput).toBeDisabled();
             expect(passwordInput).toBeDisabled();
             expect(submitButton).toBeDisabled();
         });
@@ -171,11 +174,11 @@ describe('LoginPage', () => {
             mockLogin.mockResolvedValue(undefined);
             render(<LoginPage />);
 
-            const emailInput = screen.getByLabelText(/email/i);
+            const emailOrUsernameInput = screen.getByLabelText(/email or username/i);
             const passwordInput = screen.getByLabelText(/password/i);
             const submitButton = screen.getByRole('button', { name: /sign in/i });
 
-            await user.type(emailInput, 'test@example.com');
+            await user.type(emailOrUsernameInput, 'test@example.com');
             await user.type(passwordInput, 'password123');
             await user.click(submitButton);
 
@@ -196,11 +199,11 @@ describe('LoginPage', () => {
 
             render(<LoginPage />);
 
-            const emailInput = screen.getByLabelText(/email/i);
+            const emailOrUsernameInput = screen.getByLabelText(/email or username/i);
             const passwordInput = screen.getByLabelText(/password/i);
             const submitButton = screen.getByRole('button', { name: /sign in/i });
 
-            await user.type(emailInput, 'test@example.com');
+            await user.type(emailOrUsernameInput, 'test@example.com');
             await user.type(passwordInput, 'wrongpassword');
             await user.click(submitButton);
 
@@ -218,15 +221,15 @@ describe('LoginPage', () => {
             const user = userEvent.setup();
             render(<LoginPage />);
 
-            const emailInput = screen.getByLabelText(/email/i);
+            const emailOrUsernameInput = screen.getByLabelText(/email or username/i);
             const submitButton = screen.getByRole('button', { name: /sign in/i });
 
-            // Only fill email (password missing)
-            await user.type(emailInput, 'test@example.com');
-            
+            // Only fill email/username (password missing)
+            await user.type(emailOrUsernameInput, 'test@example.com');
+
             // Click submit - should show validation error and not call login
             await user.click(submitButton);
-            
+
             expect(await screen.findByText('Password is required')).toBeInTheDocument();
             expect(mockLogin).not.toHaveBeenCalled();
         });
