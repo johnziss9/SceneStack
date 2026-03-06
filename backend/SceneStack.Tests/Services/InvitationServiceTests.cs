@@ -21,7 +21,8 @@ public class InvitationServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var groupService = Substitute.For<IGroupService>();
         var logger = Substitute.For<ILogger<InvitationService>>();
-        var service = new InvitationService(context, groupService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new InvitationService(context, groupService, logger, auditService);
 
         var creator = context.Users.First(u => u.IsPremium);
         var invitedUser = context.Users.Skip(1).First();
@@ -81,7 +82,8 @@ public class InvitationServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var groupService = Substitute.For<IGroupService>();
         var logger = Substitute.For<ILogger<InvitationService>>();
-        var service = new InvitationService(context, groupService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new InvitationService(context, groupService, logger, auditService);
 
         var user = context.Users.First();
         var request = new CreateInvitationRequest
@@ -103,7 +105,8 @@ public class InvitationServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var groupService = Substitute.For<IGroupService>();
         var logger = Substitute.For<ILogger<InvitationService>>();
-        var service = new InvitationService(context, groupService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new InvitationService(context, groupService, logger, auditService);
 
         var creator = context.Users.First(u => u.IsPremium);
         var regularMember = context.Users.Skip(1).First();
@@ -160,7 +163,8 @@ public class InvitationServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var groupService = Substitute.For<IGroupService>();
         var logger = Substitute.For<ILogger<InvitationService>>();
-        var service = new InvitationService(context, groupService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new InvitationService(context, groupService, logger, auditService);
 
         var creator = context.Users.First(u => u.IsPremium);
 
@@ -203,7 +207,8 @@ public class InvitationServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var groupService = Substitute.For<IGroupService>();
         var logger = Substitute.For<ILogger<InvitationService>>();
-        var service = new InvitationService(context, groupService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new InvitationService(context, groupService, logger, auditService);
 
         var creator = context.Users.First(u => u.IsPremium);
         var deactivatedUser = new User
@@ -256,7 +261,8 @@ public class InvitationServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var groupService = Substitute.For<IGroupService>();
         var logger = Substitute.For<ILogger<InvitationService>>();
-        var service = new InvitationService(context, groupService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new InvitationService(context, groupService, logger, auditService);
 
         var creator = context.Users.First(u => u.IsPremium);
         var existingMember = context.Users.Skip(1).First();
@@ -309,7 +315,8 @@ public class InvitationServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var groupService = Substitute.For<IGroupService>();
         var logger = Substitute.For<ILogger<InvitationService>>();
-        var service = new InvitationService(context, groupService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new InvitationService(context, groupService, logger, auditService);
 
         var creator = context.Users.First(u => u.IsPremium);
         var invitedUser = context.Users.Skip(1).First();
@@ -367,7 +374,8 @@ public class InvitationServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var groupService = Substitute.For<IGroupService>();
         var logger = Substitute.For<ILogger<InvitationService>>();
-        var service = new InvitationService(context, groupService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new InvitationService(context, groupService, logger, auditService);
 
         var creator = context.Users.First(u => u.IsPremium);
         var invitedUser = context.Users.Skip(1).First();
@@ -413,7 +421,8 @@ public class InvitationServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var groupService = Substitute.For<IGroupService>();
         var logger = Substitute.For<ILogger<InvitationService>>();
-        var service = new InvitationService(context, groupService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new InvitationService(context, groupService, logger, auditService);
 
         var creator = context.Users.First(u => u.IsPremium);
         var users = context.Users.Skip(1).Take(6).ToList();
@@ -477,7 +486,8 @@ public class InvitationServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var groupService = Substitute.For<IGroupService>();
         var logger = Substitute.For<ILogger<InvitationService>>();
-        var service = new InvitationService(context, groupService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new InvitationService(context, groupService, logger, auditService);
 
         var inviter = context.Users.First(u => u.IsPremium);
         var invitedUser = context.Users.Skip(1).First();
@@ -545,7 +555,8 @@ public class InvitationServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var groupService = Substitute.For<IGroupService>();
         var logger = Substitute.For<ILogger<InvitationService>>();
-        var service = new InvitationService(context, groupService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new InvitationService(context, groupService, logger, auditService);
 
         var user = context.Users.First();
 
@@ -567,7 +578,8 @@ public class InvitationServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var groupService = Substitute.For<IGroupService>();
         var logger = Substitute.For<ILogger<InvitationService>>();
-        var service = new InvitationService(context, groupService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new InvitationService(context, groupService, logger, auditService);
 
         var inviter = context.Users.First(u => u.IsPremium);
         var invitedUser = context.Users.Skip(1).First();
@@ -635,7 +647,8 @@ public class InvitationServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var groupService = Substitute.For<IGroupService>();
         var logger = Substitute.For<ILogger<InvitationService>>();
-        var service = new InvitationService(context, groupService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new InvitationService(context, groupService, logger, auditService);
 
         var inviter = context.Users.First(u => u.IsPremium);
         var invitedUser = context.Users.Skip(1).First();
@@ -703,7 +716,8 @@ public class InvitationServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var groupService = Substitute.For<IGroupService>();
         var logger = Substitute.For<ILogger<InvitationService>>();
-        var service = new InvitationService(context, groupService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new InvitationService(context, groupService, logger, auditService);
 
         var inviter = context.Users.First(u => u.IsPremium);
         var invitedUser = context.Users.Skip(1).First();
@@ -766,7 +780,8 @@ public class InvitationServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var groupService = Substitute.For<IGroupService>();
         var logger = Substitute.For<ILogger<InvitationService>>();
-        var service = new InvitationService(context, groupService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new InvitationService(context, groupService, logger, auditService);
 
         var user = context.Users.First();
         var request = new RespondToInvitationRequest { Accept = true };
@@ -785,7 +800,8 @@ public class InvitationServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var groupService = Substitute.For<IGroupService>();
         var logger = Substitute.For<ILogger<InvitationService>>();
-        var service = new InvitationService(context, groupService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new InvitationService(context, groupService, logger, auditService);
 
         var inviter = context.Users.First(u => u.IsPremium);
         var invitedUser = context.Users.Skip(1).First();
@@ -836,7 +852,8 @@ public class InvitationServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var groupService = Substitute.For<IGroupService>();
         var logger = Substitute.For<ILogger<InvitationService>>();
-        var service = new InvitationService(context, groupService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new InvitationService(context, groupService, logger, auditService);
 
         var inviter = context.Users.First(u => u.IsPremium);
         var invitedUser = context.Users.Skip(1).First();
@@ -886,7 +903,8 @@ public class InvitationServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var groupService = Substitute.For<IGroupService>();
         var logger = Substitute.For<ILogger<InvitationService>>();
-        var service = new InvitationService(context, groupService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new InvitationService(context, groupService, logger, auditService);
 
         var inviter = context.Users.First(u => u.IsPremium);
         var invitedUser = context.Users.Skip(1).First();
@@ -936,7 +954,8 @@ public class InvitationServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var groupService = Substitute.For<IGroupService>();
         var logger = Substitute.For<ILogger<InvitationService>>();
-        var service = new InvitationService(context, groupService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new InvitationService(context, groupService, logger, auditService);
 
         var inviter = context.Users.First(u => u.IsPremium);
         var invitedUser = context.Users.Skip(1).First();
@@ -984,7 +1003,8 @@ public class InvitationServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var groupService = Substitute.For<IGroupService>();
         var logger = Substitute.For<ILogger<InvitationService>>();
-        var service = new InvitationService(context, groupService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new InvitationService(context, groupService, logger, auditService);
 
         var inviter = context.Users.First(u => u.IsPremium);
         var invitedUser = context.Users.Skip(1).First();
@@ -1040,7 +1060,8 @@ public class InvitationServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var groupService = Substitute.For<IGroupService>();
         var logger = Substitute.For<ILogger<InvitationService>>();
-        var service = new InvitationService(context, groupService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new InvitationService(context, groupService, logger, auditService);
 
         var inviter = context.Users.First(u => u.IsPremium);
         var invitedUser = context.Users.Skip(1).First();
@@ -1085,7 +1106,8 @@ public class InvitationServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var groupService = Substitute.For<IGroupService>();
         var logger = Substitute.For<ILogger<InvitationService>>();
-        var service = new InvitationService(context, groupService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new InvitationService(context, groupService, logger, auditService);
 
         var user = context.Users.First();
 
@@ -1103,7 +1125,8 @@ public class InvitationServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var groupService = Substitute.For<IGroupService>();
         var logger = Substitute.For<ILogger<InvitationService>>();
-        var service = new InvitationService(context, groupService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new InvitationService(context, groupService, logger, auditService);
 
         var inviter = context.Users.First(u => u.IsPremium);
         var invitedUser = context.Users.Skip(1).First();
@@ -1144,7 +1167,8 @@ public class InvitationServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var groupService = Substitute.For<IGroupService>();
         var logger = Substitute.For<ILogger<InvitationService>>();
-        var service = new InvitationService(context, groupService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new InvitationService(context, groupService, logger, auditService);
 
         var inviter = context.Users.First(u => u.IsPremium);
         var invitedUser = context.Users.Skip(1).First();
@@ -1189,7 +1213,8 @@ public class InvitationServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var groupService = Substitute.For<IGroupService>();
         var logger = Substitute.For<ILogger<InvitationService>>();
-        var service = new InvitationService(context, groupService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new InvitationService(context, groupService, logger, auditService);
 
         var creator = context.Users.First(u => u.IsPremium);
         var invitedUser1 = context.Users.Skip(1).First();
@@ -1251,7 +1276,8 @@ public class InvitationServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var groupService = Substitute.For<IGroupService>();
         var logger = Substitute.For<ILogger<InvitationService>>();
-        var service = new InvitationService(context, groupService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new InvitationService(context, groupService, logger, auditService);
 
         var creator = context.Users.First(u => u.IsPremium);
         var nonMember = context.Users.Skip(1).First();
@@ -1292,7 +1318,8 @@ public class InvitationServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var groupService = Substitute.For<IGroupService>();
         var logger = Substitute.For<ILogger<InvitationService>>();
-        var service = new InvitationService(context, groupService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new InvitationService(context, groupService, logger, auditService);
 
         var requester = context.Users.First(u => u.Username == "testuser");
         groupService.CanUserJoinGroupAsync(Arg.Any<int>()).Returns(true);
@@ -1318,7 +1345,8 @@ public class InvitationServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var groupService = Substitute.For<IGroupService>();
         var logger = Substitute.For<ILogger<InvitationService>>();
-        var service = new InvitationService(context, groupService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new InvitationService(context, groupService, logger, auditService);
 
         var creator = context.Users.First(u => u.IsPremium);
         var member = context.Users.Skip(1).First();
@@ -1375,7 +1403,8 @@ public class InvitationServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var groupService = Substitute.For<IGroupService>();
         var logger = Substitute.For<ILogger<InvitationService>>();
-        var service = new InvitationService(context, groupService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new InvitationService(context, groupService, logger, auditService);
 
         var requester = context.Users.First();
 
@@ -1395,7 +1424,8 @@ public class InvitationServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var groupService = Substitute.For<IGroupService>();
         var logger = Substitute.For<ILogger<InvitationService>>();
-        var service = new InvitationService(context, groupService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new InvitationService(context, groupService, logger, auditService);
 
         var requester = context.Users.First();
         groupService.CanUserJoinGroupAsync(Arg.Any<int>()).Returns(true);
@@ -1416,7 +1446,8 @@ public class InvitationServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var groupService = Substitute.For<IGroupService>();
         var logger = Substitute.For<ILogger<InvitationService>>();
-        var service = new InvitationService(context, groupService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new InvitationService(context, groupService, logger, auditService);
 
         var requester = context.Users.First();
         var searchUser = context.Users.Skip(1).First();

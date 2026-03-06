@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using SceneStack.API.Constants;
 using SceneStack.API.Data;
 using SceneStack.API.DTOs;
 using SceneStack.API.Interfaces;
@@ -11,15 +12,18 @@ public class InvitationService : IInvitationService
     private readonly ApplicationDbContext _context;
     private readonly IGroupService _groupService;
     private readonly ILogger<InvitationService> _logger;
+    private readonly IAuditService _auditService;
 
     public InvitationService(
         ApplicationDbContext context,
         IGroupService groupService,
-        ILogger<InvitationService> logger)
+        ILogger<InvitationService> logger,
+        IAuditService auditService)
     {
         _context = context;
         _groupService = groupService;
         _logger = logger;
+        _auditService = auditService;
     }
 
     public async Task<InvitationResponse> CreateInvitationAsync(int requestingUserId, CreateInvitationRequest request)
@@ -115,6 +119,34 @@ public class InvitationService : IInvitationService
 
         _logger.LogInformation("User {UserId} created invitation {InvitationId} for user {InvitedUserId} to group {GroupId}",
             requestingUserId, invitation.Id, request.InvitedUserId, request.GroupId);
+
+        // Audit log: Invitation sent
+        await _auditService.LogAsync(new AuditLogEntry
+        {
+            UserId = requestingUserId,
+            Category = AuditEventCategory.Group,
+            EventType = AuditEvents.GroupInvitationSent,
+            Action = "Create",
+            Success = true,
+            EntityType = "GroupInvitation",
+            EntityId = invitation.Id.ToString(),
+            NewValues = new
+            {
+                invitation.Id,
+                invitation.GroupId,
+                invitation.InvitedUserId,
+                invitation.InvitedByUserId,
+                invitation.ExpiresAt
+            },
+            AdditionalData = new Dictionary<string, object>
+            {
+                { "GroupId", request.GroupId },
+                { "GroupName", group.Name },
+                { "InvitedUserId", request.InvitedUserId },
+                { "InvitedUsername", invitedUser.Username },
+                { "InviterRole", requesterMember.Role.ToString() }
+            }
+        });
 
         return await GetInvitationResponseAsync(invitation.Id);
     }
@@ -261,12 +293,56 @@ public class InvitationService : IInvitationService
             invitation.Status = InvitationStatus.Accepted;
             _logger.LogInformation("User {UserId} accepted invitation {InvitationId} to group {GroupId}",
                 userId, invitationId, invitation.GroupId);
+
+            // Audit log: Invitation accepted
+            await _auditService.LogAsync(new AuditLogEntry
+            {
+                UserId = userId,
+                Category = AuditEventCategory.Group,
+                EventType = AuditEvents.GroupInvitationAccepted,
+                Action = "Update",
+                Success = true,
+                EntityType = "GroupInvitation",
+                EntityId = invitationId.ToString(),
+                OldValues = new { Status = InvitationStatus.Pending.ToString() },
+                NewValues = new { Status = InvitationStatus.Accepted.ToString() },
+                AdditionalData = new Dictionary<string, object>
+                {
+                    { "InvitationId", invitationId },
+                    { "GroupId", invitation.GroupId },
+                    { "GroupName", invitation.Group.Name },
+                    { "InvitedByUserId", invitation.InvitedByUserId },
+                    { "InvitedByUsername", invitation.InvitedByUser?.Username ?? "Unknown" }
+                }
+            });
         }
         else
         {
             invitation.Status = InvitationStatus.Declined;
             _logger.LogInformation("User {UserId} declined invitation {InvitationId} to group {GroupId}",
                 userId, invitationId, invitation.GroupId);
+
+            // Audit log: Invitation declined
+            await _auditService.LogAsync(new AuditLogEntry
+            {
+                UserId = userId,
+                Category = AuditEventCategory.Group,
+                EventType = AuditEvents.GroupInvitationDeclined,
+                Action = "Update",
+                Success = true,
+                EntityType = "GroupInvitation",
+                EntityId = invitationId.ToString(),
+                OldValues = new { Status = InvitationStatus.Pending.ToString() },
+                NewValues = new { Status = InvitationStatus.Declined.ToString() },
+                AdditionalData = new Dictionary<string, object>
+                {
+                    { "InvitationId", invitationId },
+                    { "GroupId", invitation.GroupId },
+                    { "GroupName", invitation.Group?.Name ?? "Unknown" },
+                    { "InvitedByUserId", invitation.InvitedByUserId },
+                    { "InvitedByUsername", invitation.InvitedByUser?.Username ?? "Unknown" }
+                }
+            });
         }
 
         invitation.RespondedAt = DateTime.UtcNow;
@@ -304,6 +380,26 @@ public class InvitationService : IInvitationService
         await _context.SaveChangesAsync();
 
         _logger.LogInformation("User {UserId} cancelled invitation {InvitationId}", requestingUserId, invitationId);
+
+        // Audit log: Invitation cancelled
+        await _auditService.LogAsync(new AuditLogEntry
+        {
+            UserId = requestingUserId,
+            Category = AuditEventCategory.Group,
+            EventType = AuditEvents.GroupInvitationCancelled,
+            Action = "Update",
+            Success = true,
+            EntityType = "GroupInvitation",
+            EntityId = invitationId.ToString(),
+            OldValues = new { Status = InvitationStatus.Pending.ToString() },
+            NewValues = new { Status = InvitationStatus.Cancelled.ToString() },
+            AdditionalData = new Dictionary<string, object>
+            {
+                { "InvitationId", invitationId },
+                { "GroupId", invitation.GroupId },
+                { "InvitedUserId", invitation.InvitedUserId }
+            }
+        });
 
         return true;
     }

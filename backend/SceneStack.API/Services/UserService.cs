@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using SceneStack.API.Constants;
 using SceneStack.API.Data;
 using SceneStack.API.DTOs;
+using SceneStack.API.Interfaces;
 using SceneStack.API.Models;
 using System.Text;
 using System.Text.Json;
@@ -14,12 +16,18 @@ public class UserService : IUserService
     private readonly ApplicationDbContext _context;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly ILogger<UserService> _logger;
+    private readonly IAuditService _auditService;
 
-    public UserService(ApplicationDbContext context, UserManager<ApplicationUser> userManager, ILogger<UserService> logger)
+    public UserService(
+        ApplicationDbContext context,
+        UserManager<ApplicationUser> userManager,
+        ILogger<UserService> logger,
+        IAuditService auditService)
     {
         _context = context;
         _userManager = userManager;
         _logger = logger;
+        _auditService = auditService;
     }
 
     public async Task<User?> GetProfileAsync(int userId)
@@ -35,6 +43,17 @@ public class UserService : IUserService
             return null;
         }
 
+        // Capture before state
+        var oldValues = new
+        {
+            Username = user.Username,
+            Email = user.Email,
+            Bio = user.Bio
+        };
+
+        var changes = new Dictionary<string, object>();
+        bool hasChanges = false;
+
         // Check if username is being changed and if it's already taken
         if (!string.IsNullOrWhiteSpace(request.Username) && request.Username != user.Username)
         {
@@ -46,7 +65,9 @@ public class UserService : IUserService
                 throw new InvalidOperationException("Username is already taken");
             }
 
+            changes["Username"] = new { Old = user.Username, New = request.Username };
             user.Username = request.Username;
+            hasChanges = true;
 
             // Update ApplicationUser username as well
             var authUser = await _userManager.Users
@@ -61,7 +82,9 @@ public class UserService : IUserService
         // Update email
         if (!string.IsNullOrWhiteSpace(request.Email) && request.Email != user.Email)
         {
+            changes["Email"] = new { Old = user.Email, New = request.Email };
             user.Email = request.Email;
+            hasChanges = true;
 
             // Update ApplicationUser email as well
             var authUser = await _userManager.Users
@@ -74,13 +97,42 @@ public class UserService : IUserService
         }
 
         // Update bio
-        if (request.Bio != null)
+        if (request.Bio != null && request.Bio != user.Bio)
         {
+            changes["Bio"] = new { Old = user.Bio ?? "", New = request.Bio };
             user.Bio = request.Bio;
+            hasChanges = true;
         }
 
         user.UpdatedAt = DateTime.UtcNow;
         await _context.SaveChangesAsync();
+
+        // Audit log: Profile updated (only if changes were made)
+        if (hasChanges)
+        {
+            await _auditService.LogAsync(new AuditLogEntry
+            {
+                UserId = userId,
+                Category = AuditEventCategory.Account,
+                EventType = AuditEvents.ProfileUpdated,
+                Action = "Update",
+                Success = true,
+                EntityType = "User",
+                EntityId = userId.ToString(),
+                OldValues = oldValues,
+                NewValues = new
+                {
+                    Username = user.Username,
+                    Email = user.Email,
+                    Bio = user.Bio
+                },
+                AdditionalData = new Dictionary<string, object>
+                {
+                    { "ChangedFields", changes.Keys.ToList() },
+                    { "FieldChanges", changes }
+                }
+            });
+        }
 
         return user;
     }
@@ -90,6 +142,14 @@ public class UserService : IUserService
         // Validate that new password matches confirmation
         if (request.NewPassword != request.ConfirmPassword)
         {
+            // Audit log: Password change failed - confirmation mismatch
+            await _auditService.LogSimpleEventAsync(
+                userId: userId,
+                category: AuditEventCategory.Account,
+                eventType: AuditEvents.PasswordChangeFailed,
+                success: false,
+                errorMessage: "New password and confirmation do not match");
+
             return false;
         }
 
@@ -99,6 +159,14 @@ public class UserService : IUserService
 
         if (authUser == null)
         {
+            // Audit log: Password change failed - user not found
+            await _auditService.LogSimpleEventAsync(
+                userId: userId,
+                category: AuditEventCategory.Account,
+                eventType: AuditEvents.PasswordChangeFailed,
+                success: false,
+                errorMessage: "ApplicationUser not found");
+
             return false;
         }
 
@@ -106,6 +174,14 @@ public class UserService : IUserService
         var isPasswordValid = await _userManager.CheckPasswordAsync(authUser, request.CurrentPassword);
         if (!isPasswordValid)
         {
+            // Audit log: Password change failed - invalid current password
+            await _auditService.LogSimpleEventAsync(
+                userId: userId,
+                category: AuditEventCategory.Account,
+                eventType: AuditEvents.PasswordChangeFailed,
+                success: false,
+                errorMessage: "Invalid current password");
+
             return false;
         }
 
@@ -115,6 +191,25 @@ public class UserService : IUserService
             request.CurrentPassword,
             request.NewPassword
         );
+
+        // Audit log: Password change result
+        if (result.Succeeded)
+        {
+            await _auditService.LogSimpleEventAsync(
+                userId: userId,
+                category: AuditEventCategory.Account,
+                eventType: AuditEvents.PasswordChanged,
+                success: true);
+        }
+        else
+        {
+            await _auditService.LogSimpleEventAsync(
+                userId: userId,
+                category: AuditEventCategory.Account,
+                eventType: AuditEvents.PasswordChangeFailed,
+                success: false,
+                errorMessage: string.Join(", ", result.Errors.Select(e => e.Description)));
+        }
 
         return result.Succeeded;
     }
@@ -134,6 +229,14 @@ public class UserService : IUserService
         var isPasswordValid = await _userManager.CheckPasswordAsync(authUser, password);
         if (!isPasswordValid)
         {
+            // Audit log: Account deletion failed - invalid password
+            await _auditService.LogSimpleEventAsync(
+                userId: userId,
+                category: AuditEventCategory.Account,
+                eventType: AuditEvents.AccountDeletionRequested,
+                success: false,
+                errorMessage: "Invalid password");
+
             return false;
         }
 
@@ -148,6 +251,24 @@ public class UserService : IUserService
             domainUser.UpdatedAt = DateTime.UtcNow;
             // NOTE: IsDeleted will be set to true after 30 days by background job
             await _context.SaveChangesAsync();
+
+            // Audit log: Account deletion requested (30-day countdown started)
+            await _auditService.LogAsync(new AuditLogEntry
+            {
+                UserId = userId,
+                Category = AuditEventCategory.Account,
+                EventType = AuditEvents.AccountDeletionRequested,
+                Action = "Delete",
+                Success = true,
+                EntityType = "User",
+                EntityId = userId.ToString(),
+                AdditionalData = new Dictionary<string, object>
+                {
+                    { "DeletionStartDate", domainUser.DeletedAt.Value },
+                    { "PermanentDeletionDate", domainUser.DeletedAt.Value.AddDays(30) },
+                    { "DaysUntilPermanentDeletion", 30 }
+                }
+            });
         }
 
         return true;
@@ -155,6 +276,23 @@ public class UserService : IUserService
 
     public async Task<(byte[] content, string contentType, string fileName)> ExportUserDataAsync(int userId, string format)
     {
+        // Audit log: Data export requested
+        await _auditService.LogAsync(new AuditLogEntry
+        {
+            UserId = userId,
+            Category = AuditEventCategory.Account,
+            EventType = AuditEvents.DataExportRequested,
+            Action = "Read",
+            Success = true,
+            EntityType = "User",
+            EntityId = userId.ToString(),
+            AdditionalData = new Dictionary<string, object>
+            {
+                { "Format", format.ToUpper() },
+                { "RequestedAt", DateTime.UtcNow }
+            }
+        });
+
         // Get user data
         var user = await _context.Users.FindAsync(userId);
         if (user == null)
@@ -232,14 +370,33 @@ public class UserService : IUserService
         }
 
         // Generate export based on format
-        if (format == "csv")
+        var exportResult = format == "csv"
+            ? GenerateCsvExport(user, watches, watchlist, groups, aiUsageStats)
+            : GenerateJsonExport(user, watches, watchlist, groups, aiUsageStats);
+
+        // Audit log: Data export completed
+        await _auditService.LogAsync(new AuditLogEntry
         {
-            return GenerateCsvExport(user, watches, watchlist, groups, aiUsageStats);
-        }
-        else
-        {
-            return GenerateJsonExport(user, watches, watchlist, groups, aiUsageStats);
-        }
+            UserId = userId,
+            Category = AuditEventCategory.Account,
+            EventType = AuditEvents.DataExportCompleted,
+            Action = "Read",
+            Success = true,
+            EntityType = "User",
+            EntityId = userId.ToString(),
+            AdditionalData = new Dictionary<string, object>
+            {
+                { "Format", format.ToUpper() },
+                { "FileName", exportResult.fileName },
+                { "FileSizeBytes", exportResult.content.Length },
+                { "WatchesCount", watches.Count() },
+                { "WatchlistCount", watchlist.Count() },
+                { "GroupsCount", groups.Count() },
+                { "CompletedAt", DateTime.UtcNow }
+            }
+        });
+
+        return exportResult;
     }
 
     private (byte[] content, string contentType, string fileName) GenerateCsvExport(
@@ -559,6 +716,23 @@ public class UserService : IUserService
                 group.IsDeleted = true;
                 group.DeletedAt = DateTime.UtcNow;
                 group.UpdatedAt = DateTime.UtcNow;
+
+                // Audit log: Group deleted as part of account deletion
+                await _auditService.LogAsync(new AuditLogEntry
+                {
+                    UserId = userId,
+                    Category = AuditEventCategory.Group,
+                    EventType = AuditEvents.GroupDeleted,
+                    Action = "Delete",
+                    Success = true,
+                    EntityType = "Group",
+                    EntityId = group.Id.ToString(),
+                    AdditionalData = new Dictionary<string, object>
+                    {
+                        { "GroupName", group.Name },
+                        { "Reason", "Account deletion - user requested group deletion" }
+                    }
+                });
             }
             else if (action.Action == "transfer")
             {
@@ -575,6 +749,26 @@ public class UserService : IUserService
                     group.IsDeleted = true;
                     group.DeletedAt = DateTime.UtcNow;
                     group.UpdatedAt = DateTime.UtcNow;
+
+                    // Audit log: Group deleted (fallback - target member left)
+                    await _auditService.LogAsync(new AuditLogEntry
+                    {
+                        UserId = userId,
+                        Category = AuditEventCategory.Group,
+                        EventType = AuditEvents.GroupDeleted,
+                        Action = "Delete",
+                        Success = true,
+                        EntityType = "Group",
+                        EntityId = group.Id.ToString(),
+                        AdditionalData = new Dictionary<string, object>
+                        {
+                            { "GroupName", group.Name },
+                            { "Reason", "Transfer failed - target member left group" },
+                            { "OriginalAction", "transfer" },
+                            { "TargetUserId", action.TransferToUserId.Value }
+                        }
+                    });
+
                     continue;
                 }
 
@@ -593,6 +787,26 @@ public class UserService : IUserService
                     group.IsDeleted = true;
                     group.DeletedAt = DateTime.UtcNow;
                     group.UpdatedAt = DateTime.UtcNow;
+
+                    // Audit log: Group deleted (fallback - target user inactive)
+                    await _auditService.LogAsync(new AuditLogEntry
+                    {
+                        UserId = userId,
+                        Category = AuditEventCategory.Group,
+                        EventType = AuditEvents.GroupDeleted,
+                        Action = "Delete",
+                        Success = true,
+                        EntityType = "Group",
+                        EntityId = group.Id.ToString(),
+                        AdditionalData = new Dictionary<string, object>
+                        {
+                            { "GroupName", group.Name },
+                            { "Reason", "Transfer failed - target user deleted or deactivated" },
+                            { "OriginalAction", "transfer" },
+                            { "TargetUserId", action.TransferToUserId.Value }
+                        }
+                    });
+
                     continue;
                 }
 
@@ -609,6 +823,26 @@ public class UserService : IUserService
                 {
                     _context.GroupMembers.Remove(oldCreator);
                 }
+
+                // Audit log: Group ownership transferred
+                await _auditService.LogAsync(new AuditLogEntry
+                {
+                    UserId = userId,
+                    Category = AuditEventCategory.Group,
+                    EventType = AuditEvents.GroupOwnershipTransferred,
+                    Action = "Update",
+                    Success = true,
+                    EntityType = "Group",
+                    EntityId = group.Id.ToString(),
+                    AdditionalData = new Dictionary<string, object>
+                    {
+                        { "GroupName", group.Name },
+                        { "OldOwner", userId },
+                        { "NewOwner", action.TransferToUserId.Value },
+                        { "NewOwnerUsername", targetUser.Username },
+                        { "Reason", "Account deletion - ownership transferred" }
+                    }
+                });
             }
         }
 
@@ -631,6 +865,23 @@ public class UserService : IUserService
 
         await _context.SaveChangesAsync();
 
+        // Audit log: Account deactivated (temporary, no deletion countdown)
+        await _auditService.LogAsync(new AuditLogEntry
+        {
+            UserId = userId,
+            Category = AuditEventCategory.Account,
+            EventType = AuditEvents.AccountDeactivated,
+            Action = "Update",
+            Success = true,
+            EntityType = "User",
+            EntityId = userId.ToString(),
+            AdditionalData = new Dictionary<string, object>
+            {
+                { "DeactivatedAt", user.DeactivatedAt.Value },
+                { "IsPermanentDeletion", false }
+            }
+        });
+
         return true;
     }
 
@@ -641,6 +892,8 @@ public class UserService : IUserService
         {
             return false;
         }
+
+        var wasPendingDeletion = user.DeletedAt.HasValue;
 
         user.IsDeactivated = false;
         user.DeactivatedAt = null;
@@ -654,6 +907,24 @@ public class UserService : IUserService
         user.PendingGroupActions = null;
 
         await _context.SaveChangesAsync();
+
+        // Audit log: Account reactivated
+        await _auditService.LogAsync(new AuditLogEntry
+        {
+            UserId = userId,
+            Category = AuditEventCategory.Account,
+            EventType = AuditEvents.AccountReactivated,
+            Action = "Update",
+            Success = true,
+            EntityType = "User",
+            EntityId = userId.ToString(),
+            AdditionalData = new Dictionary<string, object>
+            {
+                { "ReactivatedAt", DateTime.UtcNow },
+                { "WasPendingDeletion", wasPendingDeletion },
+                { "PendingGroupActionsCleared", !string.IsNullOrEmpty(user.PendingGroupActions) }
+            }
+        });
 
         return true;
     }

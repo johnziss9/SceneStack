@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using SceneStack.API.Constants;
 using SceneStack.API.Data;
 using SceneStack.API.DTOs;
 using SceneStack.API.Interfaces;
@@ -10,11 +11,13 @@ public class GroupService : IGroupService
 {
     private readonly ApplicationDbContext _context;
     private readonly ILogger<GroupService> _logger;
+    private readonly IAuditService _auditService;
 
-    public GroupService(ApplicationDbContext context, ILogger<GroupService> logger)
+    public GroupService(ApplicationDbContext context, ILogger<GroupService> logger, IAuditService auditService)
     {
         _context = context;
         _logger = logger;
+        _auditService = auditService;
     }
 
     public async Task<Group?> GetByIdAsync(int id, int requestingUserId)
@@ -133,6 +136,24 @@ public class GroupService : IGroupService
         _context.GroupMemberHistories.Add(history);
         await _context.SaveChangesAsync();
 
+        // Audit log: Group created
+        await _auditService.LogAsync(new AuditLogEntry
+        {
+            UserId = userId,
+            Category = AuditEventCategory.Group,
+            EventType = AuditEvents.GroupCreated,
+            Action = "Create",
+            Success = true,
+            EntityType = "Group",
+            EntityId = group.Id.ToString(),
+            NewValues = new { group.Id, group.Name, group.Description, group.CreatedById },
+            AdditionalData = new Dictionary<string, object>
+            {
+                { "GroupName", group.Name },
+                { "MemberCount", 1 }
+            }
+        });
+
         // Reload with navigation properties
         return (await GetByIdAsync(group.Id, userId))!;
     }
@@ -154,11 +175,49 @@ public class GroupService : IGroupService
             return null;
         }
 
+        // Capture before state
+        var oldValues = new { group.Name, group.Description };
+        var changes = new Dictionary<string, object>();
+
+        if (group.Name != request.Name)
+        {
+            changes["Name"] = new { Old = group.Name, New = request.Name };
+        }
+
+        if (group.Description != request.Description)
+        {
+            changes["Description"] = new { Old = group.Description, New = request.Description };
+        }
+
         group.Name = request.Name;
         group.Description = request.Description;
         group.UpdatedAt = DateTime.UtcNow;
 
         await _context.SaveChangesAsync();
+
+        // Audit log: Group updated (only if changes were made)
+        if (changes.Any())
+        {
+            await _auditService.LogAsync(new AuditLogEntry
+            {
+                UserId = requestingUserId,
+                Category = AuditEventCategory.Group,
+                EventType = AuditEvents.GroupUpdated,
+                Action = "Update",
+                Success = true,
+                EntityType = "Group",
+                EntityId = id.ToString(),
+                OldValues = oldValues,
+                NewValues = new { group.Name, group.Description },
+                AdditionalData = new Dictionary<string, object>
+                {
+                    { "GroupId", id },
+                    { "ChangedFields", changes.Keys.ToList() },
+                    { "FieldChanges", changes },
+                    { "ActorRole", member.Role.ToString() }
+                }
+            });
+        }
 
         return await GetByIdAsync(id, requestingUserId);
     }
@@ -177,14 +236,58 @@ public class GroupService : IGroupService
         if (group.CreatedById != requestingUserId)
         {
             _logger.LogWarning("User {UserId} attempted to delete group {GroupId} without creator permission", requestingUserId, id);
+
+            // Audit log: Failed deletion attempt
+            await _auditService.LogAsync(new AuditLogEntry
+            {
+                UserId = requestingUserId,
+                Category = AuditEventCategory.Security,
+                EventType = AuditEvents.UnauthorizedAccess,
+                Action = "Delete",
+                Success = false,
+                ErrorMessage = "User is not the group creator",
+                EntityType = "Group",
+                EntityId = id.ToString(),
+                AdditionalData = new Dictionary<string, object>
+                {
+                    { "GroupId", id },
+                    { "GroupCreatorId", group.CreatedById },
+                    { "Reason", "Unauthorized - only creator can delete" },
+                    { "AttemptedAction", "Group.Delete" }
+                }
+            });
+
             return false;
         }
+
+        // Capture data before deletion
+        var memberCount = group.Members.Count;
 
         group.IsDeleted = true;
         group.DeletedAt = DateTime.UtcNow;
         group.UpdatedAt = DateTime.UtcNow;
 
         await _context.SaveChangesAsync();
+
+        // Audit log: Group deleted
+        await _auditService.LogAsync(new AuditLogEntry
+        {
+            UserId = requestingUserId,
+            Category = AuditEventCategory.Group,
+            EventType = AuditEvents.GroupDeleted,
+            Action = "Delete",
+            Success = true,
+            EntityType = "Group",
+            EntityId = id.ToString(),
+            OldValues = new { group.Name, group.Description, MemberCount = memberCount },
+            AdditionalData = new Dictionary<string, object>
+            {
+                { "GroupId", id },
+                { "GroupName", group.Name },
+                { "MemberCount", memberCount }
+            }
+        });
+
         return true;
     }
 
@@ -241,6 +344,27 @@ public class GroupService : IGroupService
         _context.GroupMemberHistories.Add(history);
         await _context.SaveChangesAsync();
 
+        // Audit log: Member added
+        await _auditService.LogAsync(new AuditLogEntry
+        {
+            UserId = requestingUserId,
+            Category = AuditEventCategory.Group,
+            EventType = AuditEvents.GroupMemberAdded,
+            Action = "Create",
+            Success = true,
+            EntityType = "GroupMember",
+            EntityId = $"{groupId}_{request.UserId}",
+            NewValues = new { GroupId = groupId, UserId = request.UserId, Role = ((GroupRole)request.Role).ToString() },
+            AdditionalData = new Dictionary<string, object>
+            {
+                { "GroupId", groupId },
+                { "AddedUserId", request.UserId },
+                { "Role", ((GroupRole)request.Role).ToString() },
+                { "ActorId", requestingUserId },
+                { "ActorRole", requestingMember.Role.ToString() }
+            }
+        });
+
         return newMember;
     }
 
@@ -291,6 +415,29 @@ public class GroupService : IGroupService
         _context.GroupMemberHistories.Add(history);
         await _context.SaveChangesAsync();
 
+        // Audit log: Member removed or left
+        var eventType = isSelfRemoval ? AuditEvents.GroupMemberLeft : AuditEvents.GroupMemberRemoved;
+        await _auditService.LogAsync(new AuditLogEntry
+        {
+            UserId = requestingUserId,
+            Category = AuditEventCategory.Group,
+            EventType = eventType,
+            Action = "Delete",
+            Success = true,
+            EntityType = "GroupMember",
+            EntityId = $"{groupId}_{memberUserId}",
+            OldValues = new { GroupId = groupId, UserId = memberUserId, Role = memberToRemove.Role.ToString() },
+            AdditionalData = new Dictionary<string, object>
+            {
+                { "GroupId", groupId },
+                { "RemovedUserId", memberUserId },
+                { "PreviousRole", memberToRemove.Role.ToString() },
+                { "IsSelfRemoval", isSelfRemoval },
+                { "ActorId", requestingUserId },
+                { "ActorRole", requestingMember?.Role.ToString() ?? "Self" }
+            }
+        });
+
         return true;
     }
 
@@ -338,6 +485,29 @@ public class GroupService : IGroupService
 
         _context.GroupMemberHistories.Add(history);
         await _context.SaveChangesAsync();
+
+        // Audit log: Member role changed
+        await _auditService.LogAsync(new AuditLogEntry
+        {
+            UserId = requestingUserId,
+            Category = AuditEventCategory.Group,
+            EventType = AuditEvents.GroupMemberRoleChanged,
+            Action = "Update",
+            Success = true,
+            EntityType = "GroupMember",
+            EntityId = $"{groupId}_{memberUserId}",
+            OldValues = new { GroupId = groupId, UserId = memberUserId, Role = previousRole.ToString() },
+            NewValues = new { GroupId = groupId, UserId = memberUserId, Role = ((GroupRole)request.Role).ToString() },
+            AdditionalData = new Dictionary<string, object>
+            {
+                { "GroupId", groupId },
+                { "TargetUserId", memberUserId },
+                { "PreviousRole", previousRole.ToString() },
+                { "NewRole", ((GroupRole)request.Role).ToString() },
+                { "ActorId", requestingUserId },
+                { "ActorRole", requestingMember.Role.ToString() }
+            }
+        });
 
         return memberToUpdate;
     }

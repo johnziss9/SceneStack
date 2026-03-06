@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using SceneStack.API.Constants;
 using SceneStack.API.Data;
 using SceneStack.API.DTOs;
 using SceneStack.API.Interfaces;
@@ -11,12 +12,14 @@ public class WatchService : IWatchService
     private readonly ApplicationDbContext _context;
     private readonly IMovieService _movieService;
     private readonly ILogger<WatchService> _logger;
+    private readonly IAuditService _auditService;
 
-    public WatchService(ApplicationDbContext context, IMovieService movieService, ILogger<WatchService> logger)
+    public WatchService(ApplicationDbContext context, IMovieService movieService, ILogger<WatchService> logger, IAuditService auditService)
     {
         _context = context;
         _movieService = movieService;
         _logger = logger;
+        _auditService = auditService;
     }
 
     public async Task<Watch?> GetByIdAsync(int id)
@@ -256,20 +259,85 @@ public class WatchService : IWatchService
             }
 
             // Set movie privacy
-            await _movieService.SetPrivacyAsync(watch.MovieId, isPrivate.Value, validGroupIds);
+            await _movieService.SetPrivacyAsync(watch.MovieId, watch.UserId, isPrivate.Value, validGroupIds);
         }
 
+        // Audit log: Watch created
+        var reloadedWatch = (await GetByIdAsync(watch.Id))!;
+        await _auditService.LogAsync(new AuditLogEntry
+        {
+            UserId = watch.UserId,
+            Category = AuditEventCategory.Watch,
+            EventType = AuditEvents.WatchCreated,
+            Action = "Create",
+            Success = true,
+            EntityType = "Watch",
+            EntityId = watch.Id.ToString(),
+            NewValues = new
+            {
+                watch.Id,
+                watch.MovieId,
+                MovieTitle = reloadedWatch.Movie.Title,
+                watch.WatchedDate,
+                watch.Rating,
+                watch.IsRewatch
+            },
+            AdditionalData = new Dictionary<string, object>
+            {
+                { "MovieId", watch.MovieId },
+                { "MovieTitle", reloadedWatch.Movie.Title },
+                { "WatchedDate", watch.WatchedDate },
+                { "HasRating", watch.Rating.HasValue },
+                { "IsRewatch", watch.IsRewatch },
+                { "IsFirstWatch", isFirstWatch },
+                { "PrivacySet", isPrivate.HasValue },
+                { "GroupsShared", groupIds?.Count ?? 0 }
+            }
+        });
+
         // Reload with navigation properties
-        return (await GetByIdAsync(watch.Id))!;
+        return reloadedWatch;
     }
 
     public async Task<Watch?> UpdateAsync(int id, Watch watch)
     {
         var existingWatch = await _context.Watches
+            .Include(w => w.Movie)
             .FirstOrDefaultAsync(w => w.Id == id);
 
         if (existingWatch == null)
             return null;
+
+        // Capture before state
+        var oldValues = new
+        {
+            existingWatch.WatchedDate,
+            existingWatch.Rating,
+            existingWatch.Notes,
+            existingWatch.WatchLocation,
+            existingWatch.WatchedWith,
+            existingWatch.IsRewatch
+        };
+
+        var changes = new Dictionary<string, object>();
+
+        if (existingWatch.WatchedDate != watch.WatchedDate)
+            changes["WatchedDate"] = new { Old = existingWatch.WatchedDate, New = watch.WatchedDate };
+
+        if (existingWatch.Rating != watch.Rating)
+            changes["Rating"] = new { Old = existingWatch.Rating, New = watch.Rating };
+
+        if (existingWatch.Notes != watch.Notes)
+            changes["Notes"] = new { Old = existingWatch.Notes != null, New = watch.Notes != null };
+
+        if (existingWatch.WatchLocation != watch.WatchLocation)
+            changes["WatchLocation"] = new { Old = existingWatch.WatchLocation, New = watch.WatchLocation };
+
+        if (existingWatch.WatchedWith != watch.WatchedWith)
+            changes["WatchedWith"] = new { Old = existingWatch.WatchedWith, New = watch.WatchedWith };
+
+        if (existingWatch.IsRewatch != watch.IsRewatch)
+            changes["IsRewatch"] = new { Old = existingWatch.IsRewatch, New = watch.IsRewatch };
 
         existingWatch.WatchedDate = watch.WatchedDate;
         existingWatch.Rating = watch.Rating;
@@ -280,6 +348,39 @@ public class WatchService : IWatchService
 
         await _context.SaveChangesAsync();
 
+        // Audit log: Watch updated (only if changes were made)
+        if (changes.Any())
+        {
+            await _auditService.LogAsync(new AuditLogEntry
+            {
+                UserId = existingWatch.UserId,
+                Category = AuditEventCategory.Watch,
+                EventType = AuditEvents.WatchUpdated,
+                Action = "Update",
+                Success = true,
+                EntityType = "Watch",
+                EntityId = id.ToString(),
+                OldValues = oldValues,
+                NewValues = new
+                {
+                    existingWatch.WatchedDate,
+                    existingWatch.Rating,
+                    existingWatch.Notes,
+                    existingWatch.WatchLocation,
+                    existingWatch.WatchedWith,
+                    existingWatch.IsRewatch
+                },
+                AdditionalData = new Dictionary<string, object>
+                {
+                    { "WatchId", id },
+                    { "MovieId", existingWatch.MovieId },
+                    { "MovieTitle", existingWatch.Movie.Title },
+                    { "ChangedFields", changes.Keys.ToList() },
+                    { "FieldChanges", changes }
+                }
+            });
+        }
+
         // Reload with navigation properties
         return await GetByIdAsync(id);
     }
@@ -288,15 +389,49 @@ public class WatchService : IWatchService
     {
         var watch = await _context.Watches
             .IgnoreQueryFilters()
+            .Include(w => w.Movie)
             .FirstOrDefaultAsync(w => w.Id == id && !w.IsDeleted);
 
         if (watch == null)
             return false;
 
+        // Capture data before deletion
+        var watchData = new
+        {
+            watch.Id,
+            watch.MovieId,
+            MovieTitle = watch.Movie.Title,
+            watch.WatchedDate,
+            watch.Rating,
+            watch.IsRewatch
+        };
+
         watch.IsDeleted = true;
         watch.DeletedAt = DateTime.UtcNow;
 
         await _context.SaveChangesAsync();
+
+        // Audit log: Watch deleted
+        await _auditService.LogAsync(new AuditLogEntry
+        {
+            UserId = watch.UserId,
+            Category = AuditEventCategory.Watch,
+            EventType = AuditEvents.WatchDeleted,
+            Action = "Delete",
+            Success = true,
+            EntityType = "Watch",
+            EntityId = id.ToString(),
+            OldValues = watchData,
+            AdditionalData = new Dictionary<string, object>
+            {
+                { "WatchId", id },
+                { "MovieId", watch.MovieId },
+                { "MovieTitle", watch.Movie.Title },
+                { "WatchedDate", watch.WatchedDate },
+                { "HadRating", watch.Rating.HasValue }
+            }
+        });
+
         return true;
     }
 

@@ -23,6 +23,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<MovieGroup> MovieGroups { get; set; }
     public DbSet<WatchlistItem> WatchlistItems { get; set; }
     public DbSet<GroupInvitation> GroupInvitations { get; set; }
+    public DbSet<AuditLog> AuditLogs { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -282,6 +283,43 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
                 .HasForeignKey(gi => gi.InvitedByUserId)
                 .OnDelete(DeleteBehavior.SetNull)  // Set to null if inviter is deleted
                 .IsRequired(false);
+        });
+
+        // Configure AuditLog
+        modelBuilder.Entity<AuditLog>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+
+            // String length constraints
+            entity.Property(e => e.EventType).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.Action).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.EntityType).HasMaxLength(100);
+            entity.Property(e => e.EntityId).HasMaxLength(100);
+            entity.Property(e => e.IpAddress).HasMaxLength(45);  // IPv6 support
+            entity.Property(e => e.UserAgent).HasMaxLength(500);
+
+            // JSONB columns for efficient storage and querying in PostgreSQL
+            entity.Property(e => e.OldValues).HasColumnType("jsonb");
+            entity.Property(e => e.NewValues).HasColumnType("jsonb");
+            entity.Property(e => e.AdditionalData).HasColumnType("jsonb");
+
+            // Indexes for performance
+            entity.HasIndex(e => e.UserId);
+            entity.HasIndex(e => e.Timestamp);
+            entity.HasIndex(e => e.Category);
+            entity.HasIndex(e => new { e.Category, e.EventType });
+            entity.HasIndex(e => new { e.UserId, e.Timestamp });
+            entity.HasIndex(e => new { e.UserId, e.Category });
+            entity.HasIndex(e => new { e.EntityType, e.EntityId });
+
+            // Define relationship - AuditLog -> User
+            entity.HasOne(a => a.User)
+                .WithMany()
+                .HasForeignKey(a => a.UserId)
+                .OnDelete(DeleteBehavior.SetNull)  // Keep audit trail even if user deleted
+                .IsRequired(false);
+
+            // NO query filter - we ALWAYS want to see audit logs, even for deleted users
         });
     }
 }

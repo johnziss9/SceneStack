@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using NSubstitute;
 using SceneStack.API.Data;
 using SceneStack.API.DTOs;
+using SceneStack.API.Interfaces;
 using SceneStack.API.Models;
 using SceneStack.API.Services;
 using Xunit;
@@ -17,6 +18,7 @@ public class AuthServiceTests
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly ApplicationDbContext _context;
     private readonly IConfiguration _configuration;
+    private readonly IAuditService _auditService;
     private readonly AuthService _authService;
 
     public AuthServiceTests()
@@ -40,7 +42,10 @@ public class AuthServiceTests
         jwtSection["Audience"].Returns("TestAudience");
         _configuration.GetSection("JwtSettings").Returns(jwtSection);
 
-        _authService = new AuthService(_userManager, _context, _configuration);
+        // Setup AuditService mock
+        _auditService = Substitute.For<IAuditService>();
+
+        _authService = new AuthService(_userManager, _context, _configuration, _auditService);
     }
 
     [Fact]

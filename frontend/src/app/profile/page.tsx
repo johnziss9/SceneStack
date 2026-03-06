@@ -442,8 +442,8 @@ export default function ProfilePage() {
         setShowLogoutDialog(true);
     };
 
-    const handleLogoutConfirm = () => {
-        logout();
+    const handleLogoutConfirm = async () => {
+        await logout();
     };
 
     if (loading) {

@@ -3,7 +3,10 @@ using Microsoft.AspNetCore.Mvc;
 using NSubstitute;
 using SceneStack.API.Controllers;
 using SceneStack.API.DTOs;
+using SceneStack.API.Interfaces;
 using SceneStack.API.Services;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Http;
 
 namespace SceneStack.Tests.Controllers;
 
@@ -14,7 +17,8 @@ public class AuthControllerTests
     {
         // Arrange
         var authService = Substitute.For<IAuthService>();
-        var controller = new AuthController(authService);
+        var auditService = Substitute.For<IAuditService>();
+        var controller = new AuthController(authService, auditService);
 
         var request = new RegisterRequest(
             Username: "testuser",
@@ -48,7 +52,8 @@ public class AuthControllerTests
     {
         // Arrange
         var authService = Substitute.For<IAuthService>();
-        var controller = new AuthController(authService);
+        var auditService = Substitute.For<IAuditService>();
+        var controller = new AuthController(authService, auditService);
 
         var request = new RegisterRequest(
             Username: "testuser",
@@ -71,7 +76,8 @@ public class AuthControllerTests
     {
         // Arrange
         var authService = Substitute.For<IAuthService>();
-        var controller = new AuthController(authService);
+        var auditService = Substitute.For<IAuditService>();
+        var controller = new AuthController(authService, auditService);
 
         var request = new LoginRequest(
             EmailOrUsername: "test@example.com",
@@ -103,7 +109,8 @@ public class AuthControllerTests
     {
         // Arrange
         var authService = Substitute.For<IAuthService>();
-        var controller = new AuthController(authService);
+        var auditService = Substitute.For<IAuditService>();
+        var controller = new AuthController(authService, auditService);
 
         var request = new LoginRequest(
             EmailOrUsername: "testuser",
@@ -135,7 +142,8 @@ public class AuthControllerTests
     {
         // Arrange
         var authService = Substitute.For<IAuthService>();
-        var controller = new AuthController(authService);
+        var auditService = Substitute.For<IAuditService>();
+        var controller = new AuthController(authService, auditService);
 
         var request = new LoginRequest(
             EmailOrUsername: "test@example.com",
@@ -153,17 +161,63 @@ public class AuthControllerTests
     }
 
     [Fact]
-    public void Logout_ReturnsOkWithMessage()
+    public async Task Logout_ReturnsOkWithMessage()
     {
         // Arrange
         var authService = Substitute.For<IAuthService>();
-        var controller = new AuthController(authService);
+        var auditService = Substitute.For<IAuditService>();
+        var controller = new AuthController(authService, auditService);
+
+        // Setup authenticated user context
+        var claims = new List<Claim>
+        {
+            new Claim(ClaimTypes.NameIdentifier, "1"),
+            new Claim(ClaimTypes.Name, "testuser")
+        };
+        var identity = new ClaimsIdentity(claims, "TestAuth");
+        var claimsPrincipal = new ClaimsPrincipal(identity);
+        controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext { User = claimsPrincipal }
+        };
 
         // Act
-        var result = controller.Logout();
+        var result = await controller.Logout();
 
         // Assert
         var okResult = result.Should().BeOfType<OkObjectResult>().Subject;
         okResult.Value.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task Logout_LogsAuditEvent()
+    {
+        // Arrange
+        var authService = Substitute.For<IAuthService>();
+        var auditService = Substitute.For<IAuditService>();
+        var controller = new AuthController(authService, auditService);
+
+        // Setup authenticated user context
+        var userId = 42;
+        var claims = new List<Claim>
+        {
+            new Claim(ClaimTypes.NameIdentifier, userId.ToString()),
+            new Claim(ClaimTypes.Name, "testuser")
+        };
+        var identity = new ClaimsIdentity(claims, "TestAuth");
+        var claimsPrincipal = new ClaimsPrincipal(identity);
+        controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext { User = claimsPrincipal }
+        };
+
+        // Act
+        await controller.Logout();
+
+        // Assert - Verify audit logging was called with correct parameters
+        await auditService.Received(1).LogAuthenticationAsync(
+            userId: userId,
+            eventType: Arg.Is<string>(s => s.Contains("Logout")),
+            success: true);
     }
 }

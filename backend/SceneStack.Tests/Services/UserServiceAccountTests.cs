@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using NSubstitute;
 using SceneStack.API.Data;
 using SceneStack.API.DTOs;
+using SceneStack.API.Interfaces;
 using SceneStack.API.Models;
 using SceneStack.API.Services;
 using SceneStack.Tests.Helpers;
@@ -17,6 +18,7 @@ public class UserServiceAccountTests
     private readonly ApplicationDbContext _context;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly ILogger<UserService> _logger;
+    private readonly IAuditService _auditService;
     private readonly UserService _userService;
 
     public UserServiceAccountTests()
@@ -35,7 +37,10 @@ public class UserServiceAccountTests
         // Setup Logger mock
         _logger = Substitute.For<ILogger<UserService>>();
 
-        _userService = new UserService(_context, _userManager, _logger);
+        // Setup AuditService mock
+        _auditService = Substitute.For<IAuditService>();
+
+        _userService = new UserService(_context, _userManager, _logger, _auditService);
     }
 
     [Fact]

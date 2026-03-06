@@ -119,7 +119,8 @@ public class MoviesController : ControllerBase
     [HttpPut("{id}/privacy")]
     public async Task<IActionResult> UpdateMoviePrivacy(int id, UpdateMoviePrivacyRequest request)
     {
-        await _movieService.SetPrivacyAsync(id, request.IsPrivate, request.GroupIds);
+        var userId = User.GetUserId();
+        await _movieService.SetPrivacyAsync(id, userId, request.IsPrivate, request.GroupIds);
         return NoContent();
     }
 

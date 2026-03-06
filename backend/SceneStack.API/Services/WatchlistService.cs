@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using SceneStack.API.Constants;
 using SceneStack.API.Data;
 using SceneStack.API.DTOs;
 using SceneStack.API.Interfaces;
@@ -13,15 +14,18 @@ public class WatchlistService : IWatchlistService
     private readonly ApplicationDbContext _context;
     private readonly IMovieService _movieService;
     private readonly ILogger<WatchlistService> _logger;
+    private readonly IAuditService _auditService;
 
     public WatchlistService(
         ApplicationDbContext context,
         IMovieService movieService,
-        ILogger<WatchlistService> logger)
+        ILogger<WatchlistService> logger,
+        IAuditService auditService)
     {
         _context = context;
         _movieService = movieService;
         _logger = logger;
+        _auditService = auditService;
     }
 
     public async Task<PaginatedWatchlistResponse> GetWatchlistAsync(int userId, int page = 1, int pageSize = 20, string sortBy = "priority-asc")
@@ -90,6 +94,34 @@ public class WatchlistService : IWatchlistService
             existing.Priority = nextPriority;
             existing.AddedAt = DateTime.UtcNow;
             await _context.SaveChangesAsync();
+
+            // Audit log: Watchlist item re-added
+            await _auditService.LogAsync(new AuditLogEntry
+            {
+                UserId = userId,
+                Category = AuditEventCategory.Watchlist,
+                EventType = AuditEvents.WatchlistItemAdded,
+                Action = "Create",
+                Success = true,
+                EntityType = "WatchlistItem",
+                EntityId = existing.Id.ToString(),
+                NewValues = new
+                {
+                    existing.Id,
+                    existing.MovieId,
+                    MovieTitle = existing.Movie.Title,
+                    existing.Priority,
+                    HasNotes = !string.IsNullOrEmpty(notes)
+                },
+                AdditionalData = new Dictionary<string, object>
+                {
+                    { "MovieId", existing.MovieId },
+                    { "MovieTitle", existing.Movie.Title },
+                    { "Priority", existing.Priority },
+                    { "IsRestore", true }
+                }
+            });
+
             return existing;
         }
 
@@ -106,18 +138,58 @@ public class WatchlistService : IWatchlistService
         _context.WatchlistItems.Add(item);
         await _context.SaveChangesAsync();
 
-        return (await _context.WatchlistItems
+        var reloadedItem = (await _context.WatchlistItems
             .Include(wi => wi.Movie)
             .FirstOrDefaultAsync(wi => wi.Id == item.Id))!;
+
+        // Audit log: Watchlist item added
+        await _auditService.LogAsync(new AuditLogEntry
+        {
+            UserId = userId,
+            Category = AuditEventCategory.Watchlist,
+            EventType = AuditEvents.WatchlistItemAdded,
+            Action = "Create",
+            Success = true,
+            EntityType = "WatchlistItem",
+            EntityId = item.Id.ToString(),
+            NewValues = new
+            {
+                item.Id,
+                item.MovieId,
+                MovieTitle = reloadedItem.Movie.Title,
+                item.Priority,
+                HasNotes = !string.IsNullOrEmpty(notes)
+            },
+            AdditionalData = new Dictionary<string, object>
+            {
+                { "MovieId", item.MovieId },
+                { "MovieTitle", reloadedItem.Movie.Title },
+                { "Priority", item.Priority },
+                { "TmdbId", tmdbId }
+            }
+        });
+
+        return reloadedItem;
     }
 
     public async Task<bool> RemoveFromWatchlistAsync(int userId, int movieId)
     {
         var item = await _context.WatchlistItems
+            .Include(wi => wi.Movie)
             .FirstOrDefaultAsync(wi => wi.UserId == userId && wi.MovieId == movieId);
 
         if (item == null)
             return false;
+
+        // Capture data before deletion
+        var itemData = new
+        {
+            item.Id,
+            item.MovieId,
+            MovieTitle = item.Movie.Title,
+            item.Priority,
+            HasNotes = !string.IsNullOrEmpty(item.Notes)
+        };
 
         // Soft delete the item
         item.IsDeleted = true;
@@ -138,6 +210,27 @@ public class WatchlistService : IWatchlistService
         }
 
         await _context.SaveChangesAsync();
+
+        // Audit log: Watchlist item removed
+        await _auditService.LogAsync(new AuditLogEntry
+        {
+            UserId = userId,
+            Category = AuditEventCategory.Watchlist,
+            EventType = AuditEvents.WatchlistItemRemoved,
+            Action = "Delete",
+            Success = true,
+            EntityType = "WatchlistItem",
+            EntityId = item.Id.ToString(),
+            OldValues = itemData,
+            AdditionalData = new Dictionary<string, object>
+            {
+                { "MovieId", movieId },
+                { "MovieTitle", item.Movie.Title },
+                { "OldPriority", itemData.Priority },
+                { "RemainingCount", remainingItems.Count }
+            }
+        });
+
         return true;
     }
 
@@ -156,13 +249,57 @@ public class WatchlistService : IWatchlistService
         if (item == null)
             return null;
 
-        if (request.Notes != null)
-            item.Notes = request.Notes;
+        // Capture before state
+        var oldValues = new
+        {
+            item.Notes,
+            item.Priority
+        };
 
-        if (request.Priority.HasValue)
+        var changes = new Dictionary<string, object>();
+
+        if (request.Notes != null && item.Notes != request.Notes)
+        {
+            changes["Notes"] = new { Old = item.Notes != null, New = request.Notes != null };
+            item.Notes = request.Notes;
+        }
+
+        if (request.Priority.HasValue && item.Priority != request.Priority.Value)
+        {
+            changes["Priority"] = new { Old = item.Priority, New = request.Priority.Value };
             item.Priority = request.Priority.Value;
+        }
 
         await _context.SaveChangesAsync();
+
+        // Audit log: Watchlist item updated (only if changes were made)
+        if (changes.Any())
+        {
+            await _auditService.LogAsync(new AuditLogEntry
+            {
+                UserId = userId,
+                Category = AuditEventCategory.Watchlist,
+                EventType = AuditEvents.WatchlistItemUpdated,
+                Action = "Update",
+                Success = true,
+                EntityType = "WatchlistItem",
+                EntityId = item.Id.ToString(),
+                OldValues = oldValues,
+                NewValues = new
+                {
+                    item.Notes,
+                    item.Priority
+                },
+                AdditionalData = new Dictionary<string, object>
+                {
+                    { "MovieId", movieId },
+                    { "MovieTitle", item.Movie.Title },
+                    { "ChangedFields", changes.Keys.ToList() },
+                    { "FieldChanges", changes }
+                }
+            });
+        }
+
         return item;
     }
 
@@ -206,6 +343,28 @@ public class WatchlistService : IWatchlistService
         }
 
         await _context.SaveChangesAsync();
+
+        // Audit log: Priority changed
+        await _auditService.LogAsync(new AuditLogEntry
+        {
+            UserId = userId,
+            Category = AuditEventCategory.Watchlist,
+            EventType = AuditEvents.WatchlistItemPriorityChanged,
+            Action = "Update",
+            Success = true,
+            EntityType = "WatchlistItem",
+            EntityId = item.Id.ToString(),
+            OldValues = new { Priority = oldPriority },
+            NewValues = new { Priority = newPriority },
+            AdditionalData = new Dictionary<string, object>
+            {
+                { "MovieId", movieId },
+                { "MovieTitle", item.Movie.Title },
+                { "OldPriority", oldPriority },
+                { "NewPriority", newPriority },
+                { "TotalItems", allItems.Count }
+            }
+        });
 
         return ToResponse(item);
     }

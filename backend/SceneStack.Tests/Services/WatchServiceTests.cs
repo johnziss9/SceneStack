@@ -19,7 +19,8 @@ public class WatchServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var logger = Substitute.For<ILogger<WatchService>>();
         var movieService = Substitute.For<IMovieService>();
-        var service = new WatchService(context, movieService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new WatchService(context, movieService, logger, auditService);
 
         // Create a test user first
         var user = new User
@@ -65,7 +66,8 @@ public class WatchServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var logger = Substitute.For<ILogger<WatchService>>();
         var movieService = Substitute.For<IMovieService>();
-        var service = new WatchService(context, movieService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new WatchService(context, movieService, logger, auditService);
 
         // Act
         var result = await service.GetByIdAsync(999);
@@ -81,7 +83,8 @@ public class WatchServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var logger = Substitute.For<ILogger<WatchService>>();
         var movieService = Substitute.For<IMovieService>();
-        var service = new WatchService(context, movieService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new WatchService(context, movieService, logger, auditService);
 
         // Create a test user first
         var user = new User
@@ -124,7 +127,8 @@ public class WatchServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var logger = Substitute.For<ILogger<WatchService>>();
         var movieService = Substitute.For<IMovieService>();
-        var service = new WatchService(context, movieService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new WatchService(context, movieService, logger, auditService);
 
         // Create a test user first
         var user = new User
@@ -161,7 +165,8 @@ public class WatchServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var logger = Substitute.For<ILogger<WatchService>>();
         var movieService = Substitute.For<IMovieService>();
-        var service = new WatchService(context, movieService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new WatchService(context, movieService, logger, auditService);
 
         // Create two users
         var user1 = new User
@@ -207,7 +212,8 @@ public class WatchServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var logger = Substitute.For<ILogger<WatchService>>();
         var movieService = Substitute.For<IMovieService>();
-        var service = new WatchService(context, movieService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new WatchService(context, movieService, logger, auditService);
 
         // Create a test user first
         var user = new User
@@ -257,7 +263,8 @@ public class WatchServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var logger = Substitute.For<ILogger<WatchService>>();
         var movieService = Substitute.For<IMovieService>();
-        var service = new WatchService(context, movieService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new WatchService(context, movieService, logger, auditService);
 
         // Create a test user first
         var user = new User
@@ -317,7 +324,8 @@ public class WatchServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var logger = Substitute.For<ILogger<WatchService>>();
         var movieService = Substitute.For<IMovieService>();
-        var service = new WatchService(context, movieService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new WatchService(context, movieService, logger, auditService);
 
         var updatedWatch = new Watch
         {
@@ -340,7 +348,8 @@ public class WatchServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var logger = Substitute.For<ILogger<WatchService>>();
         var movieService = Substitute.For<IMovieService>();
-        var service = new WatchService(context, movieService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new WatchService(context, movieService, logger, auditService);
 
         // Create a test user first
         var user = new User
@@ -388,7 +397,8 @@ public class WatchServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var logger = Substitute.For<ILogger<WatchService>>();
         var movieService = Substitute.For<IMovieService>();
-        var service = new WatchService(context, movieService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new WatchService(context, movieService, logger, auditService);
 
         // Act
         var result = await service.DeleteAsync(999);
@@ -404,7 +414,8 @@ public class WatchServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var logger = Substitute.For<ILogger<WatchService>>();
         var movieService = Substitute.For<IMovieService>();
-        var service = new WatchService(context, movieService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new WatchService(context, movieService, logger, auditService);
 
         // Create a test user first
         var user = new User
@@ -446,7 +457,8 @@ public class WatchServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var logger = Substitute.For<ILogger<WatchService>>();
         var movieService = Substitute.For<IMovieService>();
-        var service = new WatchService(context, movieService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new WatchService(context, movieService, logger, auditService);
 
         // Create a test user first
         var user = new User
@@ -514,7 +526,8 @@ public class WatchServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var logger = Substitute.For<ILogger<WatchService>>();
         var movieService = Substitute.For<IMovieService>();
-        var service = new WatchService(context, movieService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new WatchService(context, movieService, logger, auditService);
 
         // Use second user to avoid conflict with seeded data
         var user = context.Users.Skip(1).First();
@@ -562,8 +575,9 @@ public class WatchServiceTests
         var logger = Substitute.For<ILogger<WatchService>>();
         var movieServiceLogger = Substitute.For<ILogger<MovieService>>();
         var tmdbService = Substitute.For<ITmdbService>();
-        var movieService = new MovieService(context, tmdbService, movieServiceLogger);
-        var service = new WatchService(context, movieService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var movieService = new MovieService(context, tmdbService, movieServiceLogger, auditService);
+        var service = new WatchService(context, movieService, logger, auditService);
 
         // Use the second user (freeUser) to avoid conflict with seeded testWatch
         var user = context.Users.Skip(1).First();
@@ -631,8 +645,9 @@ public class WatchServiceTests
         var logger = Substitute.For<ILogger<WatchService>>();
         var movieServiceLogger = Substitute.For<ILogger<MovieService>>();
         var tmdbService = Substitute.For<ITmdbService>();
-        var movieService = new MovieService(context, tmdbService, movieServiceLogger);
-        var service = new WatchService(context, movieService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var movieService = new MovieService(context, tmdbService, movieServiceLogger, auditService);
+        var service = new WatchService(context, movieService, logger, auditService);
 
         // Use the second user (freeUser) to avoid conflict with seeded testWatch
         var user = context.Users.Skip(1).First();
@@ -696,7 +711,8 @@ public class WatchServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var logger = Substitute.For<ILogger<WatchService>>();
         var movieService = Substitute.For<IMovieService>();
-        var service = new WatchService(context, movieService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new WatchService(context, movieService, logger, auditService);
 
         // Use second user to avoid conflict with seeded watch
         var user1 = context.Users.Skip(1).First();
@@ -766,7 +782,8 @@ public class WatchServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var logger = Substitute.For<ILogger<WatchService>>();
         var movieService = Substitute.For<IMovieService>();
-        var service = new WatchService(context, movieService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new WatchService(context, movieService, logger, auditService);
 
         var user1 = context.Users.First();
         var user2 = context.Users.Skip(1).First();
@@ -801,7 +818,8 @@ public class WatchServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var logger = Substitute.For<ILogger<WatchService>>();
         var movieService = Substitute.For<IMovieService>();
-        var service = new WatchService(context, movieService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new WatchService(context, movieService, logger, auditService);
 
         // Use second user to avoid conflict with seeded data
         var user1 = context.Users.Skip(1).First();
@@ -859,7 +877,8 @@ public class WatchServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var logger = Substitute.For<ILogger<WatchService>>();
         var movieService = Substitute.For<IMovieService>();
-        var service = new WatchService(context, movieService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new WatchService(context, movieService, logger, auditService);
 
         // Use the second user (freeuser) who has no seeded watches
         var user = context.Users.Skip(1).First();
@@ -892,7 +911,8 @@ public class WatchServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var logger = Substitute.For<ILogger<WatchService>>();
         var movieService = Substitute.For<IMovieService>();
-        var service = new WatchService(context, movieService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new WatchService(context, movieService, logger, auditService);
 
         var user = context.Users.Skip(1).First();
 
@@ -925,7 +945,8 @@ public class WatchServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var logger = Substitute.For<ILogger<WatchService>>();
         var movieService = Substitute.For<IMovieService>();
-        var service = new WatchService(context, movieService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new WatchService(context, movieService, logger, auditService);
 
         var user = context.Users.Skip(1).First();
 
@@ -958,7 +979,8 @@ public class WatchServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var logger = Substitute.For<ILogger<WatchService>>();
         var movieService = Substitute.For<IMovieService>();
-        var service = new WatchService(context, movieService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new WatchService(context, movieService, logger, auditService);
 
         var user = context.Users.Skip(1).First();
 
@@ -993,7 +1015,8 @@ public class WatchServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var logger = Substitute.For<ILogger<WatchService>>();
         var movieService = Substitute.For<IMovieService>();
-        var service = new WatchService(context, movieService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new WatchService(context, movieService, logger, auditService);
 
         var user = context.Users.Skip(1).First();
 
@@ -1028,7 +1051,8 @@ public class WatchServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var logger = Substitute.For<ILogger<WatchService>>();
         var movieService = Substitute.For<IMovieService>();
-        var service = new WatchService(context, movieService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new WatchService(context, movieService, logger, auditService);
 
         var user = context.Users.Skip(1).First();
 
@@ -1063,7 +1087,8 @@ public class WatchServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var logger = Substitute.For<ILogger<WatchService>>();
         var movieService = Substitute.For<IMovieService>();
-        var service = new WatchService(context, movieService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new WatchService(context, movieService, logger, auditService);
 
         var user = context.Users.Skip(1).First();
 
@@ -1100,7 +1125,8 @@ public class WatchServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var logger = Substitute.For<ILogger<WatchService>>();
         var movieService = Substitute.For<IMovieService>();
-        var service = new WatchService(context, movieService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new WatchService(context, movieService, logger, auditService);
 
         var user = context.Users.Skip(1).First();
 
@@ -1134,7 +1160,8 @@ public class WatchServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var logger = Substitute.For<ILogger<WatchService>>();
         var movieService = Substitute.For<IMovieService>();
-        var service = new WatchService(context, movieService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new WatchService(context, movieService, logger, auditService);
 
         var user = context.Users.Skip(1).First();
 
@@ -1170,7 +1197,8 @@ public class WatchServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var logger = Substitute.For<ILogger<WatchService>>();
         var movieService = Substitute.For<IMovieService>();
-        var service = new WatchService(context, movieService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new WatchService(context, movieService, logger, auditService);
 
         var user = context.Users.Skip(1).First();
 
@@ -1209,7 +1237,8 @@ public class WatchServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var logger = Substitute.For<ILogger<WatchService>>();
         var movieService = Substitute.For<IMovieService>();
-        var service = new WatchService(context, movieService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new WatchService(context, movieService, logger, auditService);
 
         var user = context.Users.Skip(1).First();
 
@@ -1251,7 +1280,8 @@ public class WatchServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var logger = Substitute.For<ILogger<WatchService>>();
         var movieService = Substitute.For<IMovieService>();
-        var service = new WatchService(context, movieService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new WatchService(context, movieService, logger, auditService);
 
         var user = context.Users.Skip(1).First();
 
@@ -1287,7 +1317,8 @@ public class WatchServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var logger = Substitute.For<ILogger<WatchService>>();
         var movieService = Substitute.For<IMovieService>();
-        var service = new WatchService(context, movieService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new WatchService(context, movieService, logger, auditService);
 
         var user = context.Users.Skip(1).First();
 

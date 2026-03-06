@@ -23,7 +23,7 @@ interface AuthContextType {
     loading: boolean;
     login: (data: LoginRequest) => Promise<void>;
     register: (data: RegisterRequest) => Promise<void>;
-    logout: () => void;
+    logout: () => Promise<void>;
     refreshUser: () => Promise<void>;
 }
 
@@ -165,17 +165,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         router.push('/');
     };
 
-    const logout = () => {
+    const logout = async () => {
+        // Call logout endpoint FIRST (while token still exists)
+        try {
+            await authApi.logout();
+        } catch (error) {
+            // Ignore errors, we're logging out anyway
+        }
+
         // Remove token
         tokenStorage.removeToken();
 
         // Clear user state
         setUser(null);
-
-        // Call logout endpoint (optional, for server-side cleanup)
-        authApi.logout().catch(() => {
-            // Ignore errors, we're logging out anyway
-        });
 
         // Redirect to login
         router.push('/login');

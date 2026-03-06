@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using SceneStack.API.Constants;
 using SceneStack.API.Data;
 using SceneStack.API.DTOs;
 using SceneStack.API.Interfaces;
@@ -11,12 +12,14 @@ public class MovieService : IMovieService
     private readonly ApplicationDbContext _context;
     private readonly ITmdbService _tmdbService;
     private readonly ILogger<MovieService> _logger;
+    private readonly IAuditService _auditService;
 
-    public MovieService(ApplicationDbContext context, ITmdbService tmdbService, ILogger<MovieService> logger)
+    public MovieService(ApplicationDbContext context, ITmdbService tmdbService, ILogger<MovieService> logger, IAuditService auditService)
     {
         _context = context;
         _tmdbService = tmdbService;
         _logger = logger;
+        _auditService = auditService;
     }
 
     public async Task<Movie?> GetByIdAsync(int id)
@@ -299,7 +302,7 @@ public class MovieService : IMovieService
         };
     }
 
-    public async Task SetPrivacyAsync(int movieId, bool isPrivate, List<int> groupIds)
+    public async Task SetPrivacyAsync(int movieId, int userId, bool isPrivate, List<int> groupIds)
     {
         var movie = await _context.Movies
             .Include(m => m.MovieGroups)
@@ -310,6 +313,10 @@ public class MovieService : IMovieService
             _logger.LogWarning("Attempted to set privacy for non-existent movie ID: {MovieId}", movieId);
             return;
         }
+
+        // Capture before state
+        var oldIsPrivate = movie.IsPrivate;
+        var oldGroupIds = movie.MovieGroups.Select(mg => mg.GroupId).ToList();
 
         // Update privacy flag
         movie.IsPrivate = isPrivate;
@@ -333,5 +340,77 @@ public class MovieService : IMovieService
         await _context.SaveChangesAsync();
         _logger.LogInformation("Set privacy for movie {MovieId}: IsPrivate={IsPrivate}, Groups={GroupCount}",
             movieId, isPrivate, groupIds.Count);
+
+        // Audit log: Privacy changed
+        if (oldIsPrivate != isPrivate)
+        {
+            await _auditService.LogAsync(new AuditLogEntry
+            {
+                UserId = userId,
+                Category = AuditEventCategory.Watch,
+                EventType = AuditEvents.WatchPrivacyChanged,
+                Action = "Update",
+                Success = true,
+                EntityType = "Movie",
+                EntityId = movieId.ToString(),
+                OldValues = new { IsPrivate = oldIsPrivate },
+                NewValues = new { IsPrivate = isPrivate },
+                AdditionalData = new Dictionary<string, object>
+                {
+                    { "MovieId", movieId },
+                    { "MovieTitle", movie.Title },
+                    { "OldPrivacy", oldIsPrivate },
+                    { "NewPrivacy", isPrivate }
+                }
+            });
+        }
+
+        // Audit log: Shared to groups or unshared from groups
+        var addedGroups = groupIds.Except(oldGroupIds).ToList();
+        var removedGroups = oldGroupIds.Except(groupIds).ToList();
+
+        if (addedGroups.Any())
+        {
+            await _auditService.LogAsync(new AuditLogEntry
+            {
+                UserId = userId,
+                Category = AuditEventCategory.Watch,
+                EventType = AuditEvents.WatchSharedToGroup,
+                Action = "Update",
+                Success = true,
+                EntityType = "Movie",
+                EntityId = movieId.ToString(),
+                NewValues = new { GroupIds = addedGroups },
+                AdditionalData = new Dictionary<string, object>
+                {
+                    { "MovieId", movieId },
+                    { "MovieTitle", movie.Title },
+                    { "AddedGroupIds", addedGroups },
+                    { "GroupCount", addedGroups.Count }
+                }
+            });
+        }
+
+        if (removedGroups.Any())
+        {
+            await _auditService.LogAsync(new AuditLogEntry
+            {
+                UserId = userId,
+                Category = AuditEventCategory.Watch,
+                EventType = AuditEvents.WatchUnsharedFromGroup,
+                Action = "Update",
+                Success = true,
+                EntityType = "Movie",
+                EntityId = movieId.ToString(),
+                OldValues = new { GroupIds = removedGroups },
+                AdditionalData = new Dictionary<string, object>
+                {
+                    { "MovieId", movieId },
+                    { "MovieTitle", movie.Title },
+                    { "RemovedGroupIds", removedGroups },
+                    { "GroupCount", removedGroups.Count }
+                }
+            });
+        }
     }
 }

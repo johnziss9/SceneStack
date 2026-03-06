@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using SceneStack.API.DTOs;
+using SceneStack.API.Interfaces;
 using SceneStack.API.Models;
 using SceneStack.API.Services;
 using SceneStack.Tests.Helpers;
@@ -17,7 +18,8 @@ public class GroupServiceTests
         // Arrange
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var logger = Substitute.For<ILogger<GroupService>>();
-        var service = new GroupService(context, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new GroupService(context, logger, auditService);
 
         var user = context.Users.First();
         var request = new CreateGroupRequest
@@ -52,7 +54,8 @@ public class GroupServiceTests
         // Arrange
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var logger = Substitute.For<ILogger<GroupService>>();
-        var service = new GroupService(context, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new GroupService(context, logger, auditService);
 
         var freeUser = context.Users.First(u => !u.IsPremium);
 
@@ -75,7 +78,8 @@ public class GroupServiceTests
         // Arrange
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var logger = Substitute.For<ILogger<GroupService>>();
-        var service = new GroupService(context, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new GroupService(context, logger, auditService);
 
         var premiumUser = context.Users.First(u => u.IsPremium);
 
@@ -99,7 +103,8 @@ public class GroupServiceTests
         // Arrange
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var logger = Substitute.For<ILogger<GroupService>>();
-        var service = new GroupService(context, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new GroupService(context, logger, auditService);
 
         var user = context.Users.First();
         var group = await service.CreateAsync(user.Id, new CreateGroupRequest { Name = "Test Group" });
@@ -119,7 +124,8 @@ public class GroupServiceTests
         // Arrange
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var logger = Substitute.For<ILogger<GroupService>>();
-        var service = new GroupService(context, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new GroupService(context, logger, auditService);
 
         var user1 = context.Users.First();
         var user2 = context.Users.Skip(1).First();
@@ -139,7 +145,8 @@ public class GroupServiceTests
         // Arrange
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var logger = Substitute.For<ILogger<GroupService>>();
-        var service = new GroupService(context, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new GroupService(context, logger, auditService);
 
         var user = context.Users.First();
         var group = await service.CreateAsync(user.Id, new CreateGroupRequest { Name = "Original Name" });
@@ -165,7 +172,8 @@ public class GroupServiceTests
         // Arrange
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var logger = Substitute.For<ILogger<GroupService>>();
-        var service = new GroupService(context, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new GroupService(context, logger, auditService);
 
         var creator = context.Users.First();
         var admin = context.Users.Skip(1).First();
@@ -195,7 +203,8 @@ public class GroupServiceTests
         // Arrange
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var logger = Substitute.For<ILogger<GroupService>>();
-        var service = new GroupService(context, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new GroupService(context, logger, auditService);
 
         var creator = context.Users.First();
         var member = context.Users.Skip(1).First();
@@ -224,7 +233,8 @@ public class GroupServiceTests
         // Arrange
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var logger = Substitute.For<ILogger<GroupService>>();
-        var service = new GroupService(context, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new GroupService(context, logger, auditService);
 
         var user = context.Users.First();
         var group = await service.CreateAsync(user.Id, new CreateGroupRequest { Name = "To Delete" });
@@ -250,7 +260,8 @@ public class GroupServiceTests
         // Arrange
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var logger = Substitute.For<ILogger<GroupService>>();
-        var service = new GroupService(context, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new GroupService(context, logger, auditService);
 
         var creator = context.Users.First();
         var admin = context.Users.Skip(1).First();
@@ -282,7 +293,8 @@ public class GroupServiceTests
         // Arrange
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var logger = Substitute.For<ILogger<GroupService>>();
-        var service = new GroupService(context, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new GroupService(context, logger, auditService);
 
         var creator = context.Users.First();
         var newMember = context.Users.Skip(1).First();
@@ -318,7 +330,8 @@ public class GroupServiceTests
         // Arrange
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var logger = Substitute.For<ILogger<GroupService>>();
-        var service = new GroupService(context, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new GroupService(context, logger, auditService);
 
         var creator = context.Users.First();
         var member = context.Users.Skip(1).First();
@@ -343,7 +356,8 @@ public class GroupServiceTests
         // Arrange
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var logger = Substitute.For<ILogger<GroupService>>();
-        var service = new GroupService(context, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new GroupService(context, logger, auditService);
 
         var creator = context.Users.First(u => u.IsPremium);
         var freeUser = context.Users.First(u => !u.IsPremium);
@@ -370,7 +384,8 @@ public class GroupServiceTests
         // Arrange
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var logger = Substitute.For<ILogger<GroupService>>();
-        var service = new GroupService(context, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new GroupService(context, logger, auditService);
 
         var creator = context.Users.First();
         var member = context.Users.Skip(1).First();
@@ -411,7 +426,8 @@ public class GroupServiceTests
         // Arrange
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var logger = Substitute.For<ILogger<GroupService>>();
-        var service = new GroupService(context, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new GroupService(context, logger, auditService);
 
         var creator = context.Users.First();
         var member = context.Users.Skip(1).First();
@@ -444,7 +460,8 @@ public class GroupServiceTests
         // Arrange
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var logger = Substitute.For<ILogger<GroupService>>();
-        var service = new GroupService(context, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new GroupService(context, logger, auditService);
 
         var creator = context.Users.First();
         var member = context.Users.Skip(1).First();
@@ -471,7 +488,8 @@ public class GroupServiceTests
         // Arrange
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var logger = Substitute.For<ILogger<GroupService>>();
-        var service = new GroupService(context, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new GroupService(context, logger, auditService);
 
         var creator = context.Users.First();
         var admin = context.Users.Skip(1).First();
@@ -491,7 +509,8 @@ public class GroupServiceTests
         // Arrange
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var logger = Substitute.For<ILogger<GroupService>>();
-        var service = new GroupService(context, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new GroupService(context, logger, auditService);
 
         var creator = context.Users.First();
         var member = context.Users.Skip(1).First();
@@ -522,7 +541,8 @@ public class GroupServiceTests
         // Arrange
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var logger = Substitute.For<ILogger<GroupService>>();
-        var service = new GroupService(context, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new GroupService(context, logger, auditService);
 
         var creator = context.Users.First();
         var updateRequest = new UpdateMemberRoleRequest { Role = (int)GroupRole.Member };
@@ -541,7 +561,8 @@ public class GroupServiceTests
         // Arrange
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var logger = Substitute.For<ILogger<GroupService>>();
-        var service = new GroupService(context, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new GroupService(context, logger, auditService);
 
         var creator = context.Users.First();
         var member = context.Users.Skip(1).First();
@@ -573,7 +594,8 @@ public class GroupServiceTests
         // Arrange
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var logger = Substitute.For<ILogger<GroupService>>();
-        var service = new GroupService(context, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new GroupService(context, logger, auditService);
 
         var freeUser = context.Users.First(u => !u.IsPremium);
 
@@ -590,7 +612,8 @@ public class GroupServiceTests
         // Arrange
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var logger = Substitute.For<ILogger<GroupService>>();
-        var service = new GroupService(context, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new GroupService(context, logger, auditService);
 
         var freeUser = context.Users.First(u => !u.IsPremium);
         await service.CreateAsync(freeUser.Id, new CreateGroupRequest { Name = "My Group" });
@@ -608,7 +631,8 @@ public class GroupServiceTests
         // Arrange
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var logger = Substitute.For<ILogger<GroupService>>();
-        var service = new GroupService(context, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new GroupService(context, logger, auditService);
 
         var premiumUser = context.Users.First(u => u.IsPremium);
 
@@ -630,7 +654,8 @@ public class GroupServiceTests
         // Arrange
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var logger = Substitute.For<ILogger<GroupService>>();
-        var service = new GroupService(context, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new GroupService(context, logger, auditService);
 
         var freeUser = context.Users.First(u => !u.IsPremium);
 
@@ -650,7 +675,8 @@ public class GroupServiceTests
         // Arrange
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var logger = Substitute.For<ILogger<GroupService>>();
-        var service = new GroupService(context, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new GroupService(context, logger, auditService);
 
         var creator = context.Users.First(u => u.IsPremium);
         var freeUser = context.Users.First(u => !u.IsPremium);
@@ -675,7 +701,8 @@ public class GroupServiceTests
         // Arrange
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var logger = Substitute.For<ILogger<GroupService>>();
-        var service = new GroupService(context, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new GroupService(context, logger, auditService);
 
         // Use the seeded premium user for joining
         var premiumUser = context.Users.First(u => u.IsPremium);
@@ -707,7 +734,8 @@ public class GroupServiceTests
         // Arrange
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var logger = Substitute.For<ILogger<GroupService>>();
-        var service = new GroupService(context, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new GroupService(context, logger, auditService);
 
         var creator = context.Users.First(u => u.Username == "testuser");
         var nonMember = context.Users.First(u => u.Username == "freeuser");
@@ -726,7 +754,8 @@ public class GroupServiceTests
         // Arrange
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var logger = Substitute.For<ILogger<GroupService>>();
-        var service = new GroupService(context, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new GroupService(context, logger, auditService);
         var user = context.Users.First();
 
         // Act
@@ -742,7 +771,8 @@ public class GroupServiceTests
         // Arrange
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var logger = Substitute.For<ILogger<GroupService>>();
-        var service = new GroupService(context, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new GroupService(context, logger, auditService);
         var creator = context.Users.First(u => u.Username == "testuser");
         var group = await service.CreateAsync(creator.Id, new CreateGroupRequest { Name = "Empty Group" });
 
@@ -764,7 +794,8 @@ public class GroupServiceTests
         // Arrange
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var logger = Substitute.For<ILogger<GroupService>>();
-        var service = new GroupService(context, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new GroupService(context, logger, auditService);
         var creator = context.Users.First(u => u.Username == "testuser");
         var group = await service.CreateAsync(creator.Id, new CreateGroupRequest { Name = "Cinema Club" });
 
@@ -783,7 +814,8 @@ public class GroupServiceTests
         // Arrange
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var logger = Substitute.For<ILogger<GroupService>>();
-        var service = new GroupService(context, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new GroupService(context, logger, auditService);
         var creator = context.Users.First(u => u.Username == "testuser");
         var secondUser = context.Users.First(u => u.Username == "freeuser");
         var group = await service.CreateAsync(creator.Id, new CreateGroupRequest { Name = "Two Member Group" });

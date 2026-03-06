@@ -116,6 +116,11 @@ builder.Services.AddScoped<IGroupRecommendationsService, GroupRecommendationsSer
 builder.Services.AddScoped<IStatsService, StatsService>();
 builder.Services.AddScoped<IWatchlistService, WatchlistService>();
 builder.Services.AddScoped<IInvitationService, InvitationService>();
+builder.Services.AddScoped<IAuditService, AuditService>();
+builder.Services.AddScoped<AuditCleanupService>();
+
+// Add IHttpContextAccessor for audit logging (captures IP and User-Agent)
+builder.Services.AddHttpContextAccessor();
 
 // Add Rate Limiting
 builder.Services.AddRateLimiter(options =>
@@ -173,5 +178,10 @@ RecurringJob.AddOrUpdate<AccountCleanupJob>(
     "account-cleanup",
     job => job.ExecuteAsync(),
     Cron.Daily(2)); // Runs daily at 2:00 AM
+
+RecurringJob.AddOrUpdate<AuditCleanupJob>(
+    "audit-cleanup",
+    job => job.ExecuteAsync(),
+    Cron.Daily(3)); // Runs daily at 3:00 AM
 
 app.Run();

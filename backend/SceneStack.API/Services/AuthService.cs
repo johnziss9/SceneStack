@@ -4,8 +4,10 @@ using System.Text;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using SceneStack.API.Constants;
 using SceneStack.API.Data;
 using SceneStack.API.DTOs;
+using SceneStack.API.Interfaces;
 using SceneStack.API.Models;
 
 namespace SceneStack.API.Services;
@@ -15,15 +17,18 @@ public class AuthService : IAuthService
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly ApplicationDbContext _context;
     private readonly IConfiguration _configuration;
+    private readonly IAuditService _auditService;
 
     public AuthService(
         UserManager<ApplicationUser> userManager,
         ApplicationDbContext context,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        IAuditService auditService)
     {
         _userManager = userManager;
         _context = context;
         _configuration = configuration;
+        _auditService = auditService;
     }
 
     public async Task<AuthResponse?> RegisterAsync(RegisterRequest request)
@@ -98,11 +103,36 @@ public class AuthService : IAuthService
             // Clean up domain user if auth user creation fails
             _context.Users.Remove(domainUser);
             await _context.SaveChangesAsync();
+
+            // Audit log: Registration failed
+            await _auditService.LogAuthenticationAsync(
+                userId: null,
+                eventType: AuditEvents.RegisterFailed,
+                success: false,
+                errorMessage: string.Join(", ", result.Errors.Select(e => e.Description)),
+                additionalData: new Dictionary<string, object>
+                {
+                    { "Username", request.Username },
+                    { "Email", request.Email },
+                    { "Errors", result.Errors.Select(e => new { e.Code, e.Description }).ToList() }
+                });
+
             return null;
         }
 
         // 5. Generate JWT token
         var token = GenerateJwtToken(authUser, domainUser);
+
+        // Audit log: Registration success
+        await _auditService.LogAuthenticationAsync(
+            userId: domainUser.Id,
+            eventType: AuditEvents.RegisterSuccess,
+            success: true,
+            additionalData: new Dictionary<string, object>
+            {
+                { "Username", domainUser.Username },
+                { "Email", domainUser.Email }
+            });
 
         return new AuthResponse(
             Token: token,
@@ -123,6 +153,17 @@ public class AuthService : IAuthService
             authUser = await _userManager.FindByNameAsync(request.EmailOrUsername);
             if (authUser == null)
             {
+                // Audit log: Login failed - user not found
+                await _auditService.LogAuthenticationAsync(
+                    userId: null,
+                    eventType: AuditEvents.LoginFailedInvalidCredentials,
+                    success: false,
+                    errorMessage: "User not found",
+                    additionalData: new Dictionary<string, object>
+                    {
+                        { "EmailOrUsername", request.EmailOrUsername }
+                    });
+
                 return null;
             }
         }
@@ -131,6 +172,17 @@ public class AuthService : IAuthService
         var isPasswordValid = await _userManager.CheckPasswordAsync(authUser, request.Password);
         if (!isPasswordValid)
         {
+            // Audit log: Login failed - invalid password
+            await _auditService.LogAuthenticationAsync(
+                userId: authUser.DomainUserId,
+                eventType: AuditEvents.LoginFailedInvalidCredentials,
+                success: false,
+                errorMessage: "Invalid password",
+                additionalData: new Dictionary<string, object>
+                {
+                    { "EmailOrUsername", request.EmailOrUsername }
+                });
+
             return null;
         }
 
@@ -147,7 +199,18 @@ public class AuthService : IAuthService
         // 4. Check if account is permanently deleted
         if (domainUser.IsDeleted)
         {
-            Console.WriteLine($"Account {request.EmailOrUsername} is permanently deleted (IsDeleted={domainUser.IsDeleted})");
+            // Audit log: Login failed - account permanently deleted
+            await _auditService.LogAuthenticationAsync(
+                userId: domainUser.Id,
+                eventType: AuditEvents.LoginFailedAccountDeleted,
+                success: false,
+                errorMessage: "Account has been permanently deleted",
+                additionalData: new Dictionary<string, object>
+                {
+                    { "EmailOrUsername", request.EmailOrUsername },
+                    { "DeletedAt", domainUser.DeletedAt ?? DateTime.UtcNow }
+                });
+
             throw new InvalidOperationException("Account has been permanently deactivated and cannot be accessed.");
         }
 
@@ -164,6 +227,19 @@ public class AuthService : IAuthService
             daysUntilPermanentDeletion = daysRemaining > 0 ? daysRemaining : 0;
         }
         // If deactivated but DeletedAt is null = simple deactivation (no countdown)
+
+        // Audit log: Login success
+        await _auditService.LogAuthenticationAsync(
+            userId: domainUser.Id,
+            eventType: AuditEvents.LoginSuccess,
+            success: true,
+            additionalData: new Dictionary<string, object>
+            {
+                { "Username", domainUser.Username },
+                { "Email", domainUser.Email },
+                { "IsDeactivated", domainUser.IsDeactivated },
+                { "DaysUntilPermanentDeletion", daysUntilPermanentDeletion ?? 0 }
+            });
 
         return new AuthResponse(
             Token: token,

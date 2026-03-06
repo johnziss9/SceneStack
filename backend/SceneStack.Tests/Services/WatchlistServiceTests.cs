@@ -19,7 +19,8 @@ public class WatchlistServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var movieService = Substitute.For<IMovieService>();
         var logger = Substitute.For<ILogger<WatchlistService>>();
-        var service = new WatchlistService(context, movieService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new WatchlistService(context, movieService, logger, auditService);
 
         var user = context.Users.First();
 
@@ -39,7 +40,8 @@ public class WatchlistServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var movieService = Substitute.For<IMovieService>();
         var logger = Substitute.For<ILogger<WatchlistService>>();
-        var service = new WatchlistService(context, movieService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new WatchlistService(context, movieService, logger, auditService);
 
         var user = context.Users.First();
         var movie = context.Movies.First();
@@ -90,7 +92,8 @@ public class WatchlistServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var movieService = Substitute.For<IMovieService>();
         var logger = Substitute.For<ILogger<WatchlistService>>();
-        var service = new WatchlistService(context, movieService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new WatchlistService(context, movieService, logger, auditService);
 
         var user = context.Users.First();
         var movie = context.Movies.First();
@@ -137,7 +140,8 @@ public class WatchlistServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var movieService = Substitute.For<IMovieService>();
         var logger = Substitute.For<ILogger<WatchlistService>>();
-        var service = new WatchlistService(context, movieService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new WatchlistService(context, movieService, logger, auditService);
 
         var user1 = context.Users.First();
         var user2 = context.Users.Skip(1).First();
@@ -164,7 +168,8 @@ public class WatchlistServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var movieService = Substitute.For<IMovieService>();
         var logger = Substitute.For<ILogger<WatchlistService>>();
-        var service = new WatchlistService(context, movieService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new WatchlistService(context, movieService, logger, auditService);
 
         var user = context.Users.First();
         var movie = context.Movies.First();
@@ -192,7 +197,8 @@ public class WatchlistServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var movieService = Substitute.For<IMovieService>();
         var logger = Substitute.For<ILogger<WatchlistService>>();
-        var service = new WatchlistService(context, movieService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new WatchlistService(context, movieService, logger, auditService);
 
         var user = context.Users.First();
 
@@ -213,7 +219,8 @@ public class WatchlistServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var movieService = Substitute.For<IMovieService>();
         var logger = Substitute.For<ILogger<WatchlistService>>();
-        var service = new WatchlistService(context, movieService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new WatchlistService(context, movieService, logger, auditService);
 
         var user = context.Users.First();
         var movie = context.Movies.First();
@@ -238,7 +245,8 @@ public class WatchlistServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var movieService = Substitute.For<IMovieService>();
         var logger = Substitute.For<ILogger<WatchlistService>>();
-        var service = new WatchlistService(context, movieService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new WatchlistService(context, movieService, logger, auditService);
 
         var user = context.Users.First();
         var movie = context.Movies.First();
@@ -280,7 +288,8 @@ public class WatchlistServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var movieService = Substitute.For<IMovieService>();
         var logger = Substitute.For<ILogger<WatchlistService>>();
-        var service = new WatchlistService(context, movieService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new WatchlistService(context, movieService, logger, auditService);
 
         var user = context.Users.First();
         var movie = context.Movies.First();
@@ -317,7 +326,8 @@ public class WatchlistServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var movieService = Substitute.For<IMovieService>();
         var logger = Substitute.For<ILogger<WatchlistService>>();
-        var service = new WatchlistService(context, movieService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new WatchlistService(context, movieService, logger, auditService);
 
         var user = context.Users.First();
 
@@ -335,7 +345,8 @@ public class WatchlistServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var movieService = Substitute.For<IMovieService>();
         var logger = Substitute.For<ILogger<WatchlistService>>();
-        var service = new WatchlistService(context, movieService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new WatchlistService(context, movieService, logger, auditService);
 
         var user = context.Users.First();
         var movie = context.Movies.First();
@@ -364,7 +375,8 @@ public class WatchlistServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var movieService = Substitute.For<IMovieService>();
         var logger = Substitute.For<ILogger<WatchlistService>>();
-        var service = new WatchlistService(context, movieService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new WatchlistService(context, movieService, logger, auditService);
 
         var user = context.Users.First();
 
@@ -382,7 +394,8 @@ public class WatchlistServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var movieService = Substitute.For<IMovieService>();
         var logger = Substitute.For<ILogger<WatchlistService>>();
-        var service = new WatchlistService(context, movieService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new WatchlistService(context, movieService, logger, auditService);
 
         var user = context.Users.First();
         var movie = context.Movies.First();
@@ -425,7 +438,8 @@ public class WatchlistServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var movieService = Substitute.For<IMovieService>();
         var logger = Substitute.For<ILogger<WatchlistService>>();
-        var service = new WatchlistService(context, movieService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new WatchlistService(context, movieService, logger, auditService);
 
         var user = context.Users.First();
 
@@ -449,7 +463,8 @@ public class WatchlistServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var movieService = Substitute.For<IMovieService>();
         var logger = Substitute.For<ILogger<WatchlistService>>();
-        var service = new WatchlistService(context, movieService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new WatchlistService(context, movieService, logger, auditService);
 
         var user = context.Users.First();
         var movie = context.Movies.First();
@@ -478,7 +493,8 @@ public class WatchlistServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var movieService = Substitute.For<IMovieService>();
         var logger = Substitute.For<ILogger<WatchlistService>>();
-        var service = new WatchlistService(context, movieService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new WatchlistService(context, movieService, logger, auditService);
 
         var premiumUser = context.Users.First(u => u.IsPremium);
 
@@ -496,7 +512,8 @@ public class WatchlistServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var movieService = Substitute.For<IMovieService>();
         var logger = Substitute.For<ILogger<WatchlistService>>();
-        var service = new WatchlistService(context, movieService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new WatchlistService(context, movieService, logger, auditService);
 
         var freeUser = context.Users.First(u => !u.IsPremium);
 
@@ -514,7 +531,8 @@ public class WatchlistServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var movieService = Substitute.For<IMovieService>();
         var logger = Substitute.For<ILogger<WatchlistService>>();
-        var service = new WatchlistService(context, movieService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new WatchlistService(context, movieService, logger, auditService);
 
         var freeUser = context.Users.First(u => !u.IsPremium);
 
@@ -560,7 +578,8 @@ public class WatchlistServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var movieService = Substitute.For<IMovieService>();
         var logger = Substitute.For<ILogger<WatchlistService>>();
-        var service = new WatchlistService(context, movieService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new WatchlistService(context, movieService, logger, auditService);
 
         // Act
         var result = await service.CanAddToWatchlistAsync(999);

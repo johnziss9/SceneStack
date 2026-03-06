@@ -1,5 +1,9 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using SceneStack.API.Constants;
 using SceneStack.API.DTOs;
+using SceneStack.API.Extensions;
+using SceneStack.API.Interfaces;
 using SceneStack.API.Services;
 
 namespace SceneStack.API.Controllers;
@@ -9,10 +13,12 @@ namespace SceneStack.API.Controllers;
 public class AuthController : ControllerBase
 {
     private readonly IAuthService _authService;
+    private readonly IAuditService _auditService;
 
-    public AuthController(IAuthService authService)
+    public AuthController(IAuthService authService, IAuditService auditService)
     {
         _authService = authService;
+        _auditService = auditService;
     }
 
     // POST: api/auth/register
@@ -57,11 +63,21 @@ public class AuthController : ControllerBase
     }
 
     // POST: api/auth/logout
+    [Authorize]
     [HttpPost("logout")]
-    public IActionResult Logout()
+    public async Task<IActionResult> Logout()
     {
         // With JWT, logout is handled client-side by removing the token
         // This endpoint exists for consistency and future enhancements (e.g., token blacklisting)
+
+        var userId = User.GetUserId();
+
+        // Audit log: Logout
+        await _auditService.LogAuthenticationAsync(
+            userId: userId,
+            eventType: AuditEvents.Logout,
+            success: true);
+
         return Ok(new { message = "Logged out successfully" });
     }
 }

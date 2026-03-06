@@ -19,7 +19,8 @@ public class MovieServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var tmdbService = Substitute.For<ITmdbService>();
         var logger = Substitute.For<ILogger<MovieService>>();
-        var service = new MovieService(context, tmdbService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new MovieService(context, tmdbService, logger, auditService);
 
         // Act
         var result = await service.GetByIdAsync(1);
@@ -37,7 +38,8 @@ public class MovieServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var tmdbService = Substitute.For<ITmdbService>();
         var logger = Substitute.For<ILogger<MovieService>>();
-        var service = new MovieService(context, tmdbService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new MovieService(context, tmdbService, logger, auditService);
 
         // Act
         var result = await service.GetByIdAsync(999);
@@ -53,7 +55,8 @@ public class MovieServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var tmdbService = Substitute.For<ITmdbService>();
         var logger = Substitute.For<ILogger<MovieService>>();
-        var service = new MovieService(context, tmdbService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new MovieService(context, tmdbService, logger, auditService);
 
         // Soft delete the test movie
         var movie = await context.Movies.FindAsync(1);
@@ -75,7 +78,8 @@ public class MovieServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var tmdbService = Substitute.For<ITmdbService>();
         var logger = Substitute.For<ILogger<MovieService>>();
-        var service = new MovieService(context, tmdbService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new MovieService(context, tmdbService, logger, auditService);
 
         // Add another movie and soft delete it
         var deletedMovie = new Movie
@@ -106,7 +110,8 @@ public class MovieServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var tmdbService = Substitute.For<ITmdbService>();
         var logger = Substitute.For<ILogger<MovieService>>();
-        var service = new MovieService(context, tmdbService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new MovieService(context, tmdbService, logger, auditService);
 
         var newMovie = new Movie
         {
@@ -137,7 +142,8 @@ public class MovieServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var tmdbService = Substitute.For<ITmdbService>();
         var logger = Substitute.For<ILogger<MovieService>>();
-        var service = new MovieService(context, tmdbService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new MovieService(context, tmdbService, logger, auditService);
         
         var updatedMovie = new Movie
         {
@@ -166,7 +172,8 @@ public class MovieServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var tmdbService = Substitute.For<ITmdbService>();
         var logger = Substitute.For<ILogger<MovieService>>();
-        var service = new MovieService(context, tmdbService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new MovieService(context, tmdbService, logger, auditService);
 
         // Act
         var result = await service.DeleteAsync(1);
@@ -188,7 +195,8 @@ public class MovieServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var tmdbService = Substitute.For<ITmdbService>();
         var logger = Substitute.For<ILogger<MovieService>>();
-        var service = new MovieService(context, tmdbService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new MovieService(context, tmdbService, logger, auditService);
 
         // Act
         var result = await service.GetByTmdbIdAsync(550);
@@ -205,7 +213,8 @@ public class MovieServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var tmdbService = Substitute.For<ITmdbService>();
         var logger = Substitute.For<ILogger<MovieService>>();
-        var service = new MovieService(context, tmdbService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new MovieService(context, tmdbService, logger, auditService);
 
         // Act
         var result = await service.GetByTmdbIdAsync(999);
@@ -221,7 +230,8 @@ public class MovieServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var tmdbService = Substitute.For<ITmdbService>();
         var logger = Substitute.For<ILogger<MovieService>>();
-        var service = new MovieService(context, tmdbService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new MovieService(context, tmdbService, logger, auditService);
         
         // Act
         var result = await service.GetOrCreateFromTmdbAsync(550);
@@ -242,7 +252,8 @@ public class MovieServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var tmdbService = Substitute.For<ITmdbService>();
         var logger = Substitute.For<ILogger<MovieService>>();
-        var service = new MovieService(context, tmdbService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new MovieService(context, tmdbService, logger, auditService);
         
         // Soft delete the test movie
         var movie = await context.Movies.IgnoreQueryFilters().FirstAsync(m => m.Id == 1);
@@ -270,7 +281,8 @@ public class MovieServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var tmdbService = Substitute.For<ITmdbService>();
         var logger = Substitute.For<ILogger<MovieService>>();
-        var service = new MovieService(context, tmdbService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new MovieService(context, tmdbService, logger, auditService);
         
         // Mock TMDb API response
         var tmdbMovie = new TmdbMovie
@@ -309,7 +321,8 @@ public class MovieServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var tmdbService = Substitute.For<ITmdbService>();
         var logger = Substitute.For<ILogger<MovieService>>();
-        var service = new MovieService(context, tmdbService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new MovieService(context, tmdbService, logger, auditService);
 
         // Mock TMDb API to return null (movie not found or API error)
         tmdbService.GetMovieDetailsAsync(999).Returns((TmdbMovie?)null);
@@ -331,7 +344,8 @@ public class MovieServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var tmdbService = Substitute.For<ITmdbService>();
         var logger = Substitute.For<ILogger<MovieService>>();
-        var service = new MovieService(context, tmdbService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new MovieService(context, tmdbService, logger, auditService);
 
         var tmdbMovie = new TmdbMovie
         {
@@ -409,7 +423,8 @@ public class MovieServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var tmdbService = Substitute.For<ITmdbService>();
         var logger = Substitute.For<ILogger<MovieService>>();
-        var service = new MovieService(context, tmdbService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new MovieService(context, tmdbService, logger, auditService);
 
         var tmdbMovie = new TmdbMovie
         {
@@ -447,7 +462,8 @@ public class MovieServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var tmdbService = Substitute.For<ITmdbService>();
         var logger = Substitute.For<ILogger<MovieService>>();
-        var service = new MovieService(context, tmdbService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new MovieService(context, tmdbService, logger, auditService);
 
         var tmdbMovie = new TmdbMovie
         {
@@ -493,7 +509,8 @@ public class MovieServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var tmdbService = Substitute.For<ITmdbService>();
         var logger = Substitute.For<ILogger<MovieService>>();
-        var service = new MovieService(context, tmdbService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new MovieService(context, tmdbService, logger, auditService);
 
         // Create a legacy movie without enrichment
         var legacyMovie = new Movie
@@ -573,7 +590,8 @@ public class MovieServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var tmdbService = Substitute.For<ITmdbService>();
         var logger = Substitute.For<ILogger<MovieService>>();
-        var service = new MovieService(context, tmdbService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new MovieService(context, tmdbService, logger, auditService);
 
         // Create an already enriched movie
         var enrichedMovie = new Movie
@@ -626,7 +644,8 @@ public class MovieServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var tmdbService = Substitute.For<ITmdbService>();
         var logger = Substitute.For<ILogger<MovieService>>();
-        var service = new MovieService(context, tmdbService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new MovieService(context, tmdbService, logger, auditService);
 
         var user = context.Users.First();
 
@@ -683,7 +702,8 @@ public class MovieServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var tmdbService = Substitute.For<ITmdbService>();
         var logger = Substitute.For<ILogger<MovieService>>();
-        var service = new MovieService(context, tmdbService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new MovieService(context, tmdbService, logger, auditService);
 
         var user = context.Users.First();
 
@@ -730,7 +750,8 @@ public class MovieServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var tmdbService = Substitute.For<ITmdbService>();
         var logger = Substitute.For<ILogger<MovieService>>();
-        var service = new MovieService(context, tmdbService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new MovieService(context, tmdbService, logger, auditService);
 
         var user = context.Users.First();
 
@@ -753,7 +774,8 @@ public class MovieServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var tmdbService = Substitute.For<ITmdbService>();
         var logger = Substitute.For<ILogger<MovieService>>();
-        var service = new MovieService(context, tmdbService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new MovieService(context, tmdbService, logger, auditService);
 
         // Create a movie with cast/crew but missing PersonIds (legacy data)
         var legacyMovie = new Movie
@@ -852,7 +874,8 @@ public class MovieServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var tmdbService = Substitute.For<ITmdbService>();
         var logger = Substitute.For<ILogger<MovieService>>();
-        var service = new MovieService(context, tmdbService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new MovieService(context, tmdbService, logger, auditService);
 
         // Create a movie with only cast missing PersonIds
         var partialLegacyMovie = new Movie
@@ -932,7 +955,8 @@ public class MovieServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var tmdbService = Substitute.For<ITmdbService>();
         var logger = Substitute.For<ILogger<MovieService>>();
-        var service = new MovieService(context, tmdbService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new MovieService(context, tmdbService, logger, auditService);
 
         var tmdbMovie = new TmdbMovie
         {
@@ -977,7 +1001,8 @@ public class MovieServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var tmdbService = Substitute.For<ITmdbService>();
         var logger = Substitute.For<ILogger<MovieService>>();
-        var service = new MovieService(context, tmdbService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new MovieService(context, tmdbService, logger, auditService);
 
         var tmdbMovie = new TmdbMovie
         {
@@ -1025,7 +1050,8 @@ public class MovieServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var tmdbService = Substitute.For<ITmdbService>();
         var logger = Substitute.For<ILogger<MovieService>>();
-        var service = new MovieService(context, tmdbService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new MovieService(context, tmdbService, logger, auditService);
 
         var tmdbMovie = new TmdbMovie
         {
@@ -1075,7 +1101,8 @@ public class MovieServiceTests
         using var context = TestDbContextFactory.CreateInMemoryDbContext();
         var tmdbService = Substitute.For<ITmdbService>();
         var logger = Substitute.For<ILogger<MovieService>>();
-        var service = new MovieService(context, tmdbService, logger);
+        var auditService = Substitute.For<IAuditService>();
+        var service = new MovieService(context, tmdbService, logger, auditService);
 
         // Create a fully enriched movie with all PersonIds
         var fullyEnrichedMovie = new Movie
