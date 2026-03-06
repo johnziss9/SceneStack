@@ -13,6 +13,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import { UpgradeToPremiumModal } from "@/components/UpgradeToPremiumModal";
 import { LoadingTips } from "@/components/LoadingTips";
+import { log } from '@/lib/logger';
 
 type SortBy = 'name' | 'updated';
 
@@ -37,7 +38,7 @@ export function GroupList() {
             const data = await groupApi.getUserGroups();
             setGroups(data);
         } catch (err) {
-            console.error("Failed to fetch groups:", err);
+            log.error("Failed to fetch groups", err);
             toast.error("Failed to load groups", {
                 description: "Please try again later",
             });

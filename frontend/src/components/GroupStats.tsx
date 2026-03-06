@@ -1,4 +1,5 @@
 "use client";
+import { log } from '@/lib/logger';
 
 import { useEffect, useState } from "react";
 import { groupApi } from "@/lib/api";
@@ -63,7 +64,7 @@ export function GroupStats({ groupId }: GroupStatsProps) {
             const data = await groupApi.getGroupStats(groupId);
             setStats(data);
         } catch (err) {
-            console.error("Failed to load group stats:", err);
+            log.error("Failed to load group stats", err);
             setError("Failed to load group stats.");
         } finally {
             setIsLoading(false);

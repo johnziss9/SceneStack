@@ -13,6 +13,7 @@ import { ArrowLeft, Loader2 } from "lucide-react";
 import { toast } from "@/lib/toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { LoadingTips } from "@/components/LoadingTips";
+import { log } from '@/lib/logger';
 
 interface EditGroupPageProps {
     params: Promise<{ id: string }>;
@@ -61,7 +62,7 @@ export default function EditGroupPage({ params }: EditGroupPageProps) {
                 nameInputRef.current?.focus();
             }, 100);
         } catch (err) {
-            console.error("Failed to fetch group:", err);
+            log.error("Failed to fetch group", err);
             toast.error("Failed to load group");
             router.push("/groups");
         } finally {
@@ -112,7 +113,7 @@ export default function EditGroupPage({ params }: EditGroupPageProps) {
             toast.success("Group updated successfully!");
             router.push(`/groups/${groupId}`);
         } catch (err) {
-            console.error("Failed to update group:", err);
+            log.error("Failed to update group", err);
             toast.error("Failed to update group", {
                 description: "Please try again later",
             });

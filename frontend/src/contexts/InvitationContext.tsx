@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useAuth } from './AuthContext';
 import { invitationApi } from '@/lib/api';
+import { log } from '@/lib/logger';
 
 interface InvitationContextType {
     count: number;
@@ -29,7 +30,7 @@ export function InvitationProvider({ children }: { children: ReactNode }) {
             const response = await invitationApi.getPendingCount();
             setCount(response.count);
         } catch (error) {
-            console.error('Failed to fetch invitation count:', error);
+            log.error('Failed to fetch invitation count', error);
         } finally {
             setIsLoading(false);
         }

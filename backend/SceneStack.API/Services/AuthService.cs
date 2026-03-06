@@ -259,7 +259,7 @@ public class AuthService : IAuthService
         var issuer = jwtSettings["Issuer"] ?? throw new InvalidOperationException("JWT Issuer not configured");
         var audience = jwtSettings["Audience"] ?? throw new InvalidOperationException("JWT Audience not configured");
 
-        var claims = new[]
+        var claims = new List<Claim>
         {
             new Claim(ClaimTypes.NameIdentifier, domainUser.Id.ToString()), // Domain User.Id (int)
             new Claim(ClaimTypes.Name, authUser.UserName ?? string.Empty),
@@ -267,6 +267,13 @@ public class AuthService : IAuthService
             new Claim("AuthUserId", authUser.Id), // ApplicationUser.Id (string GUID)
             new Claim("IsPremium", domainUser.IsPremium.ToString())
         };
+
+        // Add roles to claims
+        var roles = _userManager.GetRolesAsync(authUser).Result;
+        foreach (var role in roles)
+        {
+            claims.Add(new Claim(ClaimTypes.Role, role));
+        }
 
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);

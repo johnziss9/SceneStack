@@ -4,6 +4,7 @@ import { createContext, useContext, useState, useEffect, ReactNode } from 'react
 import { useRouter } from 'next/navigation';
 import { authApi, userApi } from '@/lib/api';
 import { tokenStorage } from '@/lib/api-client';
+import { log } from '@/lib/logger';
 import type { AuthResponse, RegisterRequest, LoginRequest } from '@/types';
 
 interface AuthUser {
@@ -74,7 +75,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 });
             } catch (error) {
                 // Invalid token, remove it
-                console.error('Failed to decode token:', error);
+                log.error('Failed to decode JWT token', error);
                 tokenStorage.removeToken();
             }
         }
@@ -195,7 +196,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 createdAt: profile.createdAt,
             });
         } catch (error) {
-            console.error('Failed to refresh user:', error);
+            log.error('Failed to refresh user profile', error);
             // If refresh fails, user might be logged out
             // Keep existing user state rather than clearing it
         }

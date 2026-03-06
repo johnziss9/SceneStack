@@ -16,6 +16,7 @@ import { TopRewatched } from '@/components/stats/TopRewatched';
 import { TopRatedFilms } from '@/components/stats/TopRatedFilms';
 import { FavoriteGenres } from '@/components/stats/FavoriteGenres';
 import type { UserStats } from '@/types/stats';
+import { log } from '@/lib/logger';
 
 function StatsSkeleton() {
     return (
@@ -75,7 +76,7 @@ export default function StatsPage() {
             const data = await statsApi.getStats();
             setStats(data);
         } catch (err) {
-            console.error('Failed to load stats:', err);
+            log.error('Failed to load stats', err);
             setError('Failed to load your stats. Please try again.');
         } finally {
             setLoading(false);

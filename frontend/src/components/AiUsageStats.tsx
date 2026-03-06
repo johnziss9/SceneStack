@@ -1,4 +1,5 @@
 'use client';
+import { log } from '@/lib/logger';
 
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -20,7 +21,7 @@ export function AiUsageStats() {
             const data = await aiApi.getUsageStats();
             setStats(data);
         } catch (err) {
-            console.error('Failed to load usage stats:', err);
+            log.error('Failed to load usage stats', err);
         } finally {
             setIsLoading(false);
         }

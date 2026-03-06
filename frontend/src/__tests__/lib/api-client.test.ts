@@ -1,5 +1,16 @@
 import { api, ApiError } from '@/lib/api-client'
 
+// Helper to create a mock response with headers
+const createMockResponse = (data: any): Partial<Response> => ({
+    ...data,
+    headers: {
+        get: jest.fn((key: string) => {
+            if (key === 'X-Correlation-ID') return 'test-correlation-id';
+            return null;
+        }),
+    } as any,
+});
+
 describe('api-client', () => {
     beforeEach(() => {
         // Clear all mocks before each test
@@ -20,43 +31,44 @@ describe('api-client', () => {
     describe('api.get', () => {
         it('should make a GET request and return parsed JSON', async () => {
             const mockData = { id: 1, name: 'Test' }
-            global.fetch = jest.fn().mockResolvedValue({
+            global.fetch = jest.fn().mockResolvedValue(createMockResponse({
                 ok: true,
                 status: 200,
                 json: async () => mockData,
-            })
+            }))
 
             const result = await api.get('/api/test')
 
             expect(global.fetch).toHaveBeenCalledWith(
                 'http://localhost:5127/api/test',
-                {
+                expect.objectContaining({
                     method: 'GET',
-                    headers: {
+                    headers: expect.objectContaining({
                         'Content-Type': 'application/json',
-                    },
-                }
+                        'X-Correlation-ID': expect.any(String),
+                    }),
+                })
             )
             expect(result).toEqual(mockData)
         })
 
         it('should throw ApiError on non-ok response', async () => {
-            global.fetch = jest.fn().mockResolvedValue({
+            global.fetch = jest.fn().mockResolvedValue(createMockResponse({
                 ok: false,
                 status: 404,
                 text: async () => 'Not found',
-            })
+            }))
 
             await expect(api.get('/api/test')).rejects.toThrow(ApiError)
             await expect(api.get('/api/test')).rejects.toThrow('Not found')
         })
 
         it('should throw ApiError with status message if no error text', async () => {
-            global.fetch = jest.fn().mockResolvedValue({
+            global.fetch = jest.fn().mockResolvedValue(createMockResponse({
                 ok: false,
                 status: 500,
                 text: async () => '',
-            })
+            }))
 
             await expect(api.get('/api/test')).rejects.toThrow('API error: 500')
         })
@@ -67,23 +79,24 @@ describe('api-client', () => {
             const postData = { name: 'New Item' }
             const mockResponse = { id: 1, ...postData }
 
-            global.fetch = jest.fn().mockResolvedValue({
+            global.fetch = jest.fn().mockResolvedValue(createMockResponse({
                 ok: true,
                 status: 201,
                 json: async () => mockResponse,
-            })
+            }))
 
             const result = await api.post('/api/items', postData)
 
             expect(global.fetch).toHaveBeenCalledWith(
                 'http://localhost:5127/api/items',
-                {
+                expect.objectContaining({
                     method: 'POST',
-                    headers: {
+                    headers: expect.objectContaining({
                         'Content-Type': 'application/json',
-                    },
+                        'X-Correlation-ID': expect.any(String),
+                    }),
                     body: JSON.stringify(postData),
-                }
+                })
             )
             expect(result).toEqual(mockResponse)
         })
@@ -91,23 +104,24 @@ describe('api-client', () => {
         it('should make a POST request without body if no data provided', async () => {
             const mockResponse = { success: true }
 
-            global.fetch = jest.fn().mockResolvedValue({
+            global.fetch = jest.fn().mockResolvedValue(createMockResponse({
                 ok: true,
                 status: 200,
                 json: async () => mockResponse,
-            })
+            }))
 
             const result = await api.post('/api/action')
 
             expect(global.fetch).toHaveBeenCalledWith(
                 'http://localhost:5127/api/action',
-                {
+                expect.objectContaining({
                     method: 'POST',
-                    headers: {
+                    headers: expect.objectContaining({
                         'Content-Type': 'application/json',
-                    },
+                        'X-Correlation-ID': expect.any(String),
+                    }),
                     body: undefined,
-                }
+                })
             )
             expect(result).toEqual(mockResponse)
         })
@@ -118,23 +132,24 @@ describe('api-client', () => {
             const updateData = { name: 'Updated Item' }
             const mockResponse = { id: 1, ...updateData }
 
-            global.fetch = jest.fn().mockResolvedValue({
+            global.fetch = jest.fn().mockResolvedValue(createMockResponse({
                 ok: true,
                 status: 200,
                 json: async () => mockResponse,
-            })
+            }))
 
             const result = await api.put('/api/items/1', updateData)
 
             expect(global.fetch).toHaveBeenCalledWith(
                 'http://localhost:5127/api/items/1',
-                {
+                expect.objectContaining({
                     method: 'PUT',
-                    headers: {
+                    headers: expect.objectContaining({
                         'Content-Type': 'application/json',
-                    },
+                        'X-Correlation-ID': expect.any(String),
+                    }),
                     body: JSON.stringify(updateData),
-                }
+                })
             )
             expect(result).toEqual(mockResponse)
         })
@@ -142,21 +157,22 @@ describe('api-client', () => {
 
     describe('api.delete', () => {
         it('should make a DELETE request and handle 204 No Content', async () => {
-            global.fetch = jest.fn().mockResolvedValue({
+            global.fetch = jest.fn().mockResolvedValue(createMockResponse({
                 ok: true,
                 status: 204,
-            })
+            }))
 
             const result = await api.delete('/api/items/1')
 
             expect(global.fetch).toHaveBeenCalledWith(
                 'http://localhost:5127/api/items/1',
-                {
+                expect.objectContaining({
                     method: 'DELETE',
-                    headers: {
+                    headers: expect.objectContaining({
                         'Content-Type': 'application/json',
-                    },
-                }
+                        'X-Correlation-ID': expect.any(String),
+                    }),
+                })
             )
             expect(result).toBeUndefined()
         })
@@ -164,11 +180,11 @@ describe('api-client', () => {
         it('should make a DELETE request and return JSON if provided', async () => {
             const mockResponse = { deleted: true }
 
-            global.fetch = jest.fn().mockResolvedValue({
+            global.fetch = jest.fn().mockResolvedValue(createMockResponse({
                 ok: true,
                 status: 200,
                 json: async () => mockResponse,
-            })
+            }))
 
             const result = await api.delete('/api/items/1')
 

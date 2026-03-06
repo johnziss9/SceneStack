@@ -10,6 +10,7 @@ import { LoadingTips } from '@/components/LoadingTips';
 import Link from 'next/link';
 import { toast } from '@/lib/toast';
 import { Check, Eye, EyeOff } from 'lucide-react';
+import { log } from '@/lib/logger';
 
 export default function RegisterPage() {
     const { register, loading: authLoading } = useAuth();
@@ -198,7 +199,7 @@ export default function RegisterPage() {
             await register({ username, email, password });
             toast.success('Account created successfully!');
         } catch (error) {
-            console.error('Registration error:', error);
+            log.error('Registration error', error);
             toast.error('Failed to create account. Email may already be in use.');
         } finally {
             setIsLoading(false);

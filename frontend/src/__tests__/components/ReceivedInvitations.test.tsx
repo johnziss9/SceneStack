@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { ReceivedInvitations } from '@/components/ReceivedInvitations'
 import { invitationApi } from '@/lib/api'
 import type { Invitation } from '@/types'
+import { log } from '@/lib/logger'
 
 // Mock the API
 jest.mock('@/lib/api', () => ({
@@ -18,6 +19,17 @@ jest.mock('@/lib/toast', () => ({
         success: jest.fn(),
         error: jest.fn(),
     },
+}))
+
+// Mock the logger
+jest.mock('@/lib/logger', () => ({
+    log: {
+        error: jest.fn(),
+        warn: jest.fn(),
+        info: jest.fn(),
+        debug: jest.fn(),
+    },
+    setCorrelationId: jest.fn(),
 }))
 
 // Mock InvitationContext
@@ -203,21 +215,19 @@ describe('ReceivedInvitations', () => {
     })
 
     it('should handle API error when fetching invitations', async () => {
-        const consoleError = jest.spyOn(console, 'error').mockImplementation()
-        ;(invitationApi.getPendingInvitations as jest.Mock).mockRejectedValue(
+        (log.error as jest.Mock).mockClear();
+        (invitationApi.getPendingInvitations as jest.Mock).mockRejectedValue(
             new Error('Failed to fetch')
-        )
+        );
 
-        render(<ReceivedInvitations />)
+        render(<ReceivedInvitations />);
 
         await waitFor(() => {
-            expect(consoleError).toHaveBeenCalledWith(
-                'Failed to fetch invitations:',
+            expect(log.error).toHaveBeenCalledWith(
+                'Failed to fetch invitations',
                 expect.any(Error)
-            )
-        })
-
-        consoleError.mockRestore()
+            );
+        });
     })
 
     it('should handle API error when responding to invitation', async () => {

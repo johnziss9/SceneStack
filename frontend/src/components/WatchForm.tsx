@@ -17,6 +17,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Slider } from '@/components/ui/slider';
 import { toast } from '@/lib/toast';
 import { dateStringToISO } from '@/lib/utils';
+import { log } from '@/lib/logger';
 
 interface WatchFormProps {
     movie: TmdbMovie | null;
@@ -109,7 +110,7 @@ export function WatchForm({ movie, open, onOpenChange, onSuccess, isFirstWatch =
             const groups = await groupApi.getUserGroups();
             setUserGroups(groups);
         } catch (err) {
-            console.error('Failed to fetch groups:', err);
+            log.error('Failed to fetch groups', err);
             // Don't show error toast, groups are optional
         } finally {
             setIsLoadingGroups(false);
@@ -349,7 +350,7 @@ export function WatchForm({ movie, open, onOpenChange, onSuccess, isFirstWatch =
             });
             onSuccess();
         } catch (err) {
-            console.error('Failed to create watch:', err);
+            log.error('Failed to create watch', err);
             toast.error('Failed to add watch', {
                 description: 'Please try again later',
             });

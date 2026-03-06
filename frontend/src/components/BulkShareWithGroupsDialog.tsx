@@ -1,4 +1,5 @@
 "use client";
+import { log } from '@/lib/logger';
 
 import { useState, useEffect } from "react";
 import {
@@ -68,7 +69,7 @@ export function BulkShareWithGroupsDialog({
             const groups = await groupApi.getUserGroups();
             setUserGroups(groups);
         } catch (err) {
-            console.error("Failed to fetch groups:", err);
+            log.error("Failed to fetch groups", err);
             toast.error("Failed to load groups");
         } finally {
             setIsLoadingGroups(false);

@@ -10,6 +10,7 @@ import type { Watch, Movie, MovieDetail } from '@/types';
 import { ApiError, PremiumRequiredError } from '@/lib/api-client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Clock, Star } from 'lucide-react';
+import { log } from '@/lib/logger';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -69,7 +70,7 @@ export default function WatchDetailPage({ params }: WatchDetailPageProps) {
         const watchesData = await watchApi.getWatchesByMovie(movieId);
         setWatches(watchesData);
       } catch (err) {
-        console.error('Error refetching watches:', err);
+        log.error('Error refetching watches', err);
       }
     }
   };
@@ -90,7 +91,7 @@ export default function WatchDetailPage({ params }: WatchDetailPageProps) {
       setIsDeleteDialogOpen(false);
       setDeletingWatch(null);
     } catch (err) {
-      console.error('Error deleting watch:', err);
+      log.error('Error deleting watch', err);
       toast.error('Failed to delete watch', { description: 'Please try again later' });
     } finally {
       setIsDeleting(false);
@@ -104,7 +105,7 @@ export default function WatchDetailPage({ params }: WatchDetailPageProps) {
         setWatches(watchesData);
         if (watchesData.length > 0) setMovie(watchesData[0].movie);
       } catch (err) {
-        console.error('Error refetching watches:', err);
+        log.error('Error refetching watches', err);
       }
     }
   };
@@ -173,7 +174,7 @@ export default function WatchDetailPage({ params }: WatchDetailPageProps) {
 
         setIsLoading(false);
       } catch (err) {
-        console.error('Error loading watch details:', err);
+        log.error('Error loading watch details', err);
         setError('Failed to load watch details. Please try again.');
         setIsLoading(false);
       }

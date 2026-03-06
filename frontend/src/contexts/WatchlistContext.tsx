@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useAuth } from './AuthContext';
 import { watchlistApi } from '@/lib/api';
+import { log } from '@/lib/logger';
 
 interface WishlistContextType {
     count: number;
@@ -30,7 +31,7 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
             const response = await watchlistApi.getWatchlistCount();
             setCount(response.count);
         } catch (error) {
-            console.error('Failed to fetch watchlist count:', error);
+            log.error('Failed to fetch watchlist count', error);
         } finally {
             setIsLoading(false);
         }

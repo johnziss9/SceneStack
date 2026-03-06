@@ -1,4 +1,5 @@
 "use client";
+import { log } from '@/lib/logger';
 
 import { useState, useEffect, memo, forwardRef, useImperativeHandle, useRef } from 'react';
 import { Search, X, Loader2 } from 'lucide-react';
@@ -71,7 +72,7 @@ export const MovieSearchBar = memo(forwardRef<MovieSearchBarRef, MovieSearchBarP
                 }
                 setError(null);
             } catch (err) {
-                console.error('Search error:', err);
+                log.error('Search error', err);
                 setError(searchType === 'people' ? 'Failed to search people. Please try again.' : 'Failed to search movies. Please try again.');
                 if (searchType === 'people') {
                     onPersonResultsChange?.([], 0, 0, '');

@@ -17,6 +17,7 @@ import { UpgradeToPremiumModal } from "@/components/UpgradeToPremiumModal";
 import { useAuth } from "@/contexts/AuthContext";
 import { watchApi, movieApi } from "@/lib";
 import type { TmdbMovie, TmdbPerson, GroupedWatch } from '@/types';
+import { log } from '@/lib/logger';
 
 function HomeContent() {
   const { user, loading: authLoading } = useAuth();
@@ -86,7 +87,7 @@ function HomeContent() {
       setRecentWatches(data.items ?? []);
       setTotalWatchCount(data.totalCount ?? 0);
     } catch (err) {
-      console.error('Failed to fetch recent watches:', err);
+      log.error('Failed to fetch recent watches', err);
     } finally {
       setIsLoadingRecent(false);
     }
@@ -98,7 +99,7 @@ function HomeContent() {
       const data = await movieApi.getTrending('week');
       setTrendingMovies(data.results.slice(0, 5)); // Get first 5
     } catch (err) {
-      console.error('Failed to fetch trending movies:', err);
+      log.error('Failed to fetch trending movies', err);
     } finally {
       setIsLoadingTrending(false);
     }
@@ -207,7 +208,7 @@ function HomeContent() {
       // Always increment page so we don't keep fetching the same page
       setPersonCurrentPage(nextPage);
     } catch (err) {
-      console.error('Load more people error:', err);
+      log.error('Load more people error', err);
     } finally {
       setIsLoadingMorePeople(false);
     }
@@ -248,7 +249,7 @@ function HomeContent() {
 
       setPersonMovies(movies);
     } catch (err) {
-      console.error('Error fetching person movies:', err);
+      log.error('Error fetching person movies', err);
       setPersonMovies([]);
     } finally {
       setIsLoadingPersonMovies(false);
@@ -279,7 +280,7 @@ function HomeContent() {
       // Always increment page so we don't keep fetching the same page
       setCurrentPage(nextPage);
     } catch (err) {
-      console.error('Load more error:', err);
+      log.error('Load more error', err);
     } finally {
       setIsLoadingMore(false);
     }

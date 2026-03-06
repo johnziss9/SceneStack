@@ -1,4 +1,5 @@
 'use client';
+import { log } from '@/lib/logger';
 
 import { useState, useEffect } from 'react';
 import { toast } from '@/lib/toast';
@@ -49,7 +50,7 @@ export function MovieInsight({ movieId, watchCount, isPremium }: MovieInsightPro
                 });
             }
         } catch (err) {
-            console.error('Error generating insight:', err);
+            log.error('Error generating insight', err);
 
             if (err instanceof PremiumRequiredError) {
                 setError('premium');
@@ -80,7 +81,7 @@ export function MovieInsight({ movieId, watchCount, isPremium }: MovieInsightPro
                 description: 'Your insight has been updated with the latest information',
             });
         } catch (err) {
-            console.error('Error regenerating insight:', err);
+            log.error('Error regenerating insight', err);
 
             if (err instanceof PremiumRequiredError) {
                 setError('premium');

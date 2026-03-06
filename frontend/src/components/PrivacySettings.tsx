@@ -1,4 +1,5 @@
 "use client";
+import { log } from '@/lib/logger';
 
 import { useEffect, useState } from "react";
 import { UserPrivacySettings } from "@/types";
@@ -38,7 +39,7 @@ export function PrivacySettings() {
             setSettings(data);
             setOriginalSettings(data);
         } catch (err) {
-            console.error("Failed to fetch privacy settings:", err);
+            log.error("Failed to fetch privacy settings", err);
             toast.error("Failed to load privacy settings", {
                 description: "Please try again later",
             });
@@ -74,7 +75,7 @@ export function PrivacySettings() {
                 description: "Your changes have been saved",
             });
         } catch (err) {
-            console.error("Failed to update privacy settings:", err);
+            log.error("Failed to update privacy settings", err);
             toast.error("Failed to save settings", {
                 description: "Please try again later",
             });

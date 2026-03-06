@@ -1,4 +1,5 @@
 "use client";
+import { log } from '@/lib/logger';
 
 import { useEffect, useState } from "react";
 import { RecommendedMovie, TmdbMovie } from "@/types";
@@ -34,7 +35,7 @@ export function SimilarMovies({ tmdbId }: SimilarMoviesProps) {
             const data = await movieApi.getSimilarMovies(tmdbId);
             setRecommendations(data);
         } catch (err) {
-            console.error("Failed to load similar movies:", err);
+            log.error("Failed to load similar movies", err);
             setError("Failed to load similar movies");
         } finally {
             setIsLoading(false);

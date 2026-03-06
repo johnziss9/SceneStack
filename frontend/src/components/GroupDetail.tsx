@@ -7,6 +7,7 @@ import { Group, GroupMember, GroupRole, Invitation } from "@/types";
 import { groupApi, invitationApi } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { log } from '@/lib/logger';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -56,7 +57,7 @@ export function GroupDetail({ groupId }: GroupDetailProps) {
             const data = await groupApi.getGroup(groupId);
             setGroup(data);
         } catch (err) {
-            console.error("Failed to fetch group:", err);
+            log.error("Failed to fetch group", err);
             toast.error("Failed to load group", {
                 description: "Please try again later",
             });
@@ -71,7 +72,7 @@ export function GroupDetail({ groupId }: GroupDetailProps) {
             const invitations = await invitationApi.getSentInvitations(groupId);
             setPendingInvitations(invitations.filter(inv => inv.status === 0)); // Only pending
         } catch (err) {
-            console.error("Failed to fetch pending invitations:", err);
+            log.error("Failed to fetch pending invitations", err);
             // Silently fail - not critical
         }
     };
@@ -89,7 +90,7 @@ export function GroupDetail({ groupId }: GroupDetailProps) {
             toast.success("Group deleted successfully");
             router.push("/groups");
         } catch (err) {
-            console.error("Error deleting group:", err);
+            log.error("Error deleting group", err);
             toast.error("Failed to delete group", {
                 description: "Please try again later",
             });
@@ -117,7 +118,7 @@ export function GroupDetail({ groupId }: GroupDetailProps) {
             setIsRemoveDialogOpen(false);
             setRemovingMember(null);
         } catch (err) {
-            console.error("Error removing member:", err);
+            log.error("Error removing member", err);
             toast.error("Failed to remove member", {
                 description: "Please try again later",
             });
@@ -135,7 +136,7 @@ export function GroupDetail({ groupId }: GroupDetailProps) {
             // Refetch pending invitations
             await fetchPendingInvitations();
         } catch (err) {
-            console.error("Error cancelling invitation:", err);
+            log.error("Error cancelling invitation", err);
             toast.error("Failed to cancel invitation", {
                 description: "Please try again later",
             });
@@ -157,7 +158,7 @@ export function GroupDetail({ groupId }: GroupDetailProps) {
             toast.success("You have left the group");
             router.push("/groups");
         } catch (err) {
-            console.error("Error leaving group:", err);
+            log.error("Error leaving group", err);
             toast.error("Failed to leave group", {
                 description: "Please try again later",
             });

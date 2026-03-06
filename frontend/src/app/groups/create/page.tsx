@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { toast } from "@/lib/toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { log } from '@/lib/logger';
 
 export default function CreateGroupPage() {
     const router = useRouter();
@@ -80,7 +81,7 @@ export default function CreateGroupPage() {
             // Redirect to the new group's page
             router.push(`/groups/${group.id}`);
         } catch (err: unknown) {
-            console.error("Failed to create group:", err);
+            log.error("Failed to create group", err);
 
             // Check if it's a free tier limit error
             if (err instanceof Error && err.message?.includes("limit")) {

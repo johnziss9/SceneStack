@@ -11,6 +11,7 @@ import { Loader2, Clock, User, Mail } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
 import { LoadingTips } from "@/components/LoadingTips";
+import { log } from '@/lib/logger';
 
 interface InvitationWithGroup extends Invitation {
     groupName: string;
@@ -54,7 +55,7 @@ export function SentInvitations({ onCountChange }: SentInvitationsProps = {}) {
                     allInvitations.push(...pendingInvitations);
                 } catch (err) {
                     // Silently skip if not authorized for this group
-                    console.error(`Failed to fetch invitations for group ${group.id}:`, err);
+                    log.error(`Failed to fetch invitations for group ${group.id}`, err);
                 }
             }
 
@@ -63,7 +64,7 @@ export function SentInvitations({ onCountChange }: SentInvitationsProps = {}) {
 
             setInvitations(allInvitations);
         } catch (err) {
-            console.error("Failed to fetch invitations:", err);
+            log.error("Failed to fetch invitations", err);
             toast.error("Failed to load invitations");
         } finally {
             setIsLoading(false);
@@ -79,7 +80,7 @@ export function SentInvitations({ onCountChange }: SentInvitationsProps = {}) {
             // Remove from list
             setInvitations(prev => prev.filter(inv => inv.id !== invitationId));
         } catch (err) {
-            console.error("Failed to cancel invitation:", err);
+            log.error("Failed to cancel invitation", err);
             toast.error("Failed to cancel invitation");
         } finally {
             setCancellingId(null);

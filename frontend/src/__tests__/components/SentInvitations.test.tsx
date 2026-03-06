@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { SentInvitations } from '@/components/SentInvitations'
 import { invitationApi, groupApi } from '@/lib/api'
 import type { Invitation, Group } from '@/types'
+import { log } from '@/lib/logger'
 
 // Mock the APIs
 jest.mock('@/lib/api', () => ({
@@ -21,6 +22,17 @@ jest.mock('@/lib/toast', () => ({
         success: jest.fn(),
         error: jest.fn(),
     },
+}))
+
+// Mock the logger
+jest.mock('@/lib/logger', () => ({
+    log: {
+        error: jest.fn(),
+        warn: jest.fn(),
+        info: jest.fn(),
+        debug: jest.fn(),
+    },
+    setCorrelationId: jest.fn(),
 }))
 
 describe('SentInvitations', () => {
@@ -307,21 +319,20 @@ describe('SentInvitations', () => {
     })
 
     it('should silently skip groups that fail authorization', async () => {
-        const consoleError = jest.spyOn(console, 'error').mockImplementation()
-        ;(groupApi.getUserGroups as jest.Mock).mockResolvedValue(mockGroups)
-        ;(invitationApi.getSentInvitations as jest.Mock)
+        (log.error as jest.Mock).mockClear();
+        (groupApi.getUserGroups as jest.Mock).mockResolvedValue(mockGroups);
+        (invitationApi.getSentInvitations as jest.Mock)
             .mockRejectedValueOnce(new Error('Unauthorized'))
-            .mockResolvedValueOnce(mockInvitations)
+            .mockResolvedValueOnce(mockInvitations);
 
-        render(<SentInvitations />)
+        render(<SentInvitations />);
 
         await waitFor(() => {
-            expect(screen.getByText('john')).toBeInTheDocument()
-        })
+            expect(screen.getByText('john')).toBeInTheDocument();
+        });
 
         // Should still show invitations from the second group
-        expect(consoleError).toHaveBeenCalled()
-        consoleError.mockRestore()
+        expect(log.error).toHaveBeenCalled();
     })
 
     it('should sort invitations by creation date (most recent first)', async () => {

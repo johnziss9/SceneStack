@@ -1,4 +1,5 @@
 'use client';
+import { log } from '@/lib/logger';
 
 import { useState, useEffect, useRef } from 'react';
 import { watchApi } from '@/lib';
@@ -342,7 +343,7 @@ export default function EditWatchDialog({
             onSuccess();
             onOpenChange(false);
         } catch (err) {
-            console.error('Error updating watch:', err);
+            log.error('Error updating watch', err);
             toast.error('Failed to update watch', {
                 description: 'Please try again later',
             });

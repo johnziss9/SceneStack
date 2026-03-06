@@ -1,4 +1,5 @@
 'use client';
+import { log } from '@/lib/logger';
 
 import { useState, memo } from 'react';
 import { Search, X, Loader2, Sparkles, Wand2 } from 'lucide-react';
@@ -41,7 +42,7 @@ export const AiSearchBar = memo(function AiSearchBar({
             onResultsChange(results);
             setError(null);
         } catch (err) {
-            console.error('AI search error:', err);
+            log.error('AI search error', err);
 
             if (err instanceof RateLimitError) {
                 setError('Rate limit exceeded. Please try again in a few minutes.');

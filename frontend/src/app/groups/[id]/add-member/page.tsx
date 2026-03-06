@@ -11,6 +11,7 @@ import { invitationApi, groupApi } from "@/lib/api";
 import { UserSearchResult, Group } from "@/types";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { log } from '@/lib/logger';
 
 interface AddMemberPageProps {
     params: Promise<{ id: string }>;
@@ -37,7 +38,7 @@ export default function AddMemberPage({ params }: AddMemberPageProps) {
                 const groupData = await groupApi.getGroup(gId);
                 setGroup(groupData);
             } catch (error) {
-                console.error("Failed to fetch group:", error);
+                log.error("Failed to fetch group", error);
                 toast.error("Failed to load group");
                 router.push('/groups');
             }
@@ -60,7 +61,7 @@ export default function AddMemberPage({ params }: AddMemberPageProps) {
                 });
             }
         } catch (error) {
-            console.error("Search failed:", error);
+            log.error("Search failed", error);
             toast.error("Search failed", {
                 description: "Please try again"
             });
@@ -86,7 +87,7 @@ export default function AddMemberPage({ params }: AddMemberPageProps) {
             // Remove from search results
             setSearchResults(prev => prev.filter(u => u.id !== userId));
         } catch (error: any) {
-            console.error("Failed to send invitation:", error);
+            log.error("Failed to send invitation", error);
             toast.error("Failed to send invitation", {
                 description: error.message || "Please try again"
             });

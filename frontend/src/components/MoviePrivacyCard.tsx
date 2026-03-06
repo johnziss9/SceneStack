@@ -1,4 +1,5 @@
 "use client";
+import { log } from '@/lib/logger';
 
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -53,7 +54,7 @@ export function MoviePrivacyCard({ movie, onPrivacyUpdated }: MoviePrivacyCardPr
             setUserGroups(groups);
             return groups;
         } catch (err) {
-            console.error('Failed to fetch groups:', err);
+            log.error('Failed to fetch groups', err);
             return [];
         } finally {
             setIsLoadingGroups(false);
@@ -91,7 +92,7 @@ export function MoviePrivacyCard({ movie, onPrivacyUpdated }: MoviePrivacyCardPr
                 onPrivacyUpdated(updatedMovie);
             }
         } catch (err) {
-            console.error('Failed to update privacy:', err);
+            log.error('Failed to update privacy', err);
             toast.error('Failed to update privacy settings');
         } finally {
             setIsSaving(false);

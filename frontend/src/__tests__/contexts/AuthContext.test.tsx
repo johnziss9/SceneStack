@@ -2,6 +2,7 @@ import { renderHook, act, waitFor } from '@testing-library/react';
 import { authApi, userApi } from '@/lib/api';
 import { tokenStorage } from '@/lib/api-client';
 import { useRouter } from 'next/navigation';
+import { log } from '@/lib/logger';
 
 // Unmock AuthContext to test the real implementation
 jest.unmock('@/contexts/AuthContext');
@@ -15,6 +16,15 @@ jest.mock('@/lib/api');
 jest.mock('@/lib/api-client');
 jest.mock('next/navigation', () => ({
     useRouter: jest.fn(),
+}));
+jest.mock('@/lib/logger', () => ({
+    log: {
+        error: jest.fn(),
+        warn: jest.fn(),
+        info: jest.fn(),
+        debug: jest.fn(),
+    },
+    setCorrelationId: jest.fn(),
 }));
 
 const mockAuthApi = authApi as jest.Mocked<typeof authApi>;
@@ -77,7 +87,7 @@ describe('AuthContext', () => {
 
         it('should handle invalid token gracefully', async () => {
             mockTokenStorage.getToken.mockReturnValue('invalid.token.here');
-            const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+            (log.error as jest.Mock).mockClear();
 
             const { result } = renderHook(() => useAuth(), {
                 wrapper: AuthProvider,
@@ -89,9 +99,7 @@ describe('AuthContext', () => {
 
             expect(result.current.user).toBe(null);
             expect(mockTokenStorage.removeToken).toHaveBeenCalled();
-            expect(consoleErrorSpy).toHaveBeenCalled();
-
-            consoleErrorSpy.mockRestore();
+            expect(log.error).toHaveBeenCalledWith('Failed to decode JWT token', expect.any(Error));
         });
     });
 
@@ -272,11 +280,14 @@ describe('AuthContext', () => {
                 });
             });
 
-            act(() => {
-                result.current.logout();
+            await act(async () => {
+                await result.current.logout();
             });
 
-            expect(mockTokenStorage.removeToken).toHaveBeenCalled();
+            await waitFor(() => {
+                expect(mockTokenStorage.removeToken).toHaveBeenCalled();
+            });
+
             expect(result.current.user).toBe(null);
             expect(mockPush).toHaveBeenCalledWith('/login');
         });
@@ -299,11 +310,13 @@ describe('AuthContext', () => {
                 expect(result.current.user).not.toBe(null);
             });
 
-            act(() => {
-                result.current.logout();
+            await act(async () => {
+                await result.current.logout();
             });
 
-            expect(mockTokenStorage.removeToken).toHaveBeenCalled();
+            await waitFor(() => {
+                expect(mockTokenStorage.removeToken).toHaveBeenCalled();
+            });
             expect(result.current.user).toBe(null);
             expect(mockPush).toHaveBeenCalledWith('/login');
         });

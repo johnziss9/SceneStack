@@ -19,6 +19,7 @@ import type { GroupBasicInfo } from "@/types";
 import { BulkMakePrivateDialog } from "./BulkMakePrivateDialog";
 import { BulkShareWithGroupsDialog } from "./BulkShareWithGroupsDialog";
 import { Film, Filter, X, Info, ChevronDown, ChevronUp, Star, Calendar, Repeat, ArrowUpDown, Loader2 } from "lucide-react";
+import { log } from '@/lib/logger';
 
 const PAGE_SIZE = 20;
 
@@ -247,7 +248,7 @@ export function WatchList() {
             setCurrentPage(page);
             setTotalCount(data.totalCount ?? 0);
         } catch (err) {
-            console.error("Failed to fetch watches:", err);
+            log.error("Failed to fetch watches", err);
             toast.error("Failed to load watches", { description: "Please try again later" });
             setError("Failed to load watches. Please try again.");
         } finally {
@@ -356,7 +357,7 @@ export function WatchList() {
                     await movieApi.setPrivacy(gw.movieId, true, []);
                     setProcessedCount(i + 1);
                 } catch (error) {
-                    console.error(`Failed to update movie ${gw.movieId}:`, error);
+                    log.error(`Failed to update movie ${gw.movieId}`, error);
                 }
             }
 
@@ -396,7 +397,7 @@ export function WatchList() {
                     await movieApi.setPrivacy(gw.movieId, false, finalGroupIds);
                     setProcessedCount(i + 1);
                 } catch (error) {
-                    console.error(`Failed to update movie ${gw.movieId}:`, error);
+                    log.error(`Failed to update movie ${gw.movieId}`, error);
                 }
             }
 

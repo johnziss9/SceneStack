@@ -11,6 +11,7 @@ import { toast } from "@/lib/toast";
 import { Loader2, Mail, Users, Check, X, Clock } from "lucide-react";
 import { format } from "date-fns";
 import { useInvitation } from "@/contexts/InvitationContext";
+import { log } from '@/lib/logger';
 
 export function ReceivedInvitations() {
     const { refreshCount } = useInvitation();
@@ -29,7 +30,7 @@ export function ReceivedInvitations() {
             const data = await invitationApi.getPendingInvitations();
             setInvitations(data);
         } catch (error) {
-            console.error("Failed to fetch invitations:", error);
+            log.error("Failed to fetch invitations", error);
             toast.error("Failed to load invitations");
         } finally {
             setIsLoading(false);
@@ -61,7 +62,7 @@ export function ReceivedInvitations() {
                 }
             }
         } catch (error: any) {
-            console.error("Failed to respond to invitation:", error);
+            log.error("Failed to respond to invitation", error);
             toast.error("Failed to respond", {
                 description: error.message || "Please try again"
             });

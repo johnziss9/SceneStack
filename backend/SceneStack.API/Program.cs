@@ -14,8 +14,45 @@ using SceneStack.API.Interfaces;
 using SceneStack.API.Jobs;
 using SceneStack.API.Models;
 using SceneStack.API.Services;
+using Serilog;
+using SceneStack.API.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Configure Serilog early in the pipeline
+Log.Logger = new LoggerConfiguration()
+    .ReadFrom.Configuration(builder.Configuration)
+    .Enrich.FromLogContext()
+    .Enrich.WithMachineName()
+    .Enrich.WithEnvironmentName()
+    .CreateLogger();
+
+builder.Host.UseSerilog();
+
+// Configure Sentry
+builder.WebHost.UseSentry(options =>
+{
+    options.Dsn = builder.Configuration["Sentry:Dsn"];
+    options.Environment = builder.Environment.EnvironmentName;
+    options.TracesSampleRate = builder.Environment.IsProduction() ? 0.1 : 1.0;
+    options.AttachStacktrace = true;
+    options.SendDefaultPii = false; // Don't send personally identifiable information
+    options.MaxBreadcrumbs = 50;
+    options.Debug = builder.Environment.IsDevelopment();
+
+    // Filter sensitive data before sending to Sentry
+    options.SetBeforeSend((sentryEvent, hint) =>
+    {
+        // Remove sensitive headers
+        if (sentryEvent.Request?.Headers != null)
+        {
+            sentryEvent.Request.Headers.Remove("Authorization");
+            sentryEvent.Request.Headers.Remove("Cookie");
+        }
+
+        return sentryEvent;
+    });
+});
 
 // Add services to the container.
 builder.Services.AddControllers();
@@ -117,6 +154,7 @@ builder.Services.AddScoped<IStatsService, StatsService>();
 builder.Services.AddScoped<IWatchlistService, WatchlistService>();
 builder.Services.AddScoped<IInvitationService, InvitationService>();
 builder.Services.AddScoped<IAuditService, AuditService>();
+builder.Services.AddScoped<IAdminService, AdminService>();
 builder.Services.AddScoped<AuditCleanupService>();
 
 // Add IHttpContextAccessor for audit logging (captures IP and User-Agent)
@@ -160,7 +198,15 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+// Add Serilog request logging
+app.UseSerilogRequestLogging();
+
 app.UseCors("AllowFrontend");
+
+// Add correlation ID middleware for request tracking
+app.UseMiddleware<CorrelationIdMiddleware>();
+
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseRateLimiter();
@@ -185,3 +231,9 @@ RecurringJob.AddOrUpdate<AuditCleanupJob>(
     Cron.Daily(3)); // Runs daily at 3:00 AM
 
 app.Run();
+
+// Track application start time for system health monitoring
+public partial class Program
+{
+    public static DateTime ApplicationStartTime { get; } = DateTime.UtcNow;
+}

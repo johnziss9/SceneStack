@@ -9,6 +9,7 @@ import { MovieCard } from '@/components/MovieCard';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ArrowLeft, Film } from 'lucide-react';
+import { log } from '@/lib/logger';
 
 interface PersonDetailPageProps {
     params: Promise<{ personId: string }>;
@@ -81,7 +82,7 @@ export default function PersonDetailPage({ params }: PersonDetailPageProps) {
 
                 setMovies(formattedMovies);
             } catch (err) {
-                console.error('Failed to fetch person movies:', err);
+                log.error('Failed to fetch person movies', err);
                 setError('Failed to load filmography. Please try again.');
             } finally {
                 setIsLoading(false);
